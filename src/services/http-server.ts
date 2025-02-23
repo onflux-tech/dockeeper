@@ -64,7 +64,8 @@ export class HttpServer {
     }
   }
 
-  public start(port: number = 8080): void {
+  public start(): void {
+    const port = process.env.PORT || 8080;
     this.server = this.app.listen(port, () => {
       console.log(`HTTP server started on port ${port}`);
     });

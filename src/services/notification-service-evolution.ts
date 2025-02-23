@@ -5,7 +5,7 @@ interface NotificationPayload {
   text: string;
 }
 
-class NotificationService {
+class NotificationServiceEvolution {
   async sendNotification(message: string): Promise<void> {
     const { instance, apiKey, number } = config.evolution;
 
@@ -41,4 +41,4 @@ class NotificationService {
   }
 }
 
-export const notificationService = new NotificationService();
+export const notificationServiceEvolution = new NotificationServiceEvolution();

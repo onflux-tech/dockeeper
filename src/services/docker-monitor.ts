@@ -1,6 +1,7 @@
 import Docker from "dockerode";
 import { config } from "../config/environment";
-import { notificationService } from "./notification-service";
+import { notificationServiceEvolution } from "./notification-service-evolution";
+import { notificationServiceMeow } from "./notification-service-meow";
 
 interface DockerService {
   ID: string;
@@ -181,7 +182,11 @@ export class DockerMonitor {
       message += `\n❌ *Error:* ${error}`;
     }
 
-    await notificationService.sendNotification(message);
+    if (config.notificationService === "evolution") {
+      await notificationServiceEvolution.sendNotification(message);
+    } else if (config.notificationService === "meow") {
+      await notificationServiceMeow.sendNotification(message);
+    }
   }
 
   private async handleEvent(event: any): Promise<void> {
@@ -239,7 +244,11 @@ export class DockerMonitor {
           message += `\n❌ *Error:* ${container.State.Error}`;
         }
 
-        await notificationService.sendNotification(message);
+        if (config.notificationService === "evolution") {
+          await notificationServiceEvolution.sendNotification(message);
+        } else if (config.notificationService === "meow") {
+          await notificationServiceMeow.sendNotification(message);
+        }
       }
     } catch (err) {
       console.error(`Error processing container event ${containerId}:`, err);
