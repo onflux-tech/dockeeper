@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+export type NotificationService = "evolution" | "wuzapi";
+
 export const config = {
   cleanupInterval: Number(process.env.CLEANUP_INTERVAL_HOURS || 24),
   docker: {
@@ -8,17 +10,13 @@ export const config = {
         ? "//./pipe/docker_engine"
         : "/var/run/docker.sock",
     isSwarm: process.env.DOCKER_MODE === "swarm",
+    nodeId: process.env.NODE_ID || "standalone",
   },
-  notificationService: process.env.NOTIFICATION_SERVICE || "evolution",
-  evolution: {
-    instance: process.env.EVO_INSTANCE || "",
-    apiKey: process.env.EVO_APIKEY || "",
-    number: process.env.EVO_NUMBER || "",
-  },
-  meow: {
-    instance: process.env.MEOW_INSTANCE || "",
-    apiKey: process.env.MEOW_APIKEY || "",
-    number: process.env.MEOW_NUMBER || "",
+  notification: {
+    service: (process.env.NOTIFICATION_SERVICE || "") as NotificationService,
+    api: process.env.NOTIFICATION_URL || "",
+    key: process.env.NOTIFICATION_KEY || "",
+    number: process.env.NOTIFICATION_NUMBER || "",
   },
   monitoring: {
     healthChecks: process.env.HEALTH_CHECKS

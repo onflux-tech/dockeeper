@@ -1,7 +1,6 @@
 import Docker from "dockerode";
-import { config } from "../config/environment";
-import { notificationServiceEvolution } from "./notification-service-evolution";
-import { notificationServiceMeow } from "./notification-service-meow";
+import { config, NotificationService } from "../config/environment";
+import { NotificationFactory } from "./notification/notification.factory";
 
 interface DockerService {
   ID: string;
@@ -23,6 +22,9 @@ export class DockerMonitor {
   private containerStates: Map<string, string> = new Map();
   private serviceStates: Map<string, string> = new Map();
   private notificationDebounce: Map<string, number> = new Map();
+  private notificationService = NotificationFactory.createNotificationService(
+    config.notification.service
+  );
 
   constructor(docker: Docker) {
     this.docker = docker;
@@ -182,11 +184,7 @@ export class DockerMonitor {
       message += `\n❌ *Error:* ${error}`;
     }
 
-    if (config.notificationService === "evolution") {
-      await notificationServiceEvolution.sendNotification(message);
-    } else if (config.notificationService === "meow") {
-      await notificationServiceMeow.sendNotification(message);
-    }
+    await this.notificationService.sendNotification(message);
   }
 
   private async handleEvent(event: any): Promise<void> {
@@ -244,14 +242,18 @@ export class DockerMonitor {
           message += `\n❌ *Error:* ${container.State.Error}`;
         }
 
-        if (config.notificationService === "evolution") {
-          await notificationServiceEvolution.sendNotification(message);
-        } else if (config.notificationService === "meow") {
-          await notificationServiceMeow.sendNotification(message);
-        }
+        await this.notificationService.sendNotification(message);
       }
-    } catch (err) {
-      console.error(`Error processing container event ${containerId}:`, err);
+    } catch (err: any) {
+      if (err.statusCode === 404) {
+        console.log(`Container ${name} was removed`);
+        this.containerStates.delete(containerId);
+      } else {
+        console.error(
+          `Error handling container ${name}:`,
+          err.json?.message || err.message
+        );
+      }
     }
   }
 

@@ -5,12 +5,12 @@ interface NotificationPayload {
   Body: string;
 }
 
-class NotificationServiceMeow {
+class NotificationServiceWuzapi {
   async sendNotification(message: string): Promise<void> {
-    const { instance, apiKey, number } = config.meow;
+    const { api: instance, key: apiKey, number } = config.notification;
 
     if (!instance || !apiKey || !number) {
-      console.log("Meow notification not configured");
+      console.log("Wuzapi notification not configured");
       return;
     }
 
@@ -24,7 +24,7 @@ class NotificationServiceMeow {
         method: "POST",
         headers: {
           token: apiKey,
-          "Accept": "application/json",
+          Accept: "application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -42,4 +42,4 @@ class NotificationServiceMeow {
   }
 }
 
-export const notificationServiceMeow = new NotificationServiceMeow();
+export const notificationServiceWuzapi = new NotificationServiceWuzapi();

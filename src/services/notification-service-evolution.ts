@@ -7,7 +7,7 @@ interface NotificationPayload {
 
 class NotificationServiceEvolution {
   async sendNotification(message: string): Promise<void> {
-    const { instance, apiKey, number } = config.evolution;
+    const { api: instance, key: apiKey, number } = config.notification;
 
     if (!instance || !apiKey || !number) {
       console.log("Evolution notification not configured");

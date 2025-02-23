@@ -15,7 +15,7 @@ DocKeeper is a robust Docker maintenance and monitoring tool that helps keep you
 - 📊 **Real-time Monitoring**
   - Monitors container state changes
   - Tracks service health in Swarm mode or Standalone
-  - Sends instant notifications via WhatsApp (Evolutio API)
+  - Sends instant notifications via WhatsApp (Evolution API or Wuzapi API)
 - 🔄 **Periodic Maintenance**
   - Configurable cleanup intervals
   - Automated maintenance cycles
@@ -31,18 +31,51 @@ DocKeeper is a robust Docker maintenance and monitoring tool that helps keep you
 - **[Dockerode](https://github.com/apocas/dockerode)** - Docker API integration
 - **[Express](https://expressjs.com/)** - HTTP server framework
 - **[Evolution API](https://github.com/evolution-api/evolution-api)** - WhatsApp notification system
+- **[Wuzapi API](https://github.com/asternic/wuzapi)** - WhatsApp notification system
 - **[Docker](https://www.docker.com/)** - Containerization platform
+
+## Notification Services
+
+DocKeeper supports two WhatsApp notification services:
+
+### Evolution API
+
+[Evolution API](https://github.com/EvolutionAPI/evolution-api) Evolution API is an open-source WhatsApp integration API
+
+Configuration:
+
+```env
+NOTIFICATION_SERVICE=evolution
+NOTIFICATION_URL=https://your-domain-evolution-api/message/sendText/your-instance
+NOTIFICATION_KEY=111111111111-1111-1111-111111111111
+NOTIFICATION_NUMBER=5511999999999
+```
+
+### Wuzapi API
+
+[Wuzapi API](https://github.com/asternic/wuzapi) Simple RESTful API for WhatsApp in Golang (using the Whatsmeow multi device library)
+
+Configuration:
+
+```env
+NOTIFICATION_SERVICE=wuzapi
+NOTIFICATION_URL=https://your-domain-wuzapi-api/chat/send/text
+NOTIFICATION_KEY=1234ABCD
+NOTIFICATION_NUMBER=5511999999999
+```
 
 ## Environment Variables
 
 | Variable                 | Description                                          | Default      |
 | ------------------------ | ---------------------------------------------------- | ------------ |
 | `CLEANUP_INTERVAL_HOURS` | Hours between cleanup cycles                         | 24           |
+| `NOTIFICATION_SERVICE`   | WhatsApp service to use (evolution/wuzapi)           | ""           |
+| `NOTIFICATION_URL`       | Notification service API URL                         | ""           |
+| `NOTIFICATION_KEY`       | Notification service API key                         | ""           |
+| `NOTIFICATION_NUMBER`    | WhatsApp number for notifications                    | ""           |
 | `HEALTH_CHECKS`          | Containers/services to monitor (semicolon-separated) | ""           |
-| `EVO_INSTANCE`           | Evolution API instance URL                           | ""           |
-| `EVO_APIKEY`             | Evolution API key                                    | ""           |
-| `EVO_NUMBER`             | WhatsApp number for notifications                    | ""           |
 | `DOCKER_MODE`            | Deployment mode (standalone/swarm)                   | "standalone" |
+| `PORT`                   | HTTP server port                                     | 5000         |
 
 ## Installation
 
@@ -52,15 +85,28 @@ DocKeeper is a robust Docker maintenance and monitoring tool that helps keep you
 # Pull the image
 docker pull ghcr.io/onflux-tech/dockeeper:latest
 
-# Run the container
+# Run with Evolution API
 docker run -d \
   --name dockeeper \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e CLEANUP_INTERVAL_HOURS=24 \
+  -e NOTIFICATION_SERVICE=evolution \
+  -e NOTIFICATION_URL=https://your-domain-evolution-api/message/sendText/your-instance \
+  -e NOTIFICATION_KEY=your-evolution-key \
+  -e NOTIFICATION_NUMBER=your-number \
   -e HEALTH_CHECKS=container1;container2 \
-  -e EVO_INSTANCE=https://your-evo-api.com \
-  -e EVO_APIKEY=your-api-key \
-  -e EVO_NUMBER=your-number \
+  ghcr.io/onflux-tech/dockeeper:latest
+
+# Run with Wuzapi
+docker run -d \
+  --name dockeeper \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e CLEANUP_INTERVAL_HOURS=24 \
+  -e NOTIFICATION_SERVICE=wuzapi \
+  -e NOTIFICATION_URL=https://your-domain-wuzapi-api/chat/send/text \
+  -e NOTIFICATION_KEY=your-wuzapi-key \
+  -e NOTIFICATION_NUMBER=your-number \
+  -e HEALTH_CHECKS=container1;container2 \
   ghcr.io/onflux-tech/dockeeper:latest
 ```
 
@@ -73,10 +119,11 @@ services:
     image: ghcr.io/onflux-tech/dockeeper:latest
     environment:
       - CLEANUP_INTERVAL_HOURS=24
+      - NOTIFICATION_SERVICE=evolution # or wuzapi
+      - NOTIFICATION_URL=https://your-domain-evolution-api/message/sendText/your-instance
+      - NOTIFICATION_KEY=your-api-key
+      - NOTIFICATION_NUMBER=your-number
       - HEALTH_CHECKS=service_service1;service_service2
-      - EVO_INSTANCE=https://your-evo-api.com
-      - EVO_APIKEY=your-api-key
-      - EVO_NUMBER=your-number
       - DOCKER_MODE=swarm
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

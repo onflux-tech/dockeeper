@@ -65,7 +65,7 @@ export class HttpServer {
   }
 
   public start(): void {
-    const port = process.env.PORT || 8080;
+    const port = process.env.PORT || 5000;
     this.server = this.app.listen(port, () => {
       console.log(`HTTP server started on port ${port}`);
     });
