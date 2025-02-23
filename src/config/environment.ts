@@ -24,4 +24,8 @@ export const config = {
       : [],
     throttleInterval: 60 * 1000,
   },
+  volumes: {
+    retentionDays: Number(process.env.VOLUME_RETENTION_DAYS || 0),
+    enabled: Boolean(Number(process.env.VOLUME_RETENTION_DAYS || 0) > 0),
+  },
 };

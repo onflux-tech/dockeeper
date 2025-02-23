@@ -11,6 +11,7 @@ DocKeeper is a robust Docker maintenance and monitoring tool that helps keep you
 - 🧹 **Automatic Cleanup**
   - Removes stopped containers
   - Cleans unused images
+  - Cleans unused volumes with retention days
   - Purges build cache
 - 📊 **Real-time Monitoring**
   - Monitors container state changes
@@ -76,6 +77,7 @@ NOTIFICATION_NUMBER=5511999999999
 | `HEALTH_CHECKS`          | Containers/services to monitor (semicolon-separated) | ""           |
 | `DOCKER_MODE`            | Deployment mode (standalone/swarm)                   | "standalone" |
 | `PORT`                   | HTTP server port                                     | 5000         |
+| `VOLUME_RETENTION_DAYS`  | Days to retain unused volumes (0 to disable cleanup) | 0            |
 
 ## Installation
 
@@ -95,6 +97,7 @@ docker run -d \
   -e NOTIFICATION_KEY=your-evolution-key \
   -e NOTIFICATION_NUMBER=your-number \
   -e HEALTH_CHECKS=container1;container2 \
+  -e VOLUME_RETENTION_DAYS=7 \
   ghcr.io/onflux-tech/dockeeper:latest
 
 # Run with Wuzapi
@@ -107,6 +110,7 @@ docker run -d \
   -e NOTIFICATION_KEY=your-wuzapi-key \
   -e NOTIFICATION_NUMBER=your-number \
   -e HEALTH_CHECKS=container1;container2 \
+  -e VOLUME_RETENTION_DAYS=7 \
   ghcr.io/onflux-tech/dockeeper:latest
 ```
 
@@ -124,6 +128,7 @@ services:
       - NOTIFICATION_KEY=your-api-key
       - NOTIFICATION_NUMBER=your-number
       - HEALTH_CHECKS=service_service1;service_service2
+      - VOLUME_RETENTION_DAYS=7
       - DOCKER_MODE=swarm
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

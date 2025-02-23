@@ -4,6 +4,7 @@ import { createDockerClient } from "./services/docker-client";
 import { cleanExitedContainers } from "./services/container-cleaner";
 import { cleanUnusedImages } from "./services/image-cleaner";
 import { cleanBuildCache } from "./services/cache-cleaner";
+import { cleanUnusedVolumes } from "./services/volume-cleaner";
 import { DockerMonitor } from "./services/docker-monitor";
 import { HttpServer } from "./services/http-server";
 
@@ -14,6 +15,7 @@ async function cleanup(): Promise<void> {
   await cleanExitedContainers(docker);
   await cleanUnusedImages(docker);
   await cleanBuildCache(docker);
+  await cleanUnusedVolumes(docker);
 
   console.log("Docker cleanup completed.");
 }
