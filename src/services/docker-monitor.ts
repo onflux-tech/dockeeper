@@ -1,6 +1,7 @@
 import Docker from "dockerode";
 import { config, NotificationService } from "../config/environment";
 import { NotificationFactory } from "./notification/notification.factory";
+import { databaseService } from "./database";
 
 interface DockerService {
   ID: string;
@@ -31,13 +32,15 @@ export class DockerMonitor {
   }
 
   async startMonitoring(): Promise<void> {
-    if (config.monitoring.healthChecks.length === 0) {
-      console.log("No monitoring configured, skipping check");
-      return;
-    }
-
     console.log("Starting Docker events monitoring in real time.");
-    console.log("Monitored containers:", config.monitoring.healthChecks);
+    if (config.monitoring.healthChecks.mode === "selective") {
+      console.log(
+        "Monitored containers:",
+        config.monitoring.healthChecks.containers
+      );
+    } else {
+      console.log("Monitoring all containers");
+    }
 
     await this.initializeStates();
 
@@ -71,7 +74,7 @@ export class DockerMonitor {
     });
 
     if (config.docker.isSwarm) {
-      setInterval(() => this.checkServicesHealth(), 5000);
+      setInterval(() => this.checkServicesHealth(), 1000);
     }
   }
 
@@ -80,7 +83,11 @@ export class DockerMonitor {
       const containers = await this.docker.listContainers({ all: true });
       for (const container of containers) {
         const name = container.Names[0]?.slice(1);
-        if (name && config.monitoring.healthChecks.includes(name)) {
+        if (
+          name &&
+          (config.monitoring.healthChecks.mode === "all" ||
+            config.monitoring.healthChecks.containers.includes(name))
+        ) {
           this.containerStates.set(container.Id, container.State);
         }
       }
@@ -92,7 +99,8 @@ export class DockerMonitor {
           const serviceName = typedService.Spec?.Name;
           if (
             serviceName &&
-            config.monitoring.healthChecks.includes(serviceName)
+            (config.monitoring.healthChecks.mode === "all" ||
+              config.monitoring.healthChecks.containers.includes(serviceName))
           ) {
             this.serviceStates.set(serviceName, "running");
           }
@@ -113,7 +121,7 @@ export class DockerMonitor {
 
         if (
           !serviceName ||
-          !config.monitoring.healthChecks.includes(serviceName)
+          !config.monitoring.healthChecks.containers.includes(serviceName)
         ) {
           continue;
         }
@@ -185,6 +193,15 @@ export class DockerMonitor {
     }
 
     await this.notificationService.sendNotification(message);
+
+    const containers = await this.docker.listContainers({
+      all: true,
+      filters: { name: [serviceName] },
+    });
+
+    if (containers[0]) {
+      databaseService.incrementNotifications(containers[0].Id);
+    }
   }
 
   private async handleEvent(event: any): Promise<void> {
@@ -197,7 +214,11 @@ export class DockerMonitor {
 
   private async handleServiceEvent(event: any): Promise<void> {
     const serviceName = event.Actor?.Attributes?.name;
-    if (!serviceName || !config.monitoring.healthChecks.includes(serviceName)) {
+    if (
+      !serviceName ||
+      (config.monitoring.healthChecks.mode === "selective" &&
+        !config.monitoring.healthChecks.containers.includes(serviceName))
+    ) {
       return;
     }
 
@@ -220,7 +241,8 @@ export class DockerMonitor {
     if (
       !name ||
       !containerId ||
-      !config.monitoring.healthChecks.includes(name)
+      (config.monitoring.healthChecks.mode === "selective" &&
+        !config.monitoring.healthChecks.containers.includes(name))
     ) {
       return;
     }
@@ -243,6 +265,7 @@ export class DockerMonitor {
         }
 
         await this.notificationService.sendNotification(message);
+        databaseService.incrementNotifications(containerId);
       }
     } catch (err: any) {
       if (err.statusCode === 404) {

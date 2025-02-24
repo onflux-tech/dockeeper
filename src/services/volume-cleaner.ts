@@ -8,7 +8,7 @@ interface VolumeInfo {
 }
 
 export async function cleanUnusedVolumes(docker: Docker): Promise<void> {
-  if (!config.volumes.enabled) {
+  if (!config.cleanup.enabled) {
     console.log("Volume cleanup is disabled");
     return;
   }
@@ -30,7 +30,7 @@ export async function cleanUnusedVolumes(docker: Docker): Promise<void> {
 
     const retentionDate = new Date();
     retentionDate.setDate(
-      retentionDate.getDate() - config.volumes.retentionDays
+      retentionDate.getDate() - config.cleanup.retentionDays
     );
 
     const unusedVolumes = (volumes.Volumes as unknown as VolumeInfo[]).filter(
@@ -45,7 +45,7 @@ export async function cleanUnusedVolumes(docker: Docker): Promise<void> {
     );
 
     console.log(
-      `Found ${unusedVolumes.length} unused volumes older than ${config.volumes.retentionDays} days`
+      `Found ${unusedVolumes.length} unused volumes older than ${config.cleanup.retentionDays} days`
     );
 
     for (const volume of unusedVolumes) {

@@ -7,6 +7,8 @@ import { cleanBuildCache } from "./services/cache-cleaner";
 import { cleanUnusedVolumes } from "./services/volume-cleaner";
 import { DockerMonitor } from "./services/docker-monitor";
 import { HttpServer } from "./services/http-server";
+import { WebSocketService } from "./services/websocket-server";
+import { MetricsCollector } from "./services/metrics-collector";
 
 async function cleanup(): Promise<void> {
   const docker = createDockerClient();
@@ -25,6 +27,10 @@ async function startPeriodicCleanup(): Promise<void> {
 
   const httpServer = new HttpServer(docker);
   httpServer.start();
+
+  const wsService = new WebSocketService(httpServer.getServer());
+  const metricsCollector = new MetricsCollector(docker, wsService);
+  await metricsCollector.startCollecting();
 
   const monitor = new DockerMonitor(docker);
   await monitor.startMonitoring();
