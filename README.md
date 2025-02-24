@@ -4,6 +4,11 @@
 [![Release](https://img.shields.io/github/v/release/onflux-tech/dockeeper)](https://github.com/onflux-tech/dockeeper/releases)
 [![Deploy Status](https://github.com/onflux-tech/dockeeper/actions/workflows/deploy.yml/badge.svg)](https://github.com/onflux-tech/dockeeper/actions/workflows/deploy.yml)
 
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/63d78939-0083-4b48-80e4-adb791f7abfb" alt="DocKeeper Banner" width="800px">
+  <br><br>
+</div>
+
 DocKeeper is a robust Docker maintenance and monitoring tool that helps keep your Docker environment clean and healthy while providing real-time notifications about container and service status changes.
 
 ## Features
