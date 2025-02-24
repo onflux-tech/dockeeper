@@ -1,7 +1,11 @@
 import Docker from "dockerode";
+import { config } from "../config/environment";
 
 export async function cleanUnusedImages(docker: Docker): Promise<void> {
   try {
+    const retentionMs = config.cleanup.retentionDays * 24 * 60 * 60 * 1000;
+    const cutoffDate = new Date(Date.now() - retentionMs);
+
     const allImages = await docker.listImages();
     console.log(`Total images found: ${allImages.length}`);
 
@@ -10,13 +14,18 @@ export async function cleanUnusedImages(docker: Docker): Promise<void> {
       containers.map((container) => container.ImageID)
     );
 
-    const unusedImages = allImages.filter(
-      (image) =>
-        !usedImageIds.has(image.Id) &&
-        !image.RepoTags?.some((tag) => tag.includes("<none>"))
-    );
+    const unusedImages = allImages.filter((image) => {
+      const created = new Date(image.Created * 1000);
+      const isUnused = !usedImageIds.has(image.Id);
+      const isOld = config.cleanup.enabled ? created < cutoffDate : true;
+      const isNotNone = !image.RepoTags?.some((tag) => tag.includes("<none>"));
 
-    console.log(`Found ${unusedImages.length} unused images.`);
+      return isUnused && isOld && isNotNone;
+    });
+
+    console.log(
+      `Found ${unusedImages.length} unused images older than ${config.cleanup.retentionDays} days`
+    );
 
     for (const imageInfo of unusedImages) {
       const image = docker.getImage(imageInfo.Id);

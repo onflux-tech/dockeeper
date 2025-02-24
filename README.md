@@ -16,14 +16,18 @@ DocKeeper is a robust Docker maintenance and monitoring tool that helps keep you
 - 📊 **Real-time Monitoring**
   - Monitors container state changes
   - Tracks service health in Swarm mode or Standalone
-  - Sends instant notifications via WhatsApp (Evolution API or Wuzapi API)
-- 🔄 **Periodic Maintenance**
-  - Configurable cleanup intervals
-  - Automated maintenance cycles
-- 🌐 **HTTP API**
+  - Sends instant notifications via WhatsApp
+  - Web dashboard with real-time metrics
+  - Live container statistics (CPU, Memory, Network, Disk I/O)
+- 🔒 **Security**
+  - Token-based API authentication
+  - Secure login dashboard access
+  - Session management
+- 🌐 **HTTP API & Dashboard**
   - Health check endpoint
   - Manual maintenance trigger
-  - Status monitoring
+  - Real-time metrics visualization
+  - Container search and filtering
 
 ## Technologies
 
@@ -67,17 +71,20 @@ NOTIFICATION_NUMBER=5511999999999
 
 ## Environment Variables
 
-| Variable                 | Description                                          | Default      |
-| ------------------------ | ---------------------------------------------------- | ------------ |
-| `CLEANUP_INTERVAL_HOURS` | Hours between cleanup cycles                         | 24           |
-| `NOTIFICATION_SERVICE`   | WhatsApp service to use (evolution/wuzapi)           | ""           |
-| `NOTIFICATION_URL`       | Notification service API URL                         | ""           |
-| `NOTIFICATION_KEY`       | Notification service API key                         | ""           |
-| `NOTIFICATION_NUMBER`    | WhatsApp number for notifications                    | ""           |
-| `HEALTH_CHECKS`          | Containers/services to monitor (semicolon-separated) | ""           |
-| `DOCKER_MODE`            | Deployment mode (standalone/swarm)                   | "standalone" |
-| `PORT`                   | HTTP server port                                     | 5000         |
-| `VOLUME_RETENTION_DAYS`  | Days to retain unused volumes (0 to disable cleanup) | 0            |
+| Variable                 | Description                                          | Default      | Required |
+| ------------------------ | ---------------------------------------------------- | ------------ | -------- |
+| `CLEANUP_INTERVAL_HOURS` | Hours between cleanup cycles                         | 24           | No       |
+| `CLEANUP_RETENTION_DAYS` | Days to retain unused (containers/images/volumes)    | 0            | No       |
+| `NOTIFICATION_SERVICE`   | WhatsApp service to use (evolution/wuzapi)           | ""           | No       |
+| `NOTIFICATION_URL`       | Notification service API URL                         | ""           | No       |
+| `NOTIFICATION_KEY`       | Notification service API key                         | ""           | No       |
+| `NOTIFICATION_NUMBER`    | WhatsApp number for notifications                    | ""           | No       |
+| `HEALTH_CHECKS`          | Containers/services to monitor (semicolon-separated) | ""           | No       |
+| `DOCKER_MODE`            | Deployment mode (standalone/swarm)                   | "standalone" | No       |
+| `PORT`                   | HTTP server port                                     | 5000         | No       |
+| `API_TOKEN`              | Security token for API endpoints                     | ""           | Yes      |
+| `ADMIN_USER`             | Dashboard admin username                             | ""           | Yes      |
+| `ADMIN_PASSWORD`         | Dashboard admin password                             | ""           | Yes      |
 
 ## Installation
 
@@ -92,12 +99,16 @@ docker run -d \
   --name dockeeper \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e CLEANUP_INTERVAL_HOURS=24 \
+  -e CLEANUP_RETENTION_DAYS=7 \
   -e NOTIFICATION_SERVICE=evolution \
   -e NOTIFICATION_URL=https://your-domain-evolution-api/message/sendText/your-instance \
   -e NOTIFICATION_KEY=your-evolution-key \
   -e NOTIFICATION_NUMBER=your-number \
   -e HEALTH_CHECKS=container1;container2 \
-  -e VOLUME_RETENTION_DAYS=7 \
+  -e API_TOKEN=your-secure-api-token \
+  -e ADMIN_USER=admin \
+  -e ADMIN_PASSWORD=your-secure-password \
+  -p 5000:5000 \
   ghcr.io/onflux-tech/dockeeper:latest
 
 # Run with Wuzapi
@@ -105,12 +116,16 @@ docker run -d \
   --name dockeeper \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e CLEANUP_INTERVAL_HOURS=24 \
+  -e CLEANUP_RETENTION_DAYS=7 \
   -e NOTIFICATION_SERVICE=wuzapi \
   -e NOTIFICATION_URL=https://your-domain-wuzapi-api/chat/send/text \
   -e NOTIFICATION_KEY=your-wuzapi-key \
   -e NOTIFICATION_NUMBER=your-number \
   -e HEALTH_CHECKS=container1;container2 \
-  -e VOLUME_RETENTION_DAYS=7 \
+  -e API_TOKEN=your-secure-api-token \
+  -e ADMIN_USER=admin \
+  -e ADMIN_PASSWORD=your-secure-password \
+  -p 5000:5000 \
   ghcr.io/onflux-tech/dockeeper:latest
 ```
 
@@ -123,15 +138,20 @@ services:
     image: ghcr.io/onflux-tech/dockeeper:latest
     environment:
       - CLEANUP_INTERVAL_HOURS=24
+      - CLEANUP_RETENTION_DAYS=7
       - NOTIFICATION_SERVICE=evolution # or wuzapi
       - NOTIFICATION_URL=https://your-domain-evolution-api/message/sendText/your-instance
       - NOTIFICATION_KEY=your-api-key
       - NOTIFICATION_NUMBER=your-number
       - HEALTH_CHECKS=service_service1;service_service2
-      - VOLUME_RETENTION_DAYS=7
       - DOCKER_MODE=swarm
+      - API_TOKEN=your-secure-api-token # Generate with: openssl rand -hex 16
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD=your-secure-password
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "5000:5000"
     deploy:
       mode: global
 ```
@@ -146,10 +166,16 @@ docker stack deploy --detach=true --prune --resolve-image always -c docker-compo
 
 ## API Endpoints
 
+- Generate your `API_TOKEN`:
+
+```
+openssl rand -hex 16
+```
+
 ### Health Check
 
 ```bash
-GET /health
+GET /health?token=your-secure-token-here
 ```
 
 Returns system status information.
@@ -157,7 +183,7 @@ Returns system status information.
 ### Manual Cleanup
 
 ```bash
-POST /run
+POST /run?token=your-secure-token-here
 ```
 
 Triggers immediate maintenance cycle.

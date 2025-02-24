@@ -13,6 +13,8 @@ RUN npm run build
 FROM node:20-alpine
 
 ENV TZ=America/Sao_Paulo
+ENV NODE_ENV=production
+
 RUN apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/$TZ /etc/localtime && \
     echo $TZ > /etc/timezone
@@ -24,4 +26,8 @@ COPY --from=builder /dockeeper/package*.json ./
 
 RUN npm ci --only=production
 
-CMD ["node", "dist/index.js"]
+RUN mkdir -p data
+
+EXPOSE 5000
+
+CMD ["npm", "start"]

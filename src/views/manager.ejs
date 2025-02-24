@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocKeeper Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      .animate-pulse-slow {
+        animation: pulse 2s infinite;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #1f2937;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #374151;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #4b5563;
+      }
+
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: #374151 #1f2937;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-white">
+    <!-- Navbar -->
+    <nav class="bg-gray-800 shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center">
+            <svg
+              class="h-8 w-8 text-blue-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 12h14M12 5l7 7-7 7"
+              />
+            </svg>
+            <span class="ml-2 text-xl font-bold text-white">DocKeeper</span>
+          </div>
+          <div class="flex items-center space-x-4">
+            <span id="lastUpdate" class="text-sm text-gray-400"></span>
+            <a
+              href="/logout"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-800"
+            >
+              <svg
+                class="mr-2 h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              Sair
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="container mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold">Docker Applications</h1>
+        <div class="w-64">
+          <div class="relative">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search containers..."
+              class="bg-gray-800 text-gray-300 placeholder-gray-500 border border-gray-700 rounded px-3 py-2 pr-14 focus:outline-none focus:ring-1 focus:ring-blue-600"
+            />
+            <span class="absolute right-3 top-3 text-gray-400">
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-lg shadow">
+        <table class="min-w-full divide-y divide-gray-700 bg-gray-800">
+          <thead class="bg-gray-700">
+            <tr>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[180px]"
+              >
+                Container
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[150px]"
+              >
+                CPU
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[150px]"
+              >
+                Memory
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[180px]"
+              >
+                Network
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[180px]"
+              >
+                Disk I/O
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[120px]"
+              >
+                Notifications
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[100px]"
+              >
+                Status
+              </th>
+            </tr>
+          </thead>
+          <tbody id="container-rows" class="divide-y divide-gray-700"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <script>
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB", "TB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${
+          sizes[i]
+        }`;
+      }
+
+      function formatRate(bytesPerSecond) {
+        return `${formatBytes(bytesPerSecond)}/s`;
+      }
+
+      function getStatusColor(status) {
+        const colors = {
+          running: "bg-green-900 text-green-300",
+          stopped: "bg-red-900 text-red-300",
+          restarting: "bg-yellow-900 text-yellow-300",
+          unknown: "bg-gray-700 text-gray-300",
+        };
+        return colors[status] || colors.unknown;
+      }
+
+      function getMemoryBarColor(percentage) {
+        if (percentage >= 80) return "bg-red-600";
+        if (percentage >= 60) return "bg-yellow-500";
+        return "bg-green-600";
+      }
+
+      function filterContainers(searchText) {
+        const rows = document.querySelectorAll("#container-rows tr");
+        const searchLower = searchText.toLowerCase();
+
+        rows.forEach((row) => {
+          const containerName = row
+            .querySelector(".text-gray-100")
+            .textContent.toLowerCase();
+          const containerStatus = row
+            .querySelector(".rounded-full")
+            .textContent.toLowerCase();
+
+          if (
+            containerName.includes(searchLower) ||
+            containerStatus.includes(searchLower)
+          ) {
+            row.classList.remove("hidden");
+          } else {
+            row.classList.add("hidden");
+          }
+        });
+      }
+
+      document.getElementById("searchInput").addEventListener("input", (e) => {
+        filterContainers(e.target.value);
+      });
+
+      let lastMetrics = [];
+
+      function updateContainers(metrics) {
+        lastMetrics = metrics;
+        const containerRows = document.getElementById("container-rows");
+
+        if (containerRows.children.length === 0) {
+          metrics.forEach((container) => {
+            const row = document.createElement("tr");
+            row.setAttribute("data-container-id", container.name);
+            row.classList.add("hover:bg-gray-700", "transition-colors");
+
+            for (let i = 0; i < 7; i++) {
+              const td = document.createElement("td");
+              td.classList.add("px-4", "py-3", "whitespace-nowrap");
+              row.appendChild(td);
+            }
+
+            containerRows.appendChild(row);
+          });
+        }
+
+        document.getElementById(
+          "lastUpdate"
+        ).textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+
+        metrics.forEach((container) => {
+          const row = containerRows.querySelector(
+            `tr[data-container-id="${container.name}"]`
+          );
+          if (!row) return;
+
+          const cells = row.getElementsByTagName("td");
+
+          cells[0].className =
+            "px-4 py-3 whitespace-nowrap font-medium text-gray-100";
+          cells[0].textContent = container.name;
+
+          const cpuPercentage = (container.cpu_usage * 100).toFixed(1);
+          cells[1].innerHTML = `
+            <div class="flex items-center">
+              <div class="w-16 bg-gray-700 rounded-full h-2 mr-2">
+                <div class="bg-blue-600 h-2 rounded-full" style="width: ${Math.min(
+                  cpuPercentage,
+                  100
+                )}%"></div>
+              </div>
+              <span class="text-sm text-gray-300">${cpuPercentage}%</span>
+            </div>`;
+
+          const memoryPercent =
+            (container.memory_usage / container.memory_limit) * 100;
+          const memoryBarColor = getMemoryBarColor(memoryPercent);
+          cells[2].innerHTML = `
+            <div class="flex items-center">
+              <div class="w-16 bg-gray-700 rounded-full h-2 mr-2">
+                <div class="${memoryBarColor} h-2 rounded-full" style="width: ${Math.min(
+            memoryPercent,
+            100
+          )}%"></div>
+              </div>
+              <span class="text-sm text-gray-300">${formatBytes(
+                container.memory_usage
+              )}</span>
+            </div>`;
+
+          cells[3].innerHTML = `
+            <div class="flex flex-col text-sm text-gray-300">
+              <span>↓ ${formatRate(container.network_rx_speed || 0)}</span>
+              <span>↑ ${formatRate(container.network_tx_speed || 0)}</span>
+            </div>`;
+
+          cells[4].innerHTML = `
+            <div class="flex flex-col text-sm text-gray-300">
+              <span>↓ ${formatRate(container.disk_read_speed || 0)}</span>
+              <span>↑ ${formatRate(container.disk_write_speed || 0)}</span>
+            </div>`;
+
+          cells[5].className =
+            "px-4 py-3 whitespace-nowrap text-sm text-gray-300";
+          cells[5].textContent = container.notifications_sent || 0;
+
+          cells[6].innerHTML = `
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+              container.status
+            )}">
+              ${container.status}
+            </span>`;
+        });
+
+        const searchInput = document.getElementById("searchInput");
+        if (searchInput.value) {
+          filterContainers(searchInput.value);
+        }
+      }
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === "metrics") {
+          updateContainers(message.data);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log("WebSocket connection closed");
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      };
+    </script>
+  </body>
+</html>

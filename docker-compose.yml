@@ -7,23 +7,34 @@ services:
     networks:
       - your-network
     environment:
-      - CLEANUP_INTERVAL_HOURS=24 # Interval to clean up old logs
-      - NOTIFICATION_SERVICE= # wuzapi or evolution
+      # Cleanup Configuration
+      - CLEANUP_INTERVAL_HOURS=24
+      - CLEANUP_RETENTION_DAYS=7 # Days to keep stopped containers, unused images and volumes
+      - VOLUME_RETENTION_DAYS=7
+      # Docker Configuration
+      - DOCKER_MODE=standalone # or 'swarm'
+      # Notification Configuration
+      - NOTIFICATION_SERVICE=evolution # or 'wuzapi'
       # Evolution_url = https://your-domain-evolution-api/message/sendText/your-instance
       # Wuzapi_url = https://your-domain-wuzapi-api/chat/send/text
-      - NOTIFICATION_URL=
+      - NOTIFICATION_URL=https://your-domain-evolution-api/message/sendText/
       # Evolution_key = 111111111111-1111-1111-111111111111
       # Wuzapi_key = 1234ABCD
-      - NOTIFICATION_KEY=
+      - NOTIFICATION_KEY= # Evolution_key or Wuzapi_key
       - NOTIFICATION_NUMBER= # 5511999999999
-      # DOCKER_MODE=staandalone -> container1;container2;container3
-      # DOCKER_MODE=swarm -> service_service1;service_service2;service_service3
-      - HEALTH_CHECKS=
-      - DOCKER_MODE= # standalone or swarm
-      - PORT=5000 # Port to run the application
-      - VOLUME_RETENTION_DAYS=7 # Number of days to keep unused volumes. Set to 0 to disable cleanup or remove the variable
+      # Health Check Configuration
+      # DOCKER_MODE=standalone -> HEALTH_CHECKS=container1;container2;container3
+      # DOCKER_MODE=swarm -> HEALTH_CHECKS=service_service1;service_service2;service_service3
+      - HEALTH_CHECKS= # Blank for checks all containers and services
+      # Server Configuration
+      - PORT=5000
+      # Security Configuration
+      - API_TOKEN=your-secure-api-token # Generate with: openssl rand -hex 16
+      - ADMIN_USER=your-admin-user
+      - ADMIN_PASSWORD=your-secure-password
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - dockeeper:/dockeeper/data
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=your-network"
@@ -37,6 +48,9 @@ services:
       nofile:
         soft: 65535
         hard: 65535
+
+volumes:
+  dockeeper:
 
 networks:
   your-network:
