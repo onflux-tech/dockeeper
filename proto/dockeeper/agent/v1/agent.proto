@@ -1,0 +1,269 @@
+syntax = "proto3";
+
+package dockeeper.agent.v1;
+
+option go_package = "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1;agentpb";
+
+import "google/protobuf/timestamp.proto";
+
+// ── Enrollment ──────────────────────────────────────
+
+service AgentEnrollmentService {
+  rpc Enroll(EnrollRequest) returns (EnrollResponse);
+  rpc RenewCert(RenewCertRequest) returns (RenewCertResponse);
+}
+
+message ServerInfo {
+  string hostname = 1;
+  string ip_address = 2;
+  string os = 3;
+  string arch = 4;
+  string docker_version = 5;
+  string agent_version = 6;
+  string orchestrator = 7; // docker, podman, kubernetes
+}
+
+message EnrollRequest {
+  string token = 1;
+  ServerInfo info = 2;
+}
+
+message EnrollResponse {
+  string server_id = 1;
+  bytes ca_cert = 2;
+  bytes client_cert = 3;
+  bytes client_key = 4;
+  google.protobuf.Timestamp cert_expires_at = 5;
+}
+
+message RenewCertRequest {
+  string server_id = 1;
+}
+
+message RenewCertResponse {
+  bytes client_cert = 1;
+  bytes client_key = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+// ── Metrics ─────────────────────────────────────────
+
+service AgentMetricsService {
+  rpc StreamMetrics(stream StreamMetricsRequest) returns (StreamMetricsResponse);
+  rpc StreamContainerMetrics(stream StreamContainerMetricsRequest) returns (StreamContainerMetricsResponse);
+}
+
+message StreamMetricsRequest {
+  string server_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  double cpu_percent = 3;
+  double mem_percent = 4;
+  uint64 mem_used = 5;
+  uint64 mem_total = 6;
+  uint64 disk_used = 7;
+  uint64 disk_total = 8;
+  uint64 net_rx = 9;
+  uint64 net_tx = 10;
+  double load_1m = 11;
+  double load_5m = 12;
+  double load_15m = 13;
+}
+
+message StreamMetricsResponse {
+  int32 received_count = 1;
+}
+
+message StreamContainerMetricsRequest {
+  string server_id = 1;
+  string container_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  double cpu_percent = 4;
+  uint64 mem_used = 5;
+  uint64 mem_limit = 6;
+  uint64 net_rx = 7;
+  uint64 net_tx = 8;
+  uint64 block_read = 9;
+  uint64 block_write = 10;
+  uint32 pids = 11;
+}
+
+message StreamContainerMetricsResponse {
+  int32 received_count = 1;
+}
+
+// ── Discovery ───────────────────────────────────────
+
+service AgentDiscoveryService {
+  rpc ReportContainers(ReportContainersRequest) returns (ReportContainersResponse);
+  rpc ReportImages(ReportImagesRequest) returns (ReportImagesResponse);
+  rpc ReportNetworks(ReportNetworksRequest) returns (ReportNetworksResponse);
+  rpc ReportVolumes(ReportVolumesRequest) returns (ReportVolumesResponse);
+}
+
+message ResourceLimits {
+  double cpu_limit = 1;
+  uint64 mem_limit = 2;
+  uint32 pids_limit = 3;
+}
+
+message ContainerInfo {
+  string container_id = 1;
+  string name = 2;
+  string image = 3;
+  string status = 4;
+  string ports_json = 5;
+  string labels_json = 6;
+  string volumes_json = 7;
+  string networks_json = 8;
+  ResourceLimits resource_limits = 9;
+  string restart_policy = 10;
+  string command = 11;
+  string entrypoint = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp started_at = 14;
+}
+
+message ReportContainersRequest {
+  string server_id = 1;
+  repeated ContainerInfo containers = 2;
+}
+
+message ReportContainersResponse {
+  int32 received_count = 1;
+}
+
+message ImageInfo {
+  string image_id = 1;
+  repeated string tags = 2;
+  uint64 size = 3;
+  google.protobuf.Timestamp created_at = 4;
+  bool in_use = 5;
+}
+
+message ReportImagesRequest {
+  string server_id = 1;
+  repeated ImageInfo images = 2;
+}
+
+message ReportImagesResponse {
+  int32 received_count = 1;
+}
+
+message NetworkInfo {
+  string network_id = 1;
+  string name = 2;
+  string driver = 3;
+  string scope = 4;
+  string subnet = 5;
+  string gateway = 6;
+  bool internal = 7;
+  string labels_json = 8;
+}
+
+message ReportNetworksRequest {
+  string server_id = 1;
+  repeated NetworkInfo networks = 2;
+}
+
+message ReportNetworksResponse {
+  int32 received_count = 1;
+}
+
+message VolumeInfo {
+  string name = 1;
+  string driver = 2;
+  string mountpoint = 3;
+  uint64 size = 4;
+  string labels_json = 5;
+  bool in_use = 6;
+}
+
+message ReportVolumesRequest {
+  string server_id = 1;
+  repeated VolumeInfo volumes = 2;
+}
+
+message ReportVolumesResponse {
+  int32 received_count = 1;
+}
+
+// ── Commands ────────────────────────────────────────
+
+service AgentCommandsService {
+  rpc ExecuteCommand(ExecuteCommandRequest) returns (ExecuteCommandResponse);
+}
+
+enum CommandType {
+  COMMAND_TYPE_UNSPECIFIED = 0;
+  COMMAND_TYPE_START = 1;
+  COMMAND_TYPE_STOP = 2;
+  COMMAND_TYPE_RESTART = 3;
+  COMMAND_TYPE_PAUSE = 4;
+  COMMAND_TYPE_UNPAUSE = 5;
+  COMMAND_TYPE_REMOVE = 6;
+  COMMAND_TYPE_PULL_IMAGE = 7;
+  COMMAND_TYPE_CREATE = 8;
+}
+
+message ExecuteCommandRequest {
+  string server_id = 1;
+  string container_id = 2;
+  CommandType type = 3;
+  map<string, string> params = 4;
+}
+
+message ExecuteCommandResponse {
+  bool success = 1;
+  string error = 2;
+  string output = 3;
+}
+
+// ── Exec ────────────────────────────────────────────
+
+service AgentExecService {
+  rpc Exec(stream ExecRequest) returns (stream ExecResponse);
+}
+
+message ExecStart {
+  string container_id = 1;
+  repeated string command = 2;
+  bool tty = 3;
+}
+
+message ExecResize {
+  uint32 rows = 1;
+  uint32 cols = 2;
+}
+
+message ExecRequest {
+  oneof input {
+    ExecStart start = 1;
+    bytes stdin_data = 2;
+    ExecResize resize = 3;
+  }
+}
+
+message ExecResponse {
+  bytes stdout = 1;
+  bytes stderr = 2;
+  optional int32 exit_code = 3;
+}
+
+// ── Logs ────────────────────────────────────────────
+
+service AgentLogsService {
+  rpc StreamLogs(StreamLogsRequest) returns (stream StreamLogsResponse);
+}
+
+message StreamLogsRequest {
+  string container_id = 1;
+  string since = 2;
+  uint32 tail_lines = 3;
+  bool follow = 4;
+}
+
+message StreamLogsResponse {
+  google.protobuf.Timestamp timestamp = 1;
+  string stream = 2; // stdout, stderr
+  string message = 3;
+}
