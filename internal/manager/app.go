@@ -14,6 +14,7 @@ import (
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/routes"
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
+	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
 )
 
 const grpcAddr = ":50051"
@@ -42,6 +43,12 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		registerHealthRoutes(se, version, commit)
 		routes.RegisterAuthRoutes(se, authLimiter)
+
+		// Container action routes.
+		auditStore := store.NewAuditStore(app)
+		dispatcher := services.NewGRPCCommandDispatcher()
+		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
+		routes.RegisterContainerRoutes(se, containerSvc)
 
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
