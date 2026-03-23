@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AdminData } from "@/types/auth";
 import { authApi, setAccessToken } from "@/lib/api";
+import { syncPbAuth } from "@/lib/pb";
 
 interface AuthState {
 	token: string | null;
@@ -27,8 +28,13 @@ export const useAuthStore = create<AuthState>()(
 			isLoading: true,
 
 			login: async (email, password) => {
-				const res = await authApi.login(email, password);
+				// Check if this is the first-time setup.
+				const { needs_setup } = await authApi.status();
+				const res = needs_setup
+					? await authApi.setup(email, password)
+					: await authApi.login(email, password);
 				setAccessToken(res.token);
+				syncPbAuth(res.token);
 				set({
 					token: res.token,
 					refresh: res.refresh,
@@ -44,6 +50,7 @@ export const useAuthStore = create<AuthState>()(
 					// Ignore errors on logout — we clear state regardless.
 				}
 				setAccessToken(null);
+				syncPbAuth(null);
 				set({
 					token: null,
 					refresh: null,
@@ -59,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
 				try {
 					const res = await authApi.refresh(refresh);
 					setAccessToken(res.token);
+					syncPbAuth(res.token);
 					set({
 						token: res.token,
 						refresh: res.refresh,
@@ -81,6 +89,7 @@ export const useAuthStore = create<AuthState>()(
 				}
 
 				setAccessToken(token);
+				syncPbAuth(token);
 
 				try {
 					const admin = await authApi.me();
@@ -99,6 +108,7 @@ export const useAuthStore = create<AuthState>()(
 
 			clear: () => {
 				setAccessToken(null);
+				syncPbAuth(null);
 				set({
 					token: null,
 					refresh: null,

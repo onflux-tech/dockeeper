@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v4";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/auth-store";
-import { ApiRequestError } from "@/lib/api";
+import { ApiRequestError, authApi } from "@/lib/api";
 
 const loginSchema = z.object({
 	email: z.email("Enter a valid email address"),
@@ -20,6 +20,11 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
 	const { isAuthenticated, login } = useAuthStore();
 	const [error, setError] = useState<string | null>(null);
+	const [needsSetup, setNeedsSetup] = useState(false);
+
+	useEffect(() => {
+		authApi.status().then((s) => setNeedsSetup(s.needs_setup)).catch(() => {});
+	}, []);
 
 	const {
 		register,
@@ -63,7 +68,11 @@ export default function LoginPage() {
 						<Container className="h-6 w-6 text-primary" />
 					</div>
 					<CardTitle className="text-2xl">Dockeeper</CardTitle>
-					<CardDescription>Sign in to manage your containers</CardDescription>
+					<CardDescription>
+						{needsSetup
+							? "Create your admin account to get started"
+							: "Sign in to manage your containers"}
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -106,7 +115,7 @@ export default function LoginPage() {
 						</div>
 
 						<Button type="submit" disabled={isSubmitting} className="mt-1 w-full">
-							{isSubmitting ? <Loader2 className="animate-spin" /> : "Sign in"}
+							{isSubmitting ? <Loader2 className="animate-spin" /> : needsSetup ? "Create account" : "Sign in"}
 						</Button>
 					</form>
 				</CardContent>

@@ -14,4 +14,13 @@ export type TypedPocketBase = PocketBase & {
 
 const pb = new PocketBase("/") as TypedPocketBase;
 
+/** Sync the superuser token into the PB SDK so collection queries authenticate. */
+export function syncPbAuth(token: string | null) {
+	if (token) {
+		pb.authStore.save(token, null);
+	} else {
+		pb.authStore.clear();
+	}
+}
+
 export default pb;
