@@ -1,0 +1,58 @@
+import {
+	BarChart3,
+	Bell,
+	Container,
+	HardDrive,
+	Home,
+	Layers,
+	Network,
+	Server,
+	Settings,
+	Archive,
+} from "lucide-react";
+import type { ComponentType } from "react";
+
+export interface NavItem {
+	label: string;
+	href: string;
+	icon: ComponentType<{ className?: string }>;
+}
+
+export interface NavGroup {
+	label: string;
+	items: NavItem[];
+}
+
+export const navigation: NavGroup[] = [
+	{
+		label: "Overview",
+		items: [
+			{ label: "Dashboard", href: "/", icon: Home },
+			{ label: "Servers", href: "/servers", icon: Server },
+		],
+	},
+	{
+		label: "Resources",
+		items: [
+			{ label: "Containers", href: "/containers", icon: Container },
+			{ label: "Images", href: "/images", icon: Layers },
+			{ label: "Networks", href: "/networks", icon: Network },
+			{ label: "Volumes", href: "/volumes", icon: HardDrive },
+		],
+	},
+	{
+		label: "Monitoring",
+		items: [
+			{ label: "Metrics", href: "/metrics", icon: BarChart3 },
+			{ label: "Alerts", href: "/alerts", icon: Bell },
+			{ label: "Backups", href: "/backups", icon: Archive },
+		],
+	},
+	{
+		label: "System",
+		items: [{ label: "Settings", href: "/settings", icon: Settings }],
+	},
+];
+
+/** Flat list of all navigation items. */
+export const allNavItems: NavItem[] = navigation.flatMap((g) => g.items);
