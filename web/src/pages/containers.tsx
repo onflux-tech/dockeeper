@@ -1,15 +1,37 @@
-import { Container } from "lucide-react";
+import { Box } from "lucide-react";
+import { useCollection } from "@/hooks/use-collection";
+import { useRealtime } from "@/hooks/use-realtime";
+import { ContainerTable } from "@/components/server/container-table";
 
 export default function ContainersPage() {
+	const { data: containersResult, isLoading } = useCollection("containers", {
+		perPage: 500,
+		sort: "-created",
+	});
+
+	useRealtime("containers");
+
+	const containers = containersResult?.items ?? [];
+
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="flex items-center gap-2">
-				<Container className="h-5 w-5 text-muted-foreground" />
-				<h1 className="text-2xl font-semibold">Containers</h1>
+		<div className="flex flex-col gap-6">
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-2">
+					<Box className="h-5 w-5 text-muted-foreground" />
+					<h1 className="text-2xl font-semibold">Containers</h1>
+					{!isLoading && (
+						<span className="text-sm text-muted-foreground">
+							({containers.length})
+						</span>
+					)}
+				</div>
 			</div>
-			<p className="text-muted-foreground">
-				View and manage containers across all servers — coming soon.
-			</p>
+
+			<ContainerTable
+				containers={containers}
+				isLoading={isLoading}
+				showServer
+			/>
 		</div>
 	);
 }
