@@ -1,0 +1,50 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+*.test
+*.out
+vendor/
+
+# PocketBase data
+pb_data/
+dk_data/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (web/)
+web/node_modules/
+web/dist/
+web/.cache/
+
+# Proto generated
+proto/gen/
+
+# Build artifacts
+dist/
+release/
+
+# Specs (keep in repo but ignore local drafts)
+.specs/
+
+# Github
+.github/

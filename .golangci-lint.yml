@@ -1,0 +1,31 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - gocritic
+    - goimports
+    - misspell
+    - unconvert
+    - unparam
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+    goimports:
+      local-prefixes:
+        - github.com/jkdesenvolvedor/dockeeper
+    misspell:
+      locale: US
+
+issues:
+  exclude-dirs:
+    - proto/gen
+    - web
+    - vendor
+  max-issues-per-linter: 0
+  max-same-issues: 0
