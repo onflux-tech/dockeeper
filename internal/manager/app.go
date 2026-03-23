@@ -10,6 +10,7 @@ import (
 
 	dkgrpc "github.com/jkdesenvolvedor/dockeeper/internal/manager/grpc"
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/hooks"
+	"github.com/jkdesenvolvedor/dockeeper/internal/manager/jobs"
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/routes"
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
@@ -27,6 +28,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 
 	// Register agent offline checker cron (every 1 min).
 	hooks.RegisterOfflineChecker(app)
+
+	// Register metrics aggregation and cleanup jobs.
+	jobs.RegisterJobs(app)
 
 	// Cleanup rate limiter entries every 5 minutes.
 	if err := app.Cron().Add("rl_cleanup", "*/5 * * * *", func() {
