@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 	"time"
@@ -39,6 +40,7 @@ type OrchestratorClient interface {
 	ListNetworks(ctx context.Context) ([]*agentpb.NetworkInfo, error)
 	ListVolumes(ctx context.Context) ([]*agentpb.VolumeInfo, error)
 	ListContainerStats(ctx context.Context) ([]ContainerMetrics, error)
+	ContainerLogs(ctx context.Context, containerID string, follow bool, tail string, since string) (io.ReadCloser, bool, error)
 	Ping(ctx context.Context) error
 	Close() error
 }
@@ -246,6 +248,32 @@ func (d *DockerClient) ListVolumes(ctx context.Context) ([]*agentpb.VolumeInfo, 
 		})
 	}
 	return result, nil
+}
+
+// ContainerLogs returns a reader for container logs and whether the container uses TTY mode.
+func (d *DockerClient) ContainerLogs(ctx context.Context, containerID string, follow bool, tail string, since string) (io.ReadCloser, bool, error) {
+	inspect, err := d.cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return nil, false, fmt.Errorf("inspect container: %w", err)
+	}
+	tty := inspect.Config.Tty
+
+	opts := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     follow,
+		Tail:       tail,
+		Timestamps: true,
+	}
+	if since != "" {
+		opts.Since = since
+	}
+
+	reader, err := d.cli.ContainerLogs(ctx, containerID, opts)
+	if err != nil {
+		return nil, false, fmt.Errorf("container logs: %w", err)
+	}
+	return reader, tty, nil
 }
 
 func (d *DockerClient) ListContainerStats(ctx context.Context) ([]ContainerMetrics, error) {

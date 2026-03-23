@@ -11,6 +11,7 @@ import (
 
 	"github.com/jkdesenvolvedor/dockeeper/internal/agent/cert"
 	"github.com/jkdesenvolvedor/dockeeper/internal/agent/collector"
+	"github.com/jkdesenvolvedor/dockeeper/internal/agent/executor"
 )
 
 // Version is set at build time via ldflags.
@@ -94,6 +95,20 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, a.logger)
 		go metrics.Run(ctx)
+
+		// Start agent gRPC server so the manager can send commands and stream logs.
+		exec, execErr := executor.NewDockerExecutor()
+		if execErr != nil {
+			a.logger.Warn("failed to create docker executor, commands disabled", "error", execErr)
+		} else {
+			agentSrv := NewAgentServer(exec, orch, a.logger)
+			go func() {
+				if srvErr := agentSrv.Start(); srvErr != nil {
+					a.logger.Error("agent gRPC server exited", "error", srvErr)
+				}
+			}()
+			defer agentSrv.Stop()
+		}
 	}
 
 	// Block until shutdown signal.

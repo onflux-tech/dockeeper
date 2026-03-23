@@ -14,6 +14,7 @@ vendor/
 # PocketBase data
 pb_data/
 dk_data/
+dk-agent-data/
 
 # Environment
 .env

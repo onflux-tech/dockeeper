@@ -11,7 +11,6 @@ import (
 	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Enroll performs first-time enrollment with the manager.
@@ -21,7 +20,9 @@ import (
 func Enroll(ctx context.Context, managerURL, token string) (*agentpb.EnrollResponse, error) {
 	conn, err := grpc.NewClient(
 		managerURL,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+			InsecureSkipVerify: true, //nolint:gosec // first enrollment — no CA cert yet
+		})),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("dial manager for enrollment: %w", err)

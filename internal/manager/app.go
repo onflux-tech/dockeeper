@@ -50,6 +50,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
 		routes.RegisterContainerRoutes(se, containerSvc)
 
+		// Container logs SSE streaming route.
+		routes.RegisterContainerLogRoutes(se, app)
+
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
 		if err != nil {

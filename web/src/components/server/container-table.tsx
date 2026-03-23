@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router";
 import {
 	ArrowUpDown,
 	MoreHorizontal,
@@ -398,7 +399,12 @@ export function ContainerTable({
 										/>
 									</TableCell>
 									<TableCell className="max-w-[200px] truncate text-sm font-medium">
-										{c.name}
+										<Link
+											to={`/containers/${c.id}`}
+											className="hover:underline"
+										>
+											{c.name}
+										</Link>
 									</TableCell>
 									<TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
 										{c.image}
