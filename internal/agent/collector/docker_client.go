@@ -18,6 +18,19 @@ import (
 	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
+// ContainerMetrics holds per-container metrics extracted from Docker stats.
+type ContainerMetrics struct {
+	ContainerID string
+	CPUPercent  float64
+	MemUsed     uint64
+	MemLimit    uint64
+	NetRx       uint64
+	NetTx       uint64
+	BlockRead   uint64
+	BlockWrite  uint64
+	PIDs        uint32
+}
+
 // OrchestratorClient is the interface for collecting resource data from a
 // container runtime (Docker, Podman, Kubernetes).
 type OrchestratorClient interface {
@@ -25,6 +38,7 @@ type OrchestratorClient interface {
 	ListImages(ctx context.Context) ([]*agentpb.ImageInfo, error)
 	ListNetworks(ctx context.Context) ([]*agentpb.NetworkInfo, error)
 	ListVolumes(ctx context.Context) ([]*agentpb.VolumeInfo, error)
+	ListContainerStats(ctx context.Context) ([]ContainerMetrics, error)
 	Ping(ctx context.Context) error
 	Close() error
 }
@@ -232,6 +246,88 @@ func (d *DockerClient) ListVolumes(ctx context.Context) ([]*agentpb.VolumeInfo, 
 		})
 	}
 	return result, nil
+}
+
+func (d *DockerClient) ListContainerStats(ctx context.Context) ([]ContainerMetrics, error) {
+	containers, err := d.cli.ContainerList(ctx, container.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("docker container list for stats: %w", err)
+	}
+
+	result := make([]ContainerMetrics, 0, len(containers))
+	for _, c := range containers {
+		id := c.ID
+		shortID := id
+		if len(shortID) > 12 {
+			shortID = shortID[:12]
+		}
+
+		statsResp, err := d.cli.ContainerStats(ctx, id, false)
+		if err != nil {
+			slog.Warn("failed to get container stats", "id", shortID, "error", err)
+			continue
+		}
+
+		var stats container.StatsResponse
+		if decErr := json.NewDecoder(statsResp.Body).Decode(&stats); decErr != nil {
+			if closeErr := statsResp.Body.Close(); closeErr != nil {
+				slog.Warn("failed to close stats body", "id", shortID, "error", closeErr)
+			}
+			slog.Warn("failed to decode container stats", "id", shortID, "error", decErr)
+			continue
+		}
+		if closeErr := statsResp.Body.Close(); closeErr != nil {
+			slog.Warn("failed to close stats body", "id", shortID, "error", closeErr)
+		}
+
+		m := ContainerMetrics{
+			ContainerID: shortID,
+			CPUPercent:  calculateCPUPercent(&stats),
+			MemUsed:     stats.MemoryStats.Usage,
+			MemLimit:    stats.MemoryStats.Limit,
+			PIDs:        uint32(stats.PidsStats.Current),
+		}
+
+		for _, ns := range stats.Networks {
+			m.NetRx += ns.RxBytes
+			m.NetTx += ns.TxBytes
+		}
+
+		for _, entry := range stats.BlkioStats.IoServiceBytesRecursive {
+			switch entry.Op {
+			case "read", "Read":
+				m.BlockRead += entry.Value
+			case "write", "Write":
+				m.BlockWrite += entry.Value
+			}
+		}
+
+		result = append(result, m)
+	}
+	return result, nil
+}
+
+func calculateCPUPercent(stats *container.StatsResponse) float64 {
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
+
+	if systemDelta <= 0 || cpuDelta < 0 {
+		return 0
+	}
+
+	cpus := float64(stats.CPUStats.OnlineCPUs)
+	if cpus == 0 {
+		cpus = float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
+	}
+	if cpus == 0 {
+		cpus = 1
+	}
+
+	pct := (cpuDelta / systemDelta) * cpus * 100.0
+	if pct > 100*cpus {
+		pct = 100 * cpus
+	}
+	return pct
 }
 
 func (d *DockerClient) usedVolumeNames(ctx context.Context) map[string]bool {

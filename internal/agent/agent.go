@@ -91,6 +91,9 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		discovery := collector.NewDiscoveryCollector(orch, a.client.Discovery(), a.cfg.ServerID, a.logger)
 		go discovery.Run(ctx)
+
+		metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, a.logger)
+		go metrics.Run(ctx)
 	}
 
 	// Block until shutdown signal.
