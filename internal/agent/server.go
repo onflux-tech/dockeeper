@@ -32,6 +32,13 @@ func NewAgentServer(exec executor.Executor, orch collector.OrchestratorClient, l
 	logs := grpchandlers.NewLogsHandler(orch, logger)
 	agentpb.RegisterAgentLogsServiceServer(gs, logs)
 
+	execH, err := grpchandlers.NewExecHandler(logger)
+	if err != nil {
+		logger.Warn("exec handler unavailable, terminal disabled", "error", err)
+	} else {
+		agentpb.RegisterAgentExecServiceServer(gs, execH)
+	}
+
 	return &AgentServer{gs: gs, addr: agentGRPCPort}
 }
 
