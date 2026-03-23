@@ -3,13 +3,14 @@ module github.com/jkdesenvolvedor/dockeeper
 go 1.25.1
 
 require (
+	github.com/coder/websocket v1.8.14
 	github.com/docker/docker v28.1.1+incompatible
+	github.com/pocketbase/dbx v1.12.0
 	github.com/pocketbase/pocketbase v0.36.7
 	github.com/shirou/gopsutil/v4 v4.26.2
 	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
-	github.com/pocketbase/dbx v1.12.0
 )
 
 require (

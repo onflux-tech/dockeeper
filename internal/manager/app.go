@@ -53,6 +53,11 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		// Container logs SSE streaming route.
 		routes.RegisterContainerLogRoutes(se, app)
 
+		// Terminal WebSocket proxy route.
+		termStore := store.NewTerminalStore(app)
+		termSvc := services.NewTerminalService(app, termStore, auditStore)
+		routes.RegisterTerminalRoutes(se, app, termSvc)
+
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
 		if err != nil {
