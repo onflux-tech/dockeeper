@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
+	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
 	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
@@ -36,6 +37,15 @@ func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr stri
 	// Register services.
 	enrollment := NewEnrollmentHandler(app, ca)
 	agentpb.RegisterAgentEnrollmentServiceServer(gs, enrollment)
+
+	metricsStore := store.NewMetricsStore(app)
+	resourceStore := store.NewResourceStore(app)
+
+	metricsHandler := NewMetricsHandler(app, metricsStore)
+	agentpb.RegisterAgentMetricsServiceServer(gs, metricsHandler)
+
+	discoveryHandler := NewDiscoveryHandler(app, resourceStore)
+	agentpb.RegisterAgentDiscoveryServiceServer(gs, discoveryHandler)
 
 	return &Server{grpcServer: gs, addr: addr}, nil
 }
