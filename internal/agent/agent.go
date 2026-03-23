@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jkdesenvolvedor/dockeeper/internal/agent/cert"
+	"github.com/jkdesenvolvedor/dockeeper/internal/agent/collector"
 )
 
 // Version is set at build time via ldflags.
@@ -30,6 +31,7 @@ type Agent struct {
 	cfg    *Config
 	certs  *cert.Manager
 	client *GRPCClient
+	orch   collector.OrchestratorClient
 	logger *slog.Logger
 	token  string // one-time enrollment token (from CLI)
 }
@@ -71,8 +73,25 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	a.logger.Info("agent running", "manager", a.cfg.ManagerURL, "server_id", a.cfg.ServerID)
 
-	// Background cert renewal
+	// Background cert renewal.
 	go a.certRenewalLoop(ctx)
+
+	// Detect container runtime and start discovery.
+	orchType, orch, err := DetectOrchestrator(ctx)
+	if err != nil {
+		a.logger.Warn("no container runtime detected, discovery disabled", "error", err)
+	} else {
+		a.orch = orch
+		a.logger.Info("orchestrator detected", "type", orchType)
+		defer func() {
+			if closeErr := a.orch.Close(); closeErr != nil {
+				a.logger.Error("error closing orchestrator client", "error", closeErr)
+			}
+		}()
+
+		discovery := collector.NewDiscoveryCollector(orch, a.client.Discovery(), a.cfg.ServerID, a.logger)
+		go discovery.Run(ctx)
+	}
 
 	// Block until shutdown signal.
 	<-ctx.Done()
