@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/auth-store";
 import { allNavItems } from "@/lib/navigation";
 import { useSidebar } from "./sidebar-context";
-import { useCommandMenu } from "./command-menu";
+import { useCommandMenu } from "./use-command-menu";
 
 function buildBreadcrumbs(pathname: string) {
 	if (pathname === "/") return [{ label: "Dashboard", href: "/" }];
