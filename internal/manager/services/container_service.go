@@ -24,13 +24,21 @@ var (
 )
 
 const (
-	agentCommandPort = "50052"
-	commandTimeout   = 30 * time.Second
+	agentCommandPort       = "50052"
+	commandTimeout         = 30 * time.Second
+	updateCommandTimeout   = 150 * time.Second // pull + recreate needs more time
 )
 
 // CommandDispatcher sends a command to an agent and returns the result.
 type CommandDispatcher interface {
 	Dispatch(ctx context.Context, agentAddr string, req *agentpb.ExecuteCommandRequest) (*agentpb.ExecuteCommandResponse, error)
+}
+
+func timeoutForCommand(cmdType agentpb.CommandType) time.Duration {
+	if cmdType == agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE {
+		return updateCommandTimeout
+	}
+	return commandTimeout
 }
 
 // GRPCCommandDispatcher connects to agents via gRPC to execute commands.
@@ -58,7 +66,7 @@ func (d *GRPCCommandDispatcher) Dispatch(ctx context.Context, agentAddr string, 
 
 	client := agentpb.NewAgentCommandsServiceClient(conn)
 
-	cmdCtx, cmdCancel := context.WithTimeout(ctx, commandTimeout)
+	cmdCtx, cmdCancel := context.WithTimeout(ctx, timeoutForCommand(req.GetType()))
 	defer cmdCancel()
 
 	return client.ExecuteCommand(cmdCtx, req)

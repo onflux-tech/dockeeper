@@ -123,6 +123,9 @@ func (h *CommandsHandler) ExecuteCommand(ctx context.Context, req *agentpb.Execu
 		}
 		result = h.exec.RecreateWithEnv(ctx, containerID, envSlice)
 
+	case agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE:
+		result = h.exec.UpdateImage(ctx, containerID)
+
 	default:
 		return &agentpb.ExecuteCommandResponse{
 			Success: false,

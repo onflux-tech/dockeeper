@@ -205,6 +205,7 @@ enum CommandType {
   COMMAND_TYPE_CREATE = 8;
   COMMAND_TYPE_UPDATE_RESOURCES = 9;
   COMMAND_TYPE_RECREATE_ENV = 10;
+  COMMAND_TYPE_UPDATE_IMAGE = 11;
 }
 
 message ExecuteCommandRequest {

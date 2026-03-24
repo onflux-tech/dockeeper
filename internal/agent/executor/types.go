@@ -41,6 +41,7 @@ type Executor interface {
 	PullImage(ctx context.Context, imageRef string) Result
 	UpdateResources(ctx context.Context, containerID string, update *ResourceUpdate) Result
 	RecreateWithEnv(ctx context.Context, containerID string, newEnv []string) Result
+	UpdateImage(ctx context.Context, containerID string) Result
 	PullImageStream(ctx context.Context, imageRef string) (io.ReadCloser, error)
 	RemoveImage(ctx context.Context, imageID string, force bool, pruneChildren bool) ImageRemoveResult
 	PruneImages(ctx context.Context, all bool) ImagePruneResult

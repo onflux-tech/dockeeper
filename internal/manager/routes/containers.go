@@ -21,6 +21,7 @@ func RegisterContainerRoutes(se *core.ServeEvent, svc *services.ContainerService
 	containers.POST("/{id}/remove", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_REMOVE)).BindFunc(middleware.RequireSuperuser)
 	containers.POST("/{id}/pause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_PAUSE)).BindFunc(middleware.RequireSuperuser)
 	containers.POST("/{id}/unpause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UNPAUSE)).BindFunc(middleware.RequireSuperuser)
+	containers.POST("/{id}/update", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE)).BindFunc(middleware.RequireSuperuser)
 	containers.GET("/{id}/inspect", handleInspect(svc)).BindFunc(middleware.RequireSuperuser)
 }
 

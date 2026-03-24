@@ -38,8 +38,13 @@ func (s *ResourceStore) UpsertContainers(serverID string, containers []*agentpb.
 
 		rec, err := s.findContainer(serverID, c.GetContainerId())
 		if err != nil {
-			rec = core.NewRecord(col)
-			rec.Set("server", serverID)
+			// Fallback: look up by server + name to handle container recreate
+			// (same name, new Docker ID after update/recreate operations).
+			rec, err = s.findContainerByName(serverID, c.GetName())
+			if err != nil {
+				rec = core.NewRecord(col)
+				rec.Set("server", serverID)
+			}
 			rec.Set("container_id", c.GetContainerId())
 		}
 
@@ -185,6 +190,11 @@ func (s *ResourceStore) findContainer(serverID, containerID string) (*core.Recor
 	return s.findByKey(constants.CollContainers, serverID, "container_id", containerID)
 }
 
+// findContainerByName looks up a container record by server and name.
+func (s *ResourceStore) findContainerByName(serverID, name string) (*core.Record, error) {
+	return s.findByKey(constants.CollContainers, serverID, "name", name)
+}
+
 // findByKey looks up a record by server relation and a unique key field.
 func (s *ResourceStore) findByKey(collection, serverID, keyField, keyValue string) (*core.Record, error) {
 	filter := fmt.Sprintf("server = {:sid} && %s = {:val}", keyField)
@@ -198,11 +208,11 @@ func (s *ResourceStore) findByKey(collection, serverID, keyField, keyValue strin
 	return records[0], nil
 }
 
-// markRemovedContainers marks containers not present in the reported set as "removed".
+// markRemovedContainers deletes container records not present in the reported set.
 func (s *ResourceStore) markRemovedContainers(serverID string, reported map[string]bool) {
 	records, err := s.app.FindRecordsByFilter(
 		constants.CollContainers,
-		"server = {:sid} && status != 'removed'",
+		"server = {:sid}",
 		"", 0, 0,
 		map[string]any{"sid": serverID},
 	)
@@ -214,11 +224,10 @@ func (s *ResourceStore) markRemovedContainers(serverID string, reported map[stri
 	for _, r := range records {
 		cid := r.GetString("container_id")
 		if !reported[cid] {
-			r.Set("status", "removed")
-			if err := s.app.Save(r); err != nil {
-				slog.Error("failed to mark container as removed", "container_id", cid, "error", err)
+			if err := s.app.Delete(r); err != nil {
+				slog.Error("failed to delete removed container", "container_id", cid, "error", err)
 			} else {
-				slog.Info("container marked as removed", "server_id", serverID, "container_id", cid)
+				slog.Info("container deleted (no longer on host)", "server_id", serverID, "container_id", cid)
 			}
 		}
 	}

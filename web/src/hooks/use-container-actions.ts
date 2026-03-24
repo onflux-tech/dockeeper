@@ -8,7 +8,8 @@ type ContainerAction =
 	| "restart"
 	| "remove"
 	| "pause"
-	| "unpause";
+	| "unpause"
+	| "update";
 
 interface ActionResponse {
 	success: boolean;
@@ -65,6 +66,7 @@ export function useContainerActions() {
 		remove: useContainerAction("remove"),
 		pause: useContainerAction("pause"),
 		unpause: useContainerAction("unpause"),
+		update: useContainerAction("update"),
 	};
 }
 

@@ -10,6 +10,7 @@ import {
 	Pause,
 	CirclePlay,
 	Trash2,
+	ArrowDownToLine,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -103,6 +104,7 @@ export function ContainerTable({
 	const [sortDir, setSortDir] = useState<SortDir>("asc");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [removeTarget, setRemoveTarget] = useState<string[] | null>(null);
+	const [updateTarget, setUpdateTarget] = useState<string | null>(null);
 	const [bulkLoading, setBulkLoading] = useState(false);
 
 	const actions = useContainerActions();
@@ -433,6 +435,9 @@ export function ContainerTable({
 											onRemove={() =>
 												setRemoveTarget([c.id])
 											}
+											onUpdate={() =>
+												setUpdateTarget(c.id)
+											}
 										/>
 									</TableCell>
 								</TableRow>
@@ -465,6 +470,35 @@ export function ContainerTable({
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
 							Remove
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Update confirmation dialog */}
+			<AlertDialog
+				open={updateTarget !== null}
+				onOpenChange={(open) => {
+					if (!open) setUpdateTarget(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Update container?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will pull the latest image and recreate the container.
+							The container will be briefly unavailable during the update.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								if (updateTarget) actions.update.mutate(updateTarget);
+								setUpdateTarget(null);
+							}}
+						>
+							Update
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
@@ -514,10 +548,12 @@ function RowActions({
 	container,
 	actions,
 	onRemove,
+	onUpdate,
 }: {
 	container: ContainerRecord;
 	actions: ReturnType<typeof useContainerActions>;
 	onRemove: () => void;
+	onUpdate: () => void;
 }) {
 	const isRunning = container.status === "running";
 	const isPaused = container.status === "paused";
@@ -569,6 +605,10 @@ function RowActions({
 				>
 					<RotateCcw className="mr-2 h-4 w-4" />
 					Restart
+				</DropdownMenuItem>
+				<DropdownMenuItem onClick={onUpdate}>
+					<ArrowDownToLine className="mr-2 h-4 w-4" />
+					Update
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
