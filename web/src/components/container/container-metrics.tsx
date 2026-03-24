@@ -112,7 +112,11 @@ export function ContainerMetrics({ data, isLoading }: ContainerMetricsProps) {
 								tickFormatter={formatPercent}
 								className="text-muted-foreground"
 							/>
-							<Tooltip formatter={tooltipPercent} />
+							<Tooltip
+								formatter={tooltipPercent}
+								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								labelStyle={{ color: "var(--color-muted-foreground)" }}
+							/>
 							<defs>
 								<linearGradient id="fillCpuC" x1="0" y1="0" x2="0" y2="1">
 									<stop
@@ -163,7 +167,11 @@ export function ContainerMetrics({ data, isLoading }: ContainerMetricsProps) {
 								tickFormatter={formatBytes}
 								className="text-muted-foreground"
 							/>
-							<Tooltip formatter={tooltipBytes} />
+							<Tooltip
+								formatter={tooltipBytes}
+								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								labelStyle={{ color: "var(--color-muted-foreground)" }}
+							/>
 							<defs>
 								<linearGradient id="fillMemC" x1="0" y1="0" x2="0" y2="1">
 									<stop

@@ -99,7 +99,11 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 							<YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={formatPercent} className="text-muted-foreground" />
-							<Tooltip formatter={tooltipPercent} />
+							<Tooltip
+								formatter={tooltipPercent}
+								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								labelStyle={{ color: "var(--color-muted-foreground)" }}
+							/>
 							<defs>
 								<linearGradient id="fillCpu" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stopColor={chartColors.cpu} stopOpacity={0.3} />
@@ -123,7 +127,11 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 							<YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={formatPercent} className="text-muted-foreground" />
-							<Tooltip formatter={tooltipPercent} />
+							<Tooltip
+								formatter={tooltipPercent}
+								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								labelStyle={{ color: "var(--color-muted-foreground)" }}
+							/>
 							<defs>
 								<linearGradient id="fillMem" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stopColor={chartColors.mem} stopOpacity={0.3} />
@@ -147,7 +155,11 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 							<YAxis tick={{ fontSize: 11 }} tickFormatter={formatBytes} className="text-muted-foreground" />
-							<Tooltip formatter={tooltipBytes} />
+							<Tooltip
+								formatter={tooltipBytes}
+								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								labelStyle={{ color: "var(--color-muted-foreground)" }}
+							/>
 							<defs>
 								<linearGradient id="fillDisk" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stopColor={chartColors.disk} stopOpacity={0.3} />
@@ -171,7 +183,11 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 							<YAxis tick={{ fontSize: 11 }} tickFormatter={formatBytes} className="text-muted-foreground" />
-							<Tooltip formatter={tooltipBytes} />
+							<Tooltip
+								formatter={tooltipBytes}
+								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								labelStyle={{ color: "var(--color-muted-foreground)" }}
+							/>
 							<defs>
 								<linearGradient id="fillRx" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stopColor={chartColors.netRx} stopOpacity={0.3} />
