@@ -21,10 +21,15 @@ import (
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
-// RegisterAgentDownloadRoute serves the pre-built agent binary (public, no auth).
-func RegisterAgentDownloadRoute(se *core.ServeEvent) {
+// RegisterAgentPublicRoutes registers public (no auth) endpoints for agent distribution.
+// These are authenticated via enrollment token in the query string, not via session.
+func RegisterAgentPublicRoutes(se *core.ServeEvent, app core.App) {
 	se.Router.GET("/api/dk/agent/download", func(e *core.RequestEvent) error {
 		return handleAgentDownload(e)
+	})
+
+	se.Router.GET("/api/dk/agent/install/{id}", func(e *core.RequestEvent) error {
+		return handlePublicInstallScript(e, app)
 	})
 }
 
@@ -166,34 +171,64 @@ func handleInstallScript(e *core.RequestEvent, app core.App, version string) err
 		mode = "docker"
 	}
 
-	// Derive manager gRPC address from request host.
-	host := e.Request.Host
-	if idx := strings.Index(host, ":"); idx != -1 {
-		host = host[:idx]
-	}
-	grpcAddr := host + ":50051"
-
-	// Derive manager HTTP URL for binary download.
 	managerHTTPURL := resolveManagerHTTPURL(e)
 
 	if version == "" {
 		version = "latest"
 	}
 
-	var script string
+	var command string
 	switch mode {
 	case "docker":
-		script = generateDockerScript(grpcAddr, token, version)
+		host := e.Request.Host
+		if idx := strings.Index(host, ":"); idx != -1 {
+			host = host[:idx]
+		}
+		grpcAddr := host + ":50051"
+		command = generateDockerScript(grpcAddr, token, version)
 	case "binary":
-		script = generateBinaryScript(grpcAddr, token, managerHTTPURL)
+		command = fmt.Sprintf("curl -sSL '%s/api/dk/agent/install/%s?token=%s' | sudo bash", managerHTTPURL, serverID, token)
 	default:
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "mode must be 'docker' or 'binary'"})
 	}
 
 	return e.JSON(http.StatusOK, map[string]string{
-		"mode":   mode,
-		"script": script,
+		"mode":    mode,
+		"command": command,
 	})
+}
+
+// handlePublicInstallScript serves the install script as text/plain, authenticated via token query param.
+func handlePublicInstallScript(e *core.RequestEvent, app core.App) error {
+	serverID := e.Request.PathValue("id")
+	token := e.Request.URL.Query().Get("token")
+
+	if token == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "token is required"})
+	}
+
+	record, err := app.FindRecordById(constants.CollServers, serverID)
+	if err != nil {
+		return e.JSON(http.StatusNotFound, map[string]string{"error": "server not found"})
+	}
+
+	if record.GetString("enrollment_token") != token {
+		return e.JSON(http.StatusForbidden, map[string]string{"error": "invalid token"})
+	}
+
+	// Derive manager addresses.
+	host := e.Request.Host
+	if idx := strings.Index(host, ":"); idx != -1 {
+		host = host[:idx]
+	}
+	grpcAddr := host + ":50051"
+	managerHTTPURL := resolveManagerHTTPURL(e)
+
+	script := generateBinaryScript(grpcAddr, token, managerHTTPURL)
+
+	e.Response.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, writeErr := e.Response.Write([]byte(script))
+	return writeErr
 }
 
 // resolveManagerHTTPURL builds the public HTTP(S) URL of the manager from the request.

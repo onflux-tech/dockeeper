@@ -5,7 +5,6 @@ import {
 	ArrowRight,
 	Check,
 	Copy,
-	Download,
 	Loader2,
 	Monitor,
 	Server,
@@ -16,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProvisionServer, useInstallScript } from "@/hooks/use-servers";
 
@@ -54,24 +52,10 @@ export default function ServerCreatePage() {
 	};
 
 	const handleCopy = async () => {
-		if (!scriptData?.script) return;
-		await navigator.clipboard.writeText(scriptData.script);
+		if (!scriptData?.command) return;
+		await navigator.clipboard.writeText(scriptData.command);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
-	};
-
-	const handleDownload = () => {
-		if (!scriptData?.script) return;
-		const filename = `dockeeper-install-${name.trim().replace(/\s+/g, "-").toLowerCase()}.sh`;
-		const blob = new Blob([scriptData.script], {
-			type: "text/x-shellscript",
-		});
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = filename;
-		a.click();
-		URL.revokeObjectURL(url);
 	};
 
 	return (
@@ -209,37 +193,26 @@ export default function ServerCreatePage() {
 									<div className="flex items-center gap-2">
 										<Badge variant="secondary">{mode === "docker" ? "Docker" : "Binary"}</Badge>
 										<span className="text-sm text-muted-foreground">
-											{mode === "docker"
-												? "Run this command on your target server:"
-												: "Download and execute the install script on your target server:"}
+											Run this command on your target server:
 										</span>
 									</div>
-									<Textarea
-										readOnly
-										value={scriptData?.script ?? ""}
-										className="h-56 max-h-56 resize-none font-mono text-xs leading-relaxed"
-										spellCheck={false}
-									/>
-									<div className="flex items-center gap-2">
-										<Button variant="outline" size="sm" onClick={handleCopy}>
+									<div className="relative">
+										<pre className="overflow-x-auto rounded-lg border bg-muted p-4 font-mono text-sm leading-relaxed">
+											{scriptData?.command ?? ""}
+										</pre>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="absolute top-2 right-2 h-7 w-7"
+											onClick={handleCopy}
+										>
 											{copied ? (
-												<Check className="mr-1.5 h-3.5 w-3.5" />
+												<Check className="h-3.5 w-3.5 text-green-500" />
 											) : (
-												<Copy className="mr-1.5 h-3.5 w-3.5" />
+												<Copy className="h-3.5 w-3.5" />
 											)}
-											{copied ? "Copied" : "Copy"}
-										</Button>
-										<Button variant="outline" size="sm" onClick={handleDownload}>
-											<Download className="mr-1.5 h-3.5 w-3.5" />
-											Download .sh
 										</Button>
 									</div>
-									<p className="text-xs text-muted-foreground">
-										After downloading, run on the target server:{" "}
-										<code className="rounded bg-muted px-1 py-0.5 font-mono">
-											chmod +x dockeeper-install-*.sh && sudo ./dockeeper-install-*.sh
-										</code>
-									</p>
 									<p className="text-xs text-muted-foreground">
 										The server will appear as <strong>online</strong> once the agent connects
 										successfully.

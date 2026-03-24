@@ -47,7 +47,7 @@ export function useProvisionServer() {
 
 interface InstallScriptResult {
 	mode: string;
-	script: string;
+	command: string;
 }
 
 export function useInstallScript(serverId: string, mode: "docker" | "binary") {
