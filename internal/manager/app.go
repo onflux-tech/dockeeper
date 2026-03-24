@@ -56,6 +56,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
 		routes.RegisterContainerRoutes(se, containerSvc)
 
+		// Server provisioning and management routes.
+		routes.RegisterServerRoutes(se, app, auditStore, version)
+
 		// Container resource limits and env var routes.
 		routes.RegisterContainerResourceRoutes(se, containerSvc)
 		routes.RegisterContainerEnvRoutes(se, containerSvc)

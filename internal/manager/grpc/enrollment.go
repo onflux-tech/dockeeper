@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase"
@@ -29,16 +30,11 @@ func NewEnrollmentHandler(app *pocketbase.PocketBase, ca *services.CertAuthority
 	return &EnrollmentHandler{app: app, ca: ca}
 }
 
-// Enroll validates the enrollment token, creates a server record in PocketBase,
+// Enroll validates the enrollment token, creates or updates a server record in PocketBase,
 // signs a client certificate and returns it along with the CA cert.
 func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollRequest) (*agentpb.EnrollResponse, error) {
 	if req.GetToken() == "" {
 		return nil, status.Error(codes.InvalidArgument, "enrollment token is required")
-	}
-
-	if err := h.validateToken(req.GetToken()); err != nil {
-		slog.Warn("enrollment rejected: invalid token", "error", err)
-		return nil, status.Error(codes.Unauthenticated, "invalid enrollment token")
 	}
 
 	info := req.GetInfo()
@@ -46,15 +42,26 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 		return nil, status.Error(codes.InvalidArgument, "server info is required")
 	}
 
-	// Create server record in PocketBase.
-	col, err := h.app.FindCachedCollectionByNameOrId(constants.CollServers)
+	// Try per-server token first (provisioned via wizard).
+	server, err := h.findProvisionedServer(req.GetToken())
 	if err != nil {
-		slog.Error("failed to find servers collection", "error", err)
-		return nil, status.Error(codes.Internal, "internal error")
+		// Fall back to legacy global token.
+		if err := h.validateToken(req.GetToken()); err != nil {
+			slog.Warn("enrollment rejected: invalid token", "error", err)
+			return nil, status.Error(codes.Unauthenticated, "invalid enrollment token")
+		}
+
+		// Create new server record (legacy flow).
+		col, colErr := h.app.FindCachedCollectionByNameOrId(constants.CollServers)
+		if colErr != nil {
+			slog.Error("failed to find servers collection", "error", colErr)
+			return nil, status.Error(codes.Internal, "internal error")
+		}
+		server = core.NewRecord(col)
+		server.Set("name", info.GetHostname())
 	}
 
-	server := core.NewRecord(col)
-	server.Set("name", info.GetHostname())
+	// Update server record with agent info.
 	server.Set("hostname", info.GetHostname())
 	server.Set("ip_address", info.GetIpAddress())
 	server.Set("os", info.GetOs())
@@ -65,9 +72,10 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 	server.Set("status", "online")
 	server.Set("last_seen", time.Now().UTC())
 	server.Set("enrolled_at", time.Now().UTC())
+	server.Set("enrollment_token", "") // clear token after use
 
 	if err := h.app.Save(server); err != nil {
-		slog.Error("failed to create server record", "error", err)
+		slog.Error("failed to save server record", "error", err)
 		return nil, status.Error(codes.Internal, "failed to register server")
 	}
 
@@ -153,7 +161,7 @@ func (h *EnrollmentHandler) validateToken(token string) error {
 		return h.createAndValidateToken(token)
 	}
 
-	stored := records[0].GetString("value")
+	stored := strings.Trim(records[0].GetString("value"), "\"")
 	if stored != token {
 		return fmt.Errorf("token mismatch")
 	}
@@ -178,4 +186,18 @@ func (h *EnrollmentHandler) createAndValidateToken(token string) error {
 
 	slog.Info("enrollment token saved from first enrollment")
 	return nil
+}
+
+// findProvisionedServer looks for a pending server record that matches the given per-server token.
+func (h *EnrollmentHandler) findProvisionedServer(token string) (*core.Record, error) {
+	records, err := h.app.FindRecordsByFilter(
+		constants.CollServers,
+		"enrollment_token = {:token} && status = 'pending'",
+		"", 1, 0,
+		map[string]any{"token": token},
+	)
+	if err != nil || len(records) == 0 {
+		return nil, fmt.Errorf("no provisioned server found for token")
+	}
+	return records[0], nil
 }

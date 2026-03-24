@@ -1,4 +1,4 @@
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
 
 export interface SparklinePoint {
 	value: number;
@@ -8,12 +8,14 @@ interface SparklineChartProps {
 	data: SparklinePoint[];
 	color?: string;
 	height?: number;
+	unit?: string;
 }
 
 export function SparklineChart({
 	data,
 	color = "var(--color-primary)",
 	height = 32,
+	unit = "%",
 }: SparklineChartProps) {
 	if (data.length === 0) return null;
 
@@ -26,6 +28,19 @@ export function SparklineChart({
 						<stop offset="100%" stopColor={color} stopOpacity={0} />
 					</linearGradient>
 				</defs>
+				<Tooltip
+					cursor={false}
+					isAnimationActive={false}
+					content={({ active, payload }) => {
+						if (!active || !payload?.length) return null;
+						const v = payload[0].value as number;
+						return (
+							<div className="rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md">
+								{v.toFixed(1)}{unit}
+							</div>
+						);
+					}}
+				/>
 				<Area
 					type="monotone"
 					dataKey="value"

@@ -27,7 +27,7 @@ export function ServerCard({ server, cpuData, memData }: ServerCardProps) {
 
 	return (
 		<Link to={`/servers/${server.id}`} className="block">
-			<Card className="transition-colors hover:border-primary/40">
+			<Card className="overflow-visible transition-colors hover:border-primary/40">
 				<CardHeader className="pb-0">
 					<div className="flex items-start justify-between">
 						<div className="flex flex-col gap-1">

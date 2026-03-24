@@ -32,6 +32,7 @@ import {
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -242,6 +243,7 @@ export default function VolumesPage() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Volume Details</DialogTitle>
+						<DialogDescription>Raw inspect data from Docker.</DialogDescription>
 					</DialogHeader>
 					{inspectData && (
 						<div className="max-h-80 overflow-y-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">

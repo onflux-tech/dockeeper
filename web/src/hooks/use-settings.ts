@@ -109,3 +109,36 @@ export function useHealth() {
 		staleTime: 60_000,
 	});
 }
+
+// ── Global Enrollment Token ─────────────────────────────
+
+interface TokenResult {
+	token: string;
+}
+
+export function useEnrollmentToken() {
+	return useQuery<TokenResult>({
+		queryKey: ["enrollment-token"],
+		queryFn: () =>
+			fetchJson("/api/dk/enrollment-token", {
+				headers: authHeaders(),
+			}),
+	});
+}
+
+export function useRegenerateEnrollmentToken() {
+	const qc = useQueryClient();
+	return useMutation<TokenResult, Error>({
+		mutationFn: () =>
+			fetchJson("/api/dk/enrollment-token/regenerate", {
+				method: "POST",
+				headers: authHeaders(),
+			}),
+		onSuccess: () => {
+			void qc.invalidateQueries({ queryKey: ["enrollment-token"] });
+			toast.success("Enrollment token regenerated");
+		},
+		onError: (err) =>
+			toast.error(`Failed to regenerate token: ${err.message}`),
+	});
+}

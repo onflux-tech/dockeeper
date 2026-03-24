@@ -15,12 +15,14 @@ export interface ServerRecord extends BaseRecord {
 	arch: string;
 	docker_version: string;
 	agent_version: string;
-	status: "online" | "offline" | "error";
+	status: "online" | "offline" | "error" | "pending";
 	orchestrator: "docker" | "podman" | "kubernetes";
 	last_seen: string;
 	enrolled_at: string;
 	labels: unknown;
 	cert_expires_at: string;
+	enrollment_token: string;
+	description: string;
 }
 
 export interface ContainerRecord extends BaseRecord {

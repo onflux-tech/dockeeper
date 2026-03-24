@@ -18,17 +18,19 @@ import AlertsPage from "@/pages/alerts";
 import BackupsPage from "@/pages/backups";
 import SettingsPage from "@/pages/settings";
 import TraefikPage from "@/pages/traefik";
+import ServerCreatePage from "@/pages/server-create";
 import AuditLogsPage from "@/pages/audit-logs";
 
 function App() {
 	return (
-		<div className="dark min-h-screen bg-background text-foreground">
+		<div className="min-h-screen bg-background text-foreground">
 			<Routes>
 				<Route path="/login" element={<LoginPage />} />
 				<Route element={<ProtectedRoute />}>
 					<Route element={<AppLayout />}>
 						<Route index element={<DashboardPage />} />
 						<Route path="servers" element={<ServersPage />} />
+						<Route path="servers/create" element={<ServerCreatePage />} />
 						<Route path="servers/:id" element={<ServerDetailPage />} />
 						<Route path="containers" element={<ContainersPage />} />
 						<Route path="containers/create" element={<ContainerCreatePage />} />

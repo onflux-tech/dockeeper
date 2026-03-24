@@ -7,6 +7,9 @@ import {
 	Eye,
 	EyeOff,
 	Loader2,
+	Copy,
+	Check,
+	RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +27,8 @@ import {
 	useSaveSettings,
 	useChangePassword,
 	useHealth,
+	useEnrollmentToken,
+	useRegenerateEnrollmentToken,
 } from "@/hooks/use-settings";
 
 export default function SettingsPage() {
@@ -125,6 +130,9 @@ function SystemTab() {
 
 	return (
 		<div className="space-y-8">
+			{/* Global Enrollment Token */}
+			<EnrollmentTokenSection />
+
 			{/* S3 Backup Storage */}
 			<section className="space-y-4">
 				<div>
@@ -258,6 +266,77 @@ function SystemTab() {
 				</Button>
 			</section>
 		</div>
+	);
+}
+
+/* ── Enrollment Token Section ───────────────────────────── */
+
+function EnrollmentTokenSection() {
+	const { data, isLoading } = useEnrollmentToken();
+	const regenerate = useRegenerateEnrollmentToken();
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = async () => {
+		if (!data?.token) return;
+		await navigator.clipboard.writeText(data.token);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
+
+	return (
+		<section className="space-y-4">
+			<div>
+				<h3 className="text-lg font-medium">Global Enrollment Token</h3>
+				<p className="text-sm text-muted-foreground">
+					Used by agents to authenticate during initial enrollment via CLI.
+					This token is also available in the server provisioning wizard.
+				</p>
+			</div>
+			{isLoading ? (
+				<Skeleton className="h-10 w-full" />
+			) : (
+				<div className="space-y-3">
+					<div className="flex items-center gap-2">
+						<code className="flex-1 rounded-md bg-muted px-3 py-2 font-mono text-sm break-all">
+							{data?.token}
+						</code>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={handleCopy}
+							className="shrink-0"
+						>
+							{copied ? (
+								<Check className="mr-1.5 h-3.5 w-3.5" />
+							) : (
+								<Copy className="mr-1.5 h-3.5 w-3.5" />
+							)}
+							{copied ? "Copied" : "Copy"}
+						</Button>
+					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => regenerate.mutate()}
+						disabled={regenerate.isPending}
+					>
+						{regenerate.isPending ? (
+							<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+						) : (
+							<RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+						)}
+						Regenerate Token
+					</Button>
+					<p className="text-xs text-muted-foreground">
+						Usage:{" "}
+						<code className="rounded bg-muted px-1 py-0.5">
+							./dockeeper-agent --manager-url=HOST:50051
+							--token=TOKEN --data-dir=./data
+						</code>
+					</p>
+				</div>
+			)}
+		</section>
 	);
 }
 
