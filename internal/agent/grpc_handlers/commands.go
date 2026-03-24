@@ -2,6 +2,7 @@ package grpc_handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -87,6 +88,40 @@ func (h *CommandsHandler) ExecuteCommand(ctx context.Context, req *agentpb.Execu
 			}, nil
 		}
 		result = h.exec.PullImage(ctx, imageRef)
+
+	case agentpb.CommandType_COMMAND_TYPE_UPDATE_RESOURCES:
+		resJSON, ok := params["resources"]
+		if !ok || resJSON == "" {
+			return &agentpb.ExecuteCommandResponse{
+				Success: false,
+				Error:   "missing 'resources' param for UPDATE_RESOURCES command",
+			}, nil
+		}
+		update, parseErr := executor.ParseResourceUpdate(resJSON)
+		if parseErr != nil {
+			return &agentpb.ExecuteCommandResponse{
+				Success: false,
+				Error:   parseErr.Error(),
+			}, nil
+		}
+		result = h.exec.UpdateResources(ctx, containerID, update)
+
+	case agentpb.CommandType_COMMAND_TYPE_RECREATE_ENV:
+		envJSON, ok := params["env"]
+		if !ok {
+			return &agentpb.ExecuteCommandResponse{
+				Success: false,
+				Error:   "missing 'env' param for RECREATE_ENV command",
+			}, nil
+		}
+		var envSlice []string
+		if jsonErr := json.Unmarshal([]byte(envJSON), &envSlice); jsonErr != nil {
+			return &agentpb.ExecuteCommandResponse{
+				Success: false,
+				Error:   "invalid 'env' JSON: " + jsonErr.Error(),
+			}, nil
+		}
+		result = h.exec.RecreateWithEnv(ctx, containerID, envSlice)
 
 	default:
 		return &agentpb.ExecuteCommandResponse{

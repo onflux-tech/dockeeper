@@ -10,6 +10,8 @@ import { useContainerMetrics } from "@/hooks/use-container-metrics";
 import { ContainerInfo } from "@/components/container/container-info";
 import { ContainerMetrics } from "@/components/container/container-metrics";
 import { LogViewer } from "@/components/container/log-viewer";
+import { ResourceEditor } from "@/components/container/resource-editor";
+import { EnvEditor } from "@/components/container/env-editor";
 
 const statusVariantMap: Record<string, "default" | "secondary" | "destructive"> = {
 	running: "default",
@@ -70,6 +72,8 @@ export default function ContainerDetailPage() {
 				<TabsList>
 					<TabsTrigger value="info">Info</TabsTrigger>
 					<TabsTrigger value="metrics">Metrics</TabsTrigger>
+					<TabsTrigger value="resources">Resources</TabsTrigger>
+					<TabsTrigger value="env">Environment</TabsTrigger>
 					<TabsTrigger value="logs">Logs</TabsTrigger>
 				</TabsList>
 
@@ -79,6 +83,14 @@ export default function ContainerDetailPage() {
 
 				<TabsContent value="metrics" className="mt-4">
 					<ContainerMetrics data={metrics} isLoading={loadingMetrics} />
+				</TabsContent>
+
+				<TabsContent value="resources" className="mt-4">
+					<ResourceEditor container={container} isLoading={isLoading} />
+				</TabsContent>
+
+				<TabsContent value="env" className="mt-4">
+					<EnvEditor container={container} isLoading={isLoading} />
 				</TabsContent>
 
 				<TabsContent value="logs" className="mt-4">

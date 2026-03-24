@@ -203,7 +203,7 @@ func buildDockerConfigs(spec *ContainerSpec) (*container.Config, *container.Host
 	}
 
 	if spec.PidsLimit > 0 {
-		hostConfig.Resources.PidsLimit = &spec.PidsLimit
+		hostConfig.PidsLimit = &spec.PidsLimit
 	}
 
 	// Network config.

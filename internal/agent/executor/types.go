@@ -20,4 +20,6 @@ type Executor interface {
 	Unpause(ctx context.Context, containerID string) Result
 	Create(ctx context.Context, spec *ContainerSpec) Result
 	PullImage(ctx context.Context, imageRef string) Result
+	UpdateResources(ctx context.Context, containerID string, update *ResourceUpdate) Result
+	RecreateWithEnv(ctx context.Context, containerID string, newEnv []string) Result
 }
