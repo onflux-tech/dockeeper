@@ -473,3 +473,29 @@ message BackupProgress {
   bool done = 5;
   string error = 6;
 }
+
+// ── Traefik ──────────────────────────────────────────
+
+service AgentTraefikService {
+  rpc ReportTraefikRoutes(ReportTraefikRoutesRequest) returns (ReportTraefikRoutesResponse);
+}
+
+message TraefikRouteInfo {
+  string name = 1;
+  string rule = 2;
+  string service = 3;
+  repeated string entrypoints = 4;
+  bool tls = 5;
+  repeated string middlewares = 6;
+  string provider = 7;
+  string status = 8;
+}
+
+message ReportTraefikRoutesRequest {
+  string server_id = 1;
+  repeated TraefikRouteInfo routes = 2;
+}
+
+message ReportTraefikRoutesResponse {
+  int32 received_count = 1;
+}

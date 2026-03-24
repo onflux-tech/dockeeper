@@ -20,6 +20,7 @@ type GRPCClient struct {
 	commands   agentpb.AgentCommandsServiceClient
 	exec       agentpb.AgentExecServiceClient
 	logs       agentpb.AgentLogsServiceClient
+	traefik    agentpb.AgentTraefikServiceClient
 }
 
 // NewGRPCClient dials the manager with mTLS and returns a connected client.
@@ -42,6 +43,7 @@ func NewGRPCClient(addr string, tlsCfg *tls.Config) (*GRPCClient, error) {
 		commands:   agentpb.NewAgentCommandsServiceClient(conn),
 		exec:       agentpb.NewAgentExecServiceClient(conn),
 		logs:       agentpb.NewAgentLogsServiceClient(conn),
+		traefik:    agentpb.NewAgentTraefikServiceClient(conn),
 	}, nil
 }
 
@@ -59,3 +61,4 @@ func (c *GRPCClient) Discovery() agentpb.AgentDiscoveryServiceClient    { return
 func (c *GRPCClient) Commands() agentpb.AgentCommandsServiceClient      { return c.commands }
 func (c *GRPCClient) Exec() agentpb.AgentExecServiceClient              { return c.exec }
 func (c *GRPCClient) Logs() agentpb.AgentLogsServiceClient              { return c.logs }
+func (c *GRPCClient) Traefik() agentpb.AgentTraefikServiceClient        { return c.traefik }

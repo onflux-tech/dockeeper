@@ -96,6 +96,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		routes.RegisterNotificationRoutes(se, app, alertStore, notifySvc)
 		jobs.RegisterAlertJobs(app, alertEngine)
 
+		// Traefik route read-only API.
+		routes.RegisterTraefikRoutes(se, app)
+
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
 		if err != nil {

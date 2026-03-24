@@ -96,6 +96,10 @@ func (a *Agent) Run(ctx context.Context) error {
 		metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, a.logger)
 		go metrics.Run(ctx)
 
+		// Traefik route collector (60s cycle, graceful skip if not installed).
+		traefikColl := collector.NewTraefikCollector(orch, a.client.Traefik(), a.cfg.ServerID, a.logger)
+		go traefikColl.Run(ctx)
+
 		// Start agent gRPC server so the manager can send commands and stream logs.
 		exec, execErr := executor.NewDockerExecutor()
 		if execErr != nil {

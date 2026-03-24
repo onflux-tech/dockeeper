@@ -47,6 +47,10 @@ func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr stri
 	discoveryHandler := NewDiscoveryHandler(app, resourceStore)
 	agentpb.RegisterAgentDiscoveryServiceServer(gs, discoveryHandler)
 
+	traefikStore := store.NewTraefikStore(app)
+	traefikHandler := NewTraefikHandler(app, traefikStore)
+	agentpb.RegisterAgentTraefikServiceServer(gs, traefikHandler)
+
 	return &Server{grpcServer: gs, addr: addr}, nil
 }
 

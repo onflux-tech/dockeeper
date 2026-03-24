@@ -1,0 +1,52 @@
+package grpc
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/pocketbase/pocketbase/core"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/jkdesenvolvedor/dockeeper/internal/manager/hooks"
+	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
+	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
+)
+
+// TraefikHandler implements AgentTraefikService, receiving Traefik route
+// reports from agents and storing them in PocketBase.
+type TraefikHandler struct {
+	agentpb.UnimplementedAgentTraefikServiceServer
+	app   core.App
+	store *store.TraefikStore
+}
+
+// NewTraefikHandler creates a new TraefikHandler.
+func NewTraefikHandler(app core.App, traefikStore *store.TraefikStore) *TraefikHandler {
+	return &TraefikHandler{app: app, store: traefikStore}
+}
+
+// ReportTraefikRoutes upserts Traefik route records for a server.
+func (h *TraefikHandler) ReportTraefikRoutes(ctx context.Context, req *agentpb.ReportTraefikRoutesRequest) (*agentpb.ReportTraefikRoutesResponse, error) {
+	sid := h.serverID(ctx, req.GetServerId())
+	if sid == "" {
+		return nil, status.Error(codes.Unauthenticated, "unknown server")
+	}
+
+	count, err := h.store.UpsertRoutes(sid, req.GetRoutes())
+	if err != nil {
+		slog.Error("traefik: upsert routes failed", "server_id", sid, "error", err)
+		return nil, status.Error(codes.Internal, "failed to store traefik routes")
+	}
+
+	hooks.UpdateHeartbeat(h.app, sid)
+	return &agentpb.ReportTraefikRoutesResponse{ReceivedCount: int32(count)}, nil
+}
+
+// serverID returns the server_id from mTLS context, falling back to the request field.
+func (h *TraefikHandler) serverID(ctx context.Context, reqServerID string) string {
+	if sid, ok := ServerIDFromContext(ctx); ok {
+		return sid
+	}
+	return reqServerID
+}
