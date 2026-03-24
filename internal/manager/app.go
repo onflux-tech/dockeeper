@@ -66,6 +66,14 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		termSvc := services.NewTerminalService(app, termStore, auditStore)
 		routes.RegisterTerminalRoutes(se, app, termSvc)
 
+		// Image management routes.
+		imageSvc := services.NewImageService(app, auditStore)
+		routes.RegisterImageRoutes(se, app, imageSvc)
+
+		// Compose stack management routes.
+		composeSvc := services.NewComposeService(app, auditStore)
+		routes.RegisterComposeRoutes(se, app, composeSvc)
+
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
 		if err != nil {
