@@ -3,6 +3,7 @@ RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -S dockeeper \
     && adduser -S -G dockeeper dockeeper
 COPY dockeeper-agent /usr/local/bin/dockeeper-agent
+RUN mkdir -p /data && chown -R dockeeper:dockeeper /data
 USER dockeeper
 WORKDIR /home/dockeeper
 ENTRYPOINT ["dockeeper-agent"]

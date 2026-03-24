@@ -28,6 +28,7 @@ services:
         VERSION: "${VERSION:-dev}"
         COMMIT: "${COMMIT:-unknown}"
     container_name: dockeeper-agent
+    user: root
     command:
       - "--manager-url=manager:50051"
       - "--token=${AGENT_TOKEN:-}"

@@ -68,21 +68,31 @@ test-web:
 
 DOCKER_REPO ?= ghcr.io/onflux-tech
 
+PLATFORMS ?= linux/amd64,linux/arm64
+
 docker-build:
-	docker build -f Dockerfile.manager \
+	docker buildx build -f Dockerfile.manager \
+		--platform $(PLATFORMS) \
 		--build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
 		-t $(DOCKER_REPO)/dockeeper-manager:$(VERSION) \
 		-t $(DOCKER_REPO)/dockeeper-manager:latest .
-	docker build -f Dockerfile.agent \
+	docker buildx build -f Dockerfile.agent \
+		--platform $(PLATFORMS) \
 		--build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
 		-t $(DOCKER_REPO)/dockeeper-agent:$(VERSION) \
 		-t $(DOCKER_REPO)/dockeeper-agent:latest .
 
 docker-push:
-	docker push $(DOCKER_REPO)/dockeeper-manager:$(VERSION)
-	docker push $(DOCKER_REPO)/dockeeper-manager:latest
-	docker push $(DOCKER_REPO)/dockeeper-agent:$(VERSION)
-	docker push $(DOCKER_REPO)/dockeeper-agent:latest
+	docker buildx build -f Dockerfile.manager \
+		--platform $(PLATFORMS) \
+		--build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
+		-t $(DOCKER_REPO)/dockeeper-manager:$(VERSION) \
+		-t $(DOCKER_REPO)/dockeeper-manager:latest --push .
+	docker buildx build -f Dockerfile.agent \
+		--platform $(PLATFORMS) \
+		--build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
+		-t $(DOCKER_REPO)/dockeeper-agent:$(VERSION) \
+		-t $(DOCKER_REPO)/dockeeper-agent:latest --push .
 
 ## ── Release ─────────────────────────────────────────
 

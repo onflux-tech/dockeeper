@@ -26,10 +26,12 @@ COPY . .
 # Inject frontend build from stage 1
 COPY --from=frontend-builder /app/web/dist/ web/dist/
 
-# Build static binary
+# Build static binary (multi-platform)
 ARG VERSION=dev
 ARG COMMIT=unknown
-RUN CGO_ENABLED=0 GOOS=linux go build \
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -trimpath \
     -ldflags "-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT}" \
     -o /out/dockeeper-manager \
@@ -42,6 +44,8 @@ RUN apk add --no-cache ca-certificates tzdata \
     && adduser -S -G dockeeper dockeeper
 
 COPY --from=go-builder /out/dockeeper-manager /usr/local/bin/dockeeper-manager
+
+RUN mkdir -p /home/dockeeper/pb_data && chown -R dockeeper:dockeeper /home/dockeeper
 
 USER dockeeper
 WORKDIR /home/dockeeper
