@@ -106,6 +106,13 @@ func (s *ImageService) RemoveImage(ctx context.Context, imageRecordID string, fo
 
 	details["success"] = resp.GetSuccess()
 	s.audit.Log("image.remove", userID, "image", imageRecordID, ip, details)
+	if resp.GetSuccess() {
+		if img, findErr := s.app.FindRecordById(constants.CollImages, imageRecordID); findErr == nil {
+			if delErr := s.app.Delete(img); delErr != nil {
+				slog.Warn("failed to delete image record after remove", "image_record_id", imageRecordID, "error", delErr)
+			}
+		}
+	}
 	return resp, nil
 }
 

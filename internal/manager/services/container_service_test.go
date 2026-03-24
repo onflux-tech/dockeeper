@@ -64,6 +64,30 @@ func TestScheduleInternalRestartDispatchesInBackground(t *testing.T) {
 	}
 }
 
+func TestContainerStateForAction(t *testing.T) {
+	status, touchStartedAt, deleteRecord, ok := containerStateForAction(agentpb.CommandType_COMMAND_TYPE_RESTART)
+	assert.True(t, ok)
+	assert.Equal(t, "running", status)
+	assert.True(t, touchStartedAt)
+	assert.False(t, deleteRecord)
+
+	status, touchStartedAt, deleteRecord, ok = containerStateForAction(agentpb.CommandType_COMMAND_TYPE_PAUSE)
+	assert.True(t, ok)
+	assert.Equal(t, "paused", status)
+	assert.False(t, touchStartedAt)
+	assert.False(t, deleteRecord)
+
+	status, touchStartedAt, deleteRecord, ok = containerStateForAction(agentpb.CommandType_COMMAND_TYPE_STOP)
+	assert.True(t, ok)
+	assert.Equal(t, "exited", status)
+	assert.False(t, touchStartedAt)
+	assert.False(t, deleteRecord)
+
+	_, _, deleteRecord, ok = containerStateForAction(agentpb.CommandType_COMMAND_TYPE_REMOVE)
+	assert.True(t, ok)
+	assert.True(t, deleteRecord)
+}
+
 func TestTimeoutForCommand(t *testing.T) {
 	tests := []struct {
 		name    string

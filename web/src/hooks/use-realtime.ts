@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import pb from "@/lib/pb";
+import { invalidateCollectionQueries } from "@/lib/query-invalidation";
 import type { CollectionName } from "@/types/pocketbase";
 
 /**
@@ -26,9 +27,7 @@ export function useRealtime(name: CollectionName) {
 
 		pb.collection(name)
 			.subscribe("*", () => {
-				void queryClient.invalidateQueries({
-					queryKey: ["collection", name],
-				});
+				invalidateCollectionQueries(queryClient, name);
 			})
 			.then((unsub) => {
 				unsubscribe = unsub;

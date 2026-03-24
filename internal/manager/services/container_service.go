@@ -138,6 +138,7 @@ func (s *ContainerService) ExecuteAction(
 
 	// 5. Dispatch to agent.
 	if cmdType == agentpb.CommandType_COMMAND_TYPE_RESTART && isDockeeperRuntimeContainer(container) {
+		s.applyContainerActionState(container, cmdType)
 		s.scheduleInternalRestart(agentAddr, req, container, userID, ip)
 
 		details := map[string]any{
@@ -171,6 +172,10 @@ func (s *ContainerService) ExecuteAction(
 		details["error"] = err.Error()
 		s.logAudit("container.action.failed", userID, "container", containerID, ip, details)
 		return nil, fmt.Errorf("dispatch command: %w", err)
+	}
+
+	if resp.GetSuccess() {
+		s.applyContainerActionState(container, cmdType)
 	}
 
 	details["success"] = resp.GetSuccess()
@@ -270,6 +275,46 @@ func (s *ContainerService) logAudit(action, userID, targetType, targetID, ip str
 		return
 	}
 	s.audit.Log(action, userID, targetType, targetID, ip, details)
+}
+
+func (s *ContainerService) applyContainerActionState(container *core.Record, cmdType agentpb.CommandType) {
+	if s.app == nil || container == nil {
+		return
+	}
+
+	status, touchStartedAt, deleteRecord, ok := containerStateForAction(cmdType)
+	if !ok {
+		return
+	}
+
+	if deleteRecord {
+		_ = s.app.Delete(container)
+		return
+	}
+
+	container.Set("status", status)
+	if touchStartedAt {
+		container.Set("started_at", time.Now().UTC())
+	}
+	_ = s.app.Save(container)
+}
+
+func containerStateForAction(cmdType agentpb.CommandType) (status string, touchStartedAt bool, deleteRecord bool, ok bool) {
+	switch cmdType {
+	case agentpb.CommandType_COMMAND_TYPE_START,
+		agentpb.CommandType_COMMAND_TYPE_UNPAUSE,
+		agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE,
+		agentpb.CommandType_COMMAND_TYPE_RESTART:
+		return "running", true, false, true
+	case agentpb.CommandType_COMMAND_TYPE_STOP:
+		return "exited", false, false, true
+	case agentpb.CommandType_COMMAND_TYPE_PAUSE:
+		return "paused", false, false, true
+	case agentpb.CommandType_COMMAND_TYPE_REMOVE:
+		return "", false, true, true
+	default:
+		return "", false, false, false
+	}
 }
 
 // InspectContainer returns a container record by ID.

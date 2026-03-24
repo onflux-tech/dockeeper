@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import pb from "@/lib/pb";
+import { invalidateCollectionQueries } from "@/lib/query-invalidation";
 import type { Collections, CollectionName } from "@/types/pocketbase";
 
 /**
@@ -16,9 +17,7 @@ export function useCreateRecord<T extends CollectionName>(name: T) {
 	return useMutation<Collections[T], Error, Partial<Collections[T]>>({
 		mutationFn: (data) => pb.collection(name).create(data),
 		onSuccess: () => {
-			void queryClient.invalidateQueries({
-				queryKey: ["collection", name],
-			});
+			invalidateCollectionQueries(queryClient, name);
 		},
 	});
 }
@@ -37,9 +36,7 @@ export function useUpdateRecord<T extends CollectionName>(name: T) {
 	return useMutation<Collections[T], Error, { id: string } & Partial<Collections[T]>>({
 		mutationFn: ({ id, ...data }) => pb.collection(name).update(id, data),
 		onSuccess: () => {
-			void queryClient.invalidateQueries({
-				queryKey: ["collection", name],
-			});
+			invalidateCollectionQueries(queryClient, name);
 		},
 	});
 }
@@ -58,9 +55,7 @@ export function useDeleteRecord(name: CollectionName) {
 	return useMutation<boolean, Error, string>({
 		mutationFn: (id) => pb.collection(name).delete(id),
 		onSuccess: () => {
-			void queryClient.invalidateQueries({
-				queryKey: ["collection", name],
-			});
+			invalidateCollectionQueries(queryClient, name);
 		},
 	});
 }
