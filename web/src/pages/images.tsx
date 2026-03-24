@@ -34,6 +34,8 @@ import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useImageRemove, useImagePrune } from "@/hooks/use-images";
 import { PullDialog } from "@/components/images/pull-dialog";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 
 function formatSize(bytes: number): string {
 	if (bytes === 0) return "0 B";
@@ -61,31 +63,27 @@ export default function ImagesPage() {
 	const [search, setSearch] = useState("");
 	const [pullOpen, setPullOpen] = useState(false);
 	const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
+	const [page, setPage] = useState(1);
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
 	const { data: imagesResult, isLoading } = useCollection("images", {
-		perPage: 500,
+		page,
+		perPage: 25,
 		sort: "-created",
-		...(serverFilter !== "all" ? { filter: `server = '${serverFilter}'` } : {}),
+		filter: andFilters([
+			serverFilter !== "all" ? eqFilter("server", serverFilter) : "",
+			containsAnyFilter(["tags", "image_id"], search),
+		]),
 	});
 
 	useRealtime("images");
 
 	const servers = serversResult?.items ?? [];
 	const images = useMemo(() => imagesResult?.items ?? [], [imagesResult?.items]);
+	const totalImages = imagesResult?.totalItems ?? 0;
 
 	const removeMut = useImageRemove();
 	const pruneMut = useImagePrune();
-
-	const filtered = useMemo(() => {
-		if (!search) return images;
-		const q = search.toLowerCase();
-		return images.filter((img) => {
-			const tags = formatTags(img.tags).toLowerCase();
-			const id = (img.image_id ?? "").toLowerCase();
-			return tags.includes(q) || id.includes(q);
-		});
-	}, [images, search]);
 
 	const handlePrune = () => {
 		if (serverFilter === "all") {
@@ -101,7 +99,9 @@ export default function ImagesPage() {
 				<div className="flex items-center gap-2">
 					<Layers className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Images</h1>
-					{!isLoading && <span className="text-sm text-muted-foreground">({filtered.length})</span>}
+					{!isLoading && (
+						<span className="text-sm text-muted-foreground">({totalImages})</span>
+					)}
 				</div>
 				<div className="flex items-center gap-2">
 					<Button
@@ -122,7 +122,13 @@ export default function ImagesPage() {
 
 			{/* Filters */}
 			<div className="flex items-center gap-3">
-				<Select value={serverFilter} onValueChange={setServerFilter}>
+				<Select
+					value={serverFilter}
+					onValueChange={(value) => {
+						setServerFilter(value);
+						setPage(1);
+					}}
+				>
 					<SelectTrigger className="w-48">
 						<SelectValue placeholder="All Servers" />
 					</SelectTrigger>
@@ -138,7 +144,10 @@ export default function ImagesPage() {
 				<Input
 					placeholder="Search images..."
 					value={search}
-					onChange={(e) => setSearch(e.target.value)}
+					onChange={(e) => {
+						setSearch(e.target.value);
+						setPage(1);
+					}}
 					className="max-w-xs"
 				/>
 			</div>
@@ -150,7 +159,7 @@ export default function ImagesPage() {
 						<Skeleton key={i} className="h-10 w-full" />
 					))}
 				</div>
-			) : filtered.length === 0 ? (
+			) : images.length === 0 ? (
 				<p className="text-sm text-muted-foreground">No images found.</p>
 			) : (
 				<div className="rounded-md border">
@@ -166,7 +175,7 @@ export default function ImagesPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{filtered.map((img) => (
+							{images.map((img) => (
 								<TableRow key={img.id}>
 									<TableCell className="font-mono text-xs max-w-64 truncate">
 										{formatTags(img.tags)}
@@ -207,6 +216,14 @@ export default function ImagesPage() {
 					</Table>
 				</div>
 			)}
+
+			<PaginationControls
+				page={page}
+				totalPages={imagesResult?.totalPages ?? 0}
+				totalItems={totalImages}
+				onPageChange={setPage}
+				label="images"
+			/>
 
 			{/* Pull Dialog */}
 			{serverFilter !== "all" && (

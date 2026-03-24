@@ -60,6 +60,10 @@ interface ContainerTableProps {
 	containers: ContainerRecord[];
 	isLoading: boolean;
 	showServer?: boolean;
+	search?: string;
+	onSearchChange?: (value: string) => void;
+	statusFilter?: string;
+	onStatusFilterChange?: (value: string) => void;
 }
 
 type SortKey = "name" | "status" | "image" | "created";
@@ -82,15 +86,25 @@ const statusOptions = ["all", "running", "exited", "paused", "created", "restart
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ContainerTable({ containers, isLoading, showServer }: ContainerTableProps) {
-	const [search, setSearch] = useState("");
-	const [statusFilter, setStatusFilter] = useState("all");
+export function ContainerTable({
+	containers,
+	isLoading,
+	showServer,
+	search,
+	onSearchChange,
+	statusFilter,
+	onStatusFilterChange,
+}: ContainerTableProps) {
+	const [localSearch, setLocalSearch] = useState("");
+	const [localStatusFilter, setLocalStatusFilter] = useState("all");
 	const [sortKey, setSortKey] = useState<SortKey>("name");
 	const [sortDir, setSortDir] = useState<SortDir>("asc");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [removeTarget, setRemoveTarget] = useState<string[] | null>(null);
 	const [updateTarget, setUpdateTarget] = useState<string | null>(null);
 	const [bulkLoading, setBulkLoading] = useState(false);
+	const searchValue = search ?? localSearch;
+	const statusValue = statusFilter ?? localStatusFilter;
 
 	const actions = useContainerActions();
 
@@ -98,12 +112,12 @@ export function ContainerTable({ containers, isLoading, showServer }: ContainerT
 	const processed = useMemo(() => {
 		let result = containers;
 
-		if (statusFilter !== "all") {
-			result = result.filter((c) => c.status === statusFilter);
+		if (statusValue !== "all") {
+			result = result.filter((c) => c.status === statusValue);
 		}
 
-		if (search) {
-			const q = search.toLowerCase();
+		if (searchValue) {
+			const q = searchValue.toLowerCase();
 			result = result.filter(
 				(c) => c.name.toLowerCase().includes(q) || c.image.toLowerCase().includes(q),
 			);
@@ -129,7 +143,7 @@ export function ContainerTable({ containers, isLoading, showServer }: ContainerT
 		});
 
 		return result;
-	}, [containers, statusFilter, search, sortKey, sortDir]);
+	}, [containers, statusValue, searchValue, sortKey, sortDir]);
 
 	// ── Selection helpers ────────────────────────────────────────────────
 	const allSelected = processed.length > 0 && processed.every((c) => selected.has(c.id));
@@ -242,12 +256,21 @@ export function ContainerTable({ containers, isLoading, showServer }: ContainerT
 					<Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 					<Input
 						placeholder="Search containers..."
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						value={searchValue}
+						onChange={(e) =>
+							onSearchChange ? onSearchChange(e.target.value) : setLocalSearch(e.target.value)
+						}
 						className="pl-9"
 					/>
 				</div>
-				<Select value={statusFilter} onValueChange={setStatusFilter}>
+				<Select
+					value={statusValue}
+					onValueChange={(value) =>
+						onStatusFilterChange
+							? onStatusFilterChange(value)
+							: setLocalStatusFilter(value)
+					}
+				>
 					<SelectTrigger className="w-36">
 						<SelectValue placeholder="Status" />
 					</SelectTrigger>
@@ -347,7 +370,7 @@ export function ContainerTable({ containers, isLoading, showServer }: ContainerT
 						{processed.length === 0 ? (
 							<TableRow>
 								<TableCell colSpan={colCount} className="py-8 text-center text-muted-foreground">
-									{search || statusFilter !== "all"
+									{searchValue || statusValue !== "all"
 										? "No containers match your filters."
 										: "No containers found."}
 								</TableCell>

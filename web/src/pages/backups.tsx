@@ -35,21 +35,23 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import {
-	useBackupPolicies,
-	useBackupRecords,
 	useDeletePolicy,
 	useTriggerBackup,
 	useUpdatePolicy,
 } from "@/hooks/use-backups";
 import { PolicyDialog } from "@/components/backups/policy-dialog";
 import { describeCron } from "@/lib/format";
+import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 import { RecordsTable } from "@/components/backups/records-table";
-import type { ServerRecord, VolumeRecord, BackupPolicyRecord } from "@/types/pocketbase";
+import type { ServerRecord, VolumeRecord, BackupPolicyRecord, BackupRecordRecord } from "@/types/pocketbase";
 
 export default function BackupsPage() {
+	const [policiesPage, setPoliciesPage] = useState(1);
+	const [recordsPage, setRecordsPage] = useState(1);
 	const [serverFilter, setServerFilter] = useState<string>("all");
 	const [search, setSearch] = useState("");
 	const [policyOpen, setPolicyOpen] = useState(false);
@@ -68,11 +70,24 @@ export default function BackupsPage() {
 	useRealtime("backup_policies");
 	useRealtime("backup_records");
 
-	const { data: policies, isLoading: policiesLoading } = useBackupPolicies(serverId);
-	const { data: records, isLoading: recordsLoading } = useBackupRecords(
-		selectedPolicyId || undefined,
-		!selectedPolicyId ? serverId : undefined,
-	);
+	const { data: policiesResult, isLoading: policiesLoading } = useCollection("backup_policies", {
+		page: policiesPage,
+		perPage: 25,
+		sort: "-created",
+		filter: andFilters([
+			serverId ? eqFilter("server", serverId) : "",
+			containsAnyFilter(["volume", "schedule", "s3_bucket"], search),
+		]),
+	});
+	const { data: recordsResult, isLoading: recordsLoading } = useCollection("backup_records", {
+		page: recordsPage,
+		perPage: 25,
+		sort: "-started_at",
+		filter: andFilters([
+			selectedPolicyId ? eqFilter("policy", selectedPolicyId) : "",
+			!selectedPolicyId && serverId ? eqFilter("server", serverId) : "",
+		]),
+	});
 
 	const deleteMut = useDeletePolicy();
 	const triggerMut = useTriggerBackup();
@@ -83,18 +98,14 @@ export default function BackupsPage() {
 		() => (volumesResult?.items ?? []) as VolumeRecord[],
 		[volumesResult?.items],
 	);
-
-	const filteredPolicies = useMemo(() => {
-		const list = policies ?? [];
-		if (!search) return list;
-		const q = search.toLowerCase();
-		return list.filter(
-			(p) =>
-				p.volume.toLowerCase().includes(q) ||
-				p.schedule.toLowerCase().includes(q) ||
-				(p.s3_bucket ?? "").toLowerCase().includes(q),
-		);
-	}, [policies, search]);
+	const policies = useMemo(
+		() => (policiesResult?.items ?? []) as BackupPolicyRecord[],
+		[policiesResult?.items],
+	);
+	const records = useMemo(
+		() => (recordsResult?.items ?? []) as BackupRecordRecord[],
+		[recordsResult?.items],
+	);
 
 	const serverName = (sid: string) => {
 		const s = servers.find((sv) => sv.id === sid);
@@ -109,7 +120,7 @@ export default function BackupsPage() {
 	};
 
 	const runningCount = useMemo(
-		() => (records ?? []).filter((r) => r.status === "running").length,
+		() => records.filter((r) => r.status === "running").length,
 		[records],
 	);
 
@@ -122,7 +133,7 @@ export default function BackupsPage() {
 					<h1 className="text-2xl font-semibold">Backups</h1>
 					{!policiesLoading && (
 						<span className="text-sm text-muted-foreground">
-							({filteredPolicies.length} policies)
+							({policiesResult?.totalItems ?? 0} policies)
 						</span>
 					)}
 					{runningCount > 0 && (
@@ -152,6 +163,8 @@ export default function BackupsPage() {
 					onValueChange={(v) => {
 						setServerFilter(v);
 						setSelectedPolicyId("");
+						setPoliciesPage(1);
+						setRecordsPage(1);
 					}}
 				>
 					<SelectTrigger className="w-48">
@@ -169,7 +182,10 @@ export default function BackupsPage() {
 				<Input
 					placeholder="Search policies..."
 					value={search}
-					onChange={(e) => setSearch(e.target.value)}
+					onChange={(e) => {
+						setSearch(e.target.value);
+						setPoliciesPage(1);
+					}}
 					className="max-w-xs"
 				/>
 			</div>
@@ -183,7 +199,7 @@ export default function BackupsPage() {
 							<Skeleton key={i} className="h-10 w-full" />
 						))}
 					</div>
-				) : filteredPolicies.length === 0 ? (
+				) : policies.length === 0 ? (
 					<p className="text-sm text-muted-foreground">
 						No backup policies found.{" "}
 						{serverFilter === "all"
@@ -205,7 +221,7 @@ export default function BackupsPage() {
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{filteredPolicies.map((policy) => (
+								{policies.map((policy) => (
 									<TableRow
 										key={policy.id}
 										className={
@@ -213,9 +229,10 @@ export default function BackupsPage() {
 												? "bg-muted/50"
 												: "cursor-pointer hover:bg-muted/30"
 										}
-										onClick={() =>
-											setSelectedPolicyId(selectedPolicyId === policy.id ? "" : policy.id)
-										}
+										onClick={() => {
+											setSelectedPolicyId(selectedPolicyId === policy.id ? "" : policy.id);
+											setRecordsPage(1);
+										}}
 									>
 										<TableCell className="font-medium">{policy.volume}</TableCell>
 										<TableCell>
@@ -300,6 +317,14 @@ export default function BackupsPage() {
 						</Table>
 					</div>
 				)}
+
+					<PaginationControls
+						page={policiesPage}
+						totalPages={policiesResult?.totalPages ?? 0}
+						totalItems={policiesResult?.totalItems ?? 0}
+						onPageChange={setPoliciesPage}
+						label="policies"
+					/>
 			</div>
 
 			{/* Backup Records */}
@@ -309,14 +334,27 @@ export default function BackupsPage() {
 					{selectedPolicyId && (
 						<span className="ml-2 text-sm font-normal text-muted-foreground">
 							(filtered by selected policy —{" "}
-							<button className="underline" onClick={() => setSelectedPolicyId("")}>
+							<button
+								className="underline"
+								onClick={() => {
+									setSelectedPolicyId("");
+									setRecordsPage(1);
+								}}
+							>
 								show all
 							</button>
 							)
 						</span>
 					)}
 				</h2>
-				<RecordsTable records={records ?? []} isLoading={recordsLoading} />
+				<RecordsTable records={records} isLoading={recordsLoading} />
+				<PaginationControls
+					page={recordsPage}
+					totalPages={recordsResult?.totalPages ?? 0}
+					totalItems={recordsResult?.totalItems ?? 0}
+					onPageChange={setRecordsPage}
+					label="records"
+				/>
 			</div>
 
 			{/* Policy Dialog (Create/Edit) */}

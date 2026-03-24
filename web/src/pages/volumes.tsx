@@ -40,6 +40,8 @@ import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useRemoveVolume, useInspectVolume } from "@/hooks/use-volumes";
 import { CreateVolumeDialog } from "@/components/volumes/create-volume-dialog";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 import type { VolumeRecord, ServerRecord } from "@/types/pocketbase";
 
 function formatSize(bytes: number): string {
@@ -60,12 +62,17 @@ export default function VolumesPage() {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [removeTarget, setRemoveTarget] = useState<VolumeRecord | null>(null);
 	const [inspectData, setInspectData] = useState<Record<string, unknown> | null>(null);
+	const [page, setPage] = useState(1);
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
 	const { data: volumesResult, isLoading } = useCollection("volumes", {
-		perPage: 200,
+		page,
+		perPage: 25,
 		sort: "name",
-		...(serverFilter !== "all" ? { filter: `server = '${serverFilter}'` } : {}),
+		filter: andFilters([
+			serverFilter !== "all" ? eqFilter("server", serverFilter) : "",
+			containsAnyFilter(["name", "driver"], search),
+		]),
 	});
 
 	useRealtime("volumes");
@@ -75,17 +82,10 @@ export default function VolumesPage() {
 		() => (volumesResult?.items ?? []) as VolumeRecord[],
 		[volumesResult?.items],
 	);
+	const totalVolumes = volumesResult?.totalItems ?? 0;
 
 	const removeMut = useRemoveVolume();
 	const inspectMut = useInspectVolume();
-
-	const filtered = useMemo(() => {
-		if (!search) return volumes;
-		const q = search.toLowerCase();
-		return volumes.filter(
-			(v) => v.name.toLowerCase().includes(q) || (v.driver ?? "").toLowerCase().includes(q),
-		);
-	}, [volumes, search]);
 
 	const serverName = (serverId: string) => {
 		const s = servers.find((sv) => sv.id === serverId);
@@ -105,7 +105,9 @@ export default function VolumesPage() {
 				<div className="flex items-center gap-2">
 					<HardDrive className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Volumes</h1>
-					{!isLoading && <span className="text-sm text-muted-foreground">({filtered.length})</span>}
+					{!isLoading && (
+						<span className="text-sm text-muted-foreground">({totalVolumes})</span>
+					)}
 				</div>
 				<Button size="sm" onClick={() => setCreateOpen(true)} disabled={serverFilter === "all"}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -115,7 +117,13 @@ export default function VolumesPage() {
 
 			{/* Filters */}
 			<div className="flex items-center gap-3">
-				<Select value={serverFilter} onValueChange={setServerFilter}>
+				<Select
+					value={serverFilter}
+					onValueChange={(value) => {
+						setServerFilter(value);
+						setPage(1);
+					}}
+				>
 					<SelectTrigger className="w-48">
 						<SelectValue placeholder="All Servers" />
 					</SelectTrigger>
@@ -131,7 +139,10 @@ export default function VolumesPage() {
 				<Input
 					placeholder="Search volumes..."
 					value={search}
-					onChange={(e) => setSearch(e.target.value)}
+					onChange={(e) => {
+						setSearch(e.target.value);
+						setPage(1);
+					}}
 					className="max-w-xs"
 				/>
 			</div>
@@ -143,7 +154,7 @@ export default function VolumesPage() {
 						<Skeleton key={i} className="h-10 w-full" />
 					))}
 				</div>
-			) : filtered.length === 0 ? (
+			) : volumes.length === 0 ? (
 				<p className="text-sm text-muted-foreground">No volumes found.</p>
 			) : (
 				<div className="rounded-md border">
@@ -160,7 +171,7 @@ export default function VolumesPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{filtered.map((vol) => (
+							{volumes.map((vol) => (
 								<TableRow key={vol.id}>
 									<TableCell className="font-medium">{vol.name}</TableCell>
 									<TableCell>
@@ -209,6 +220,14 @@ export default function VolumesPage() {
 					</Table>
 				</div>
 			)}
+
+			<PaginationControls
+				page={page}
+				totalPages={volumesResult?.totalPages ?? 0}
+				totalItems={totalVolumes}
+				onPageChange={setPage}
+				label="volumes"
+			/>
 
 			{/* Create Dialog */}
 			{serverFilter !== "all" && (

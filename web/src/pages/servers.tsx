@@ -30,9 +30,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useServers, useDeleteServer } from "@/hooks/use-servers";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { useCollection } from "@/hooks/use-collection";
+import { useDeleteServer } from "@/hooks/use-servers";
 import { useRealtime } from "@/hooks/use-realtime";
 import { relativeTime } from "@/lib/format";
+import { containsAnyFilter } from "@/lib/pocketbase-filters";
 import type { ServerRecord } from "@/types/pocketbase";
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
@@ -49,31 +52,35 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 }
 
 export default function ServersPage() {
-	const { data: servers, isLoading } = useServers();
+	const [page, setPage] = useState(1);
+	const [search, setSearch] = useState("");
+	const { data: serversResult, isLoading } = useCollection("servers", {
+		page,
+		perPage: 25,
+		sort: "name",
+		...(search
+			? {
+					filter: containsAnyFilter(["name", "hostname", "ip_address"], search),
+				}
+			: {}),
+	});
 	const deleteServer = useDeleteServer();
 	const navigate = useNavigate();
 	useRealtime("servers");
 
-	const [search, setSearch] = useState("");
 	const [deleteTarget, setDeleteTarget] = useState<ServerRecord | null>(null);
-
-	const filtered = servers?.filter(
-		(s) =>
-			(s.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-			(s.hostname ?? "").toLowerCase().includes(search.toLowerCase()) ||
-			(s.ip_address ?? "").includes(search),
-	);
+	const servers = serversResult?.items ?? [];
+	const totalServers = serversResult?.totalItems ?? 0;
 
 	return (
 		<div className="flex flex-col gap-4">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					<Server className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Servers</h1>
-					{servers && (
+					{serversResult && (
 						<Badge variant="secondary" className="ml-1">
-							{servers.length}
+							{totalServers}
 						</Badge>
 					)}
 				</div>
@@ -83,18 +90,19 @@ export default function ServersPage() {
 				</Button>
 			</div>
 
-			{/* Search */}
 			<div className="relative w-72">
 				<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					placeholder="Search servers…"
 					className="pl-8"
 					value={search}
-					onChange={(e) => setSearch(e.target.value)}
+					onChange={(e) => {
+						setSearch(e.target.value);
+						setPage(1);
+					}}
 				/>
 			</div>
 
-			{/* Table */}
 			<div className="rounded-md border">
 				<Table>
 					<TableHeader>
@@ -120,16 +128,16 @@ export default function ServersPage() {
 									))}
 								</TableRow>
 							))
-						) : filtered?.length === 0 ? (
+						) : servers.length === 0 ? (
 							<TableRow>
 								<TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-									{servers?.length === 0
-										? 'No servers yet. Click "Add Server" to get started.'
-										: "No servers match your search."}
+									{search
+										? "No servers match your search."
+										: 'No servers yet. Click "Add Server" to get started.'}
 								</TableCell>
 							</TableRow>
 						) : (
-							filtered?.map((server) => (
+							servers.map((server) => (
 								<TableRow
 									key={server.id}
 									className="cursor-pointer"
@@ -200,7 +208,14 @@ export default function ServersPage() {
 				</Table>
 			</div>
 
-			{/* Delete confirmation dialog */}
+			<PaginationControls
+				page={page}
+				totalPages={serversResult?.totalPages ?? 0}
+				totalItems={totalServers}
+				onPageChange={setPage}
+				label="servers"
+			/>
+
 			<AlertDialog
 				open={deleteTarget !== null}
 				onOpenChange={(open) => {

@@ -40,7 +40,9 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { useRemoveNetwork } from "@/hooks/use-networks";
 import { CreateNetworkDialog } from "@/components/networks/create-network-dialog";
 import { ConnectDialog } from "@/components/networks/connect-dialog";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { isProtectedDockerNetwork } from "@/lib/docker-networks";
+import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 import type { NetworkRecord, ServerRecord, ContainerRecord } from "@/types/pocketbase";
 
 export default function NetworksPage() {
@@ -52,12 +54,17 @@ export default function NetworksPage() {
 		network: NetworkRecord;
 		mode: "connect" | "disconnect";
 	} | null>(null);
+	const [page, setPage] = useState(1);
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
 	const { data: networksResult, isLoading } = useCollection("networks", {
-		perPage: 200,
+		page,
+		perPage: 25,
 		sort: "name",
-		...(serverFilter !== "all" ? { filter: `server = '${serverFilter}'` } : {}),
+		filter: andFilters([
+			serverFilter !== "all" ? eqFilter("server", serverFilter) : "",
+			containsAnyFilter(["name", "network_id", "driver"], search),
+		]),
 	});
 	const { data: containersResult } = useCollection("containers", {
 		perPage: 500,
@@ -75,19 +82,9 @@ export default function NetworksPage() {
 		() => (containersResult?.items ?? []) as ContainerRecord[],
 		[containersResult?.items],
 	);
+	const totalNetworks = networksResult?.totalItems ?? 0;
 
 	const removeMut = useRemoveNetwork();
-
-	const filtered = useMemo(() => {
-		if (!search) return networks;
-		const q = search.toLowerCase();
-		return networks.filter(
-			(n) =>
-				n.name.toLowerCase().includes(q) ||
-				(n.network_id ?? "").toLowerCase().includes(q) ||
-				(n.driver ?? "").toLowerCase().includes(q),
-		);
-	}, [networks, search]);
 
 	const serverName = (serverId: string) => {
 		const s = servers.find((sv) => sv.id === serverId);
@@ -104,7 +101,9 @@ export default function NetworksPage() {
 				<div className="flex items-center gap-2">
 					<Network className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Networks</h1>
-					{!isLoading && <span className="text-sm text-muted-foreground">({filtered.length})</span>}
+					{!isLoading && (
+						<span className="text-sm text-muted-foreground">({totalNetworks})</span>
+					)}
 				</div>
 				<Button size="sm" onClick={() => setCreateOpen(true)} disabled={serverFilter === "all"}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -114,7 +113,13 @@ export default function NetworksPage() {
 
 			{/* Filters */}
 			<div className="flex items-center gap-3">
-				<Select value={serverFilter} onValueChange={setServerFilter}>
+				<Select
+					value={serverFilter}
+					onValueChange={(value) => {
+						setServerFilter(value);
+						setPage(1);
+					}}
+				>
 					<SelectTrigger className="w-48">
 						<SelectValue placeholder="All Servers" />
 					</SelectTrigger>
@@ -130,7 +135,10 @@ export default function NetworksPage() {
 				<Input
 					placeholder="Search networks..."
 					value={search}
-					onChange={(e) => setSearch(e.target.value)}
+					onChange={(e) => {
+						setSearch(e.target.value);
+						setPage(1);
+					}}
 					className="max-w-xs"
 				/>
 			</div>
@@ -142,7 +150,7 @@ export default function NetworksPage() {
 						<Skeleton key={i} className="h-10 w-full" />
 					))}
 				</div>
-			) : filtered.length === 0 ? (
+			) : networks.length === 0 ? (
 				<p className="text-sm text-muted-foreground">No networks found.</p>
 			) : (
 				<div className="rounded-md border">
@@ -160,7 +168,7 @@ export default function NetworksPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{filtered.map((net) => (
+							{networks.map((net) => (
 								<TableRow key={net.id}>
 									<TableCell className="font-medium">{net.name}</TableCell>
 									<TableCell>
@@ -235,6 +243,14 @@ export default function NetworksPage() {
 					</Table>
 				</div>
 			)}
+
+			<PaginationControls
+				page={page}
+				totalPages={networksResult?.totalPages ?? 0}
+				totalItems={totalNetworks}
+				onPageChange={setPage}
+				label="networks"
+			/>
 
 			{/* Create Dialog */}
 			{serverFilter !== "all" && (

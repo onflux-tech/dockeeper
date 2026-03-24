@@ -30,19 +30,20 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
-import { useAlertRules, useDeleteRule, useToggleRule } from "@/hooks/use-alerts";
+import { useDeleteRule, useToggleRule } from "@/hooks/use-alerts";
 import {
-	useNotificationChannels,
-	useNotificationLogs,
 	useDeleteChannel,
 	useTestChannel,
 } from "@/hooks/use-notifications";
 import { RuleDialog } from "@/components/alerts/rule-dialog";
 import { ChannelDialog } from "@/components/notifications/channel-dialog";
+import { containsAnyFilter } from "@/lib/pocketbase-filters";
 import type {
 	AlertRuleRecord,
+	NotificationLogRecord,
 	NotificationChannelRecord,
 	ServerRecord,
 	ContainerRecord,
@@ -64,6 +65,9 @@ const STATE_VARIANT: Record<string, "default" | "destructive" | "secondary" | "o
 
 export default function AlertsPage() {
 	const [ruleSearch, setRuleSearch] = useState("");
+	const [rulesPage, setRulesPage] = useState(1);
+	const [channelsPage, setChannelsPage] = useState(1);
+	const [historyPage, setHistoryPage] = useState(1);
 	const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
 	const [editRule, setEditRule] = useState<AlertRuleRecord | null>(null);
 	const [deleteRuleTarget, setDeleteRuleTarget] = useState<AlertRuleRecord | null>(null);
@@ -79,14 +83,33 @@ export default function AlertsPage() {
 	const { data: containersResult } = useCollection("containers", {
 		perPage: 500,
 	});
+	const { data: rulesResult, isLoading: rulesLoading } = useCollection("alert_rules", {
+		page: rulesPage,
+		perPage: 25,
+		sort: "name",
+		...(ruleSearch
+			? {
+					filter: containsAnyFilter(["name", "metric"], ruleSearch),
+				}
+			: {}),
+	});
+	const { data: channelsResult, isLoading: channelsLoading } = useCollection(
+		"notification_channels",
+		{
+			page: channelsPage,
+			perPage: 25,
+			sort: "name",
+		},
+	);
+	const { data: logsResult, isLoading: logsLoading } = useCollection("notification_logs", {
+		page: historyPage,
+		perPage: 25,
+		sort: "-sent_at",
+	});
 
 	useRealtime("alert_rules");
 	useRealtime("notification_channels");
 	useRealtime("notification_logs");
-
-	const { data: rules, isLoading: rulesLoading } = useAlertRules();
-	const { data: channels, isLoading: channelsLoading } = useNotificationChannels();
-	const { data: logs, isLoading: logsLoading } = useNotificationLogs();
 
 	const toggleMut = useToggleRule();
 	const deleteRuleMut = useDeleteRule();
@@ -95,20 +118,14 @@ export default function AlertsPage() {
 
 	const servers = (serversResult?.items ?? []) as ServerRecord[];
 	const containers = (containersResult?.items ?? []) as ContainerRecord[];
-
-	const firingCount = useMemo(
-		() => (rules ?? []).filter((r) => r.state === "firing").length,
-		[rules],
+	const rules = useMemo(() => (rulesResult?.items ?? []) as AlertRuleRecord[], [rulesResult?.items]);
+	const channels = useMemo(
+		() => (channelsResult?.items ?? []) as NotificationChannelRecord[],
+		[channelsResult?.items],
 	);
+	const logs = useMemo(() => (logsResult?.items ?? []) as NotificationLogRecord[], [logsResult?.items]);
 
-	const filteredRules = useMemo(() => {
-		const list = rules ?? [];
-		if (!ruleSearch) return list;
-		const q = ruleSearch.toLowerCase();
-		return list.filter(
-			(r) => r.name.toLowerCase().includes(q) || r.metric.toLowerCase().includes(q),
-		);
-	}, [rules, ruleSearch]);
+	const firingCount = useMemo(() => rules.filter((r) => r.state === "firing").length, [rules]);
 
 	const resolveTargetName = (targetType: string, targetId: string) => {
 		if (targetType === "server") {
@@ -120,7 +137,7 @@ export default function AlertsPage() {
 	};
 
 	const channelName = (id: string) => {
-		const ch = (channels ?? []).find((c) => c.id === id);
+		const ch = channels.find((c) => c.id === id);
 		return ch?.name ?? id.slice(0, 8);
 	};
 
@@ -159,7 +176,10 @@ export default function AlertsPage() {
 						<Input
 							placeholder="Search rules..."
 							value={ruleSearch}
-							onChange={(e) => setRuleSearch(e.target.value)}
+							onChange={(e) => {
+								setRuleSearch(e.target.value);
+								setRulesPage(1);
+							}}
 							className="max-w-xs"
 						/>
 						<Button
@@ -180,7 +200,7 @@ export default function AlertsPage() {
 								<Skeleton key={i} className="h-10 w-full" />
 							))}
 						</div>
-					) : filteredRules.length === 0 ? (
+					) : rules.length === 0 ? (
 						<p className="text-sm text-muted-foreground">
 							No alert rules found. Click "New Rule" to create one.
 						</p>
@@ -198,7 +218,7 @@ export default function AlertsPage() {
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									{filteredRules.map((rule) => (
+									{rules.map((rule) => (
 										<TableRow key={rule.id}>
 											<TableCell className="font-medium">{rule.name}</TableCell>
 											<TableCell className="font-mono text-xs">
@@ -254,6 +274,14 @@ export default function AlertsPage() {
 							</Table>
 						</div>
 					)}
+
+					<PaginationControls
+						page={rulesPage}
+						totalPages={rulesResult?.totalPages ?? 0}
+						totalItems={rulesResult?.totalItems ?? 0}
+						onPageChange={setRulesPage}
+						label="rules"
+					/>
 				</TabsContent>
 
 				{/* ── Channels Tab ────────────────────────── */}
@@ -277,7 +305,7 @@ export default function AlertsPage() {
 								<Skeleton key={i} className="h-10 w-full" />
 							))}
 						</div>
-					) : (channels ?? []).length === 0 ? (
+					) : channels.length === 0 ? (
 						<p className="text-sm text-muted-foreground">
 							No notification channels configured. Click "New Channel" to add one.
 						</p>
@@ -293,7 +321,7 @@ export default function AlertsPage() {
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									{(channels ?? []).map((ch) => (
+									{channels.map((ch) => (
 										<TableRow key={ch.id}>
 											<TableCell className="font-medium">{ch.name}</TableCell>
 											<TableCell>
@@ -353,6 +381,14 @@ export default function AlertsPage() {
 							</Table>
 						</div>
 					)}
+
+					<PaginationControls
+						page={channelsPage}
+						totalPages={channelsResult?.totalPages ?? 0}
+						totalItems={channelsResult?.totalItems ?? 0}
+						onPageChange={setChannelsPage}
+						label="channels"
+					/>
 				</TabsContent>
 
 				{/* ── History Tab ─────────────────────────── */}
@@ -363,7 +399,7 @@ export default function AlertsPage() {
 								<Skeleton key={i} className="h-10 w-full" />
 							))}
 						</div>
-					) : (logs ?? []).length === 0 ? (
+					) : logs.length === 0 ? (
 						<p className="text-sm text-muted-foreground">
 							No notification history yet. Alerts will appear here once triggered.
 						</p>
@@ -381,7 +417,7 @@ export default function AlertsPage() {
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									{(logs ?? []).map((log) => (
+									{logs.map((log) => (
 										<TableRow key={log.id}>
 											<TableCell className="text-xs whitespace-nowrap">
 												{log.sent_at ? new Date(log.sent_at).toLocaleString() : "—"}
@@ -405,6 +441,14 @@ export default function AlertsPage() {
 							</Table>
 						</div>
 					)}
+
+					<PaginationControls
+						page={historyPage}
+						totalPages={logsResult?.totalPages ?? 0}
+						totalItems={logsResult?.totalItems ?? 0}
+						onPageChange={setHistoryPage}
+						label="history entries"
+					/>
 				</TabsContent>
 			</Tabs>
 
@@ -418,7 +462,7 @@ export default function AlertsPage() {
 				}}
 				servers={servers}
 				containers={containers}
-				channels={channels ?? []}
+				channels={channels}
 				editRule={editRule}
 			/>
 

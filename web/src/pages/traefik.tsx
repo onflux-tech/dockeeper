@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Globe, ShieldCheck, ShieldOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -18,35 +18,33 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
-import { useTraefikRoutes } from "@/hooks/use-traefik";
-import type { ServerRecord } from "@/types/pocketbase";
+import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
+import type { ServerRecord, TraefikRouteRecord } from "@/types/pocketbase";
 
 export default function TraefikPage() {
+	const [page, setPage] = useState(1);
 	const [serverFilter, setServerFilter] = useState<string>("all");
 	const [search, setSearch] = useState("");
 
 	const serverId = serverFilter !== "all" ? serverFilter : undefined;
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
+	const { data: routesResult, isLoading } = useCollection("traefik_routes", {
+		page,
+		perPage: 25,
+		sort: "name",
+		filter: andFilters([
+			serverId ? eqFilter("server", serverId) : "",
+			containsAnyFilter(["name", "rule", "service"], search),
+		]),
+	});
 	useRealtime("traefik_routes");
 
-	const { data: routes, isLoading } = useTraefikRoutes(serverId);
-
 	const servers = (serversResult?.items ?? []) as ServerRecord[];
-
-	const filteredRoutes = useMemo(() => {
-		const list = routes ?? [];
-		if (!search) return list;
-		const q = search.toLowerCase();
-		return list.filter(
-			(r) =>
-				r.name.toLowerCase().includes(q) ||
-				r.rule.toLowerCase().includes(q) ||
-				r.service.toLowerCase().includes(q),
-		);
-	}, [routes, search]);
+	const routes = (routesResult?.items ?? []) as TraefikRouteRecord[];
 
 	const serverName = (sid: string) => {
 		const s = servers.find((sv) => sv.id === sid);
@@ -60,13 +58,21 @@ export default function TraefikPage() {
 				<Globe className="h-5 w-5 text-muted-foreground" />
 				<h1 className="text-2xl font-semibold">Traefik Routes</h1>
 				{!isLoading && (
-					<span className="text-sm text-muted-foreground">({filteredRoutes.length} routes)</span>
+					<span className="text-sm text-muted-foreground">
+						({routesResult?.totalItems ?? 0} routes)
+					</span>
 				)}
 			</div>
 
 			{/* Filters */}
 			<div className="flex items-center gap-3">
-				<Select value={serverFilter} onValueChange={setServerFilter}>
+				<Select
+					value={serverFilter}
+					onValueChange={(value) => {
+						setServerFilter(value);
+						setPage(1);
+					}}
+				>
 					<SelectTrigger className="w-48">
 						<SelectValue placeholder="All Servers" />
 					</SelectTrigger>
@@ -82,7 +88,10 @@ export default function TraefikPage() {
 				<Input
 					placeholder="Search routes..."
 					value={search}
-					onChange={(e) => setSearch(e.target.value)}
+					onChange={(e) => {
+						setSearch(e.target.value);
+						setPage(1);
+					}}
 					className="max-w-xs"
 				/>
 			</div>
@@ -94,7 +103,7 @@ export default function TraefikPage() {
 						<Skeleton key={i} className="h-10 w-full" />
 					))}
 				</div>
-			) : filteredRoutes.length === 0 ? (
+			) : routes.length === 0 ? (
 				<p className="text-sm text-muted-foreground">
 					No Traefik routes found.
 					{serverFilter === "all"
@@ -118,7 +127,7 @@ export default function TraefikPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{filteredRoutes.map((route) => (
+							{routes.map((route) => (
 								<TableRow key={route.id}>
 									<TableCell className="font-medium">{route.name}</TableCell>
 									<TableCell className="max-w-xs truncate font-mono text-xs">
@@ -173,6 +182,14 @@ export default function TraefikPage() {
 					</Table>
 				</div>
 			)}
+
+			<PaginationControls
+				page={page}
+				totalPages={routesResult?.totalPages ?? 0}
+				totalItems={routesResult?.totalItems ?? 0}
+				onPageChange={setPage}
+				label="routes"
+			/>
 		</div>
 	);
 }

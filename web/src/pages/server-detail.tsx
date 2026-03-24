@@ -19,6 +19,8 @@ import { useServerMetrics, type TimeRange } from "@/hooks/use-server-metrics";
 import { ServerInfo } from "@/components/server/server-info";
 import { MetricsCharts } from "@/components/server/metrics-charts";
 import { ContainerTable } from "@/components/server/container-table";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 
 const timeRangeLabels: Record<TimeRange, string> = {
 	"1h": "Last 1 hour",
@@ -30,12 +32,20 @@ const timeRangeLabels: Record<TimeRange, string> = {
 export default function ServerDetailPage() {
 	const { id } = useParams();
 	const [range, setRange] = useState<TimeRange>("1h");
+	const [containersPage, setContainersPage] = useState(1);
+	const [containerSearch, setContainerSearch] = useState("");
+	const [containerStatus, setContainerStatus] = useState("all");
 
 	const { data: server, isLoading: loadingServer } = useRecord("servers", id);
 	const { data: metricsData, isLoading: loadingMetrics } = useServerMetrics(id, range);
 	const { data: containersResult, isLoading: loadingContainers } = useCollection("containers", {
-		filter: `server = "${id}"`,
-		perPage: 200,
+		page: containersPage,
+		perPage: 25,
+		filter: andFilters([
+			eqFilter("server", id),
+			containsAnyFilter(["name", "image"], containerSearch),
+			containerStatus !== "all" ? eqFilter("status", containerStatus) : "",
+		]),
 		enabled: !!id,
 	});
 
@@ -81,7 +91,9 @@ export default function ServerDetailPage() {
 			<Tabs defaultValue="overview">
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="containers">Containers ({containers.length})</TabsTrigger>
+					<TabsTrigger value="containers">
+						Containers ({containersResult?.totalItems ?? containers.length})
+					</TabsTrigger>
 				</TabsList>
 
 				{/* Overview Tab */}
@@ -109,7 +121,28 @@ export default function ServerDetailPage() {
 
 				{/* Containers Tab */}
 				<TabsContent value="containers" className="mt-4">
-					<ContainerTable containers={containers} isLoading={loadingContainers} />
+					<ContainerTable
+						containers={containers}
+						isLoading={loadingContainers}
+						search={containerSearch}
+						onSearchChange={(value) => {
+							setContainerSearch(value);
+							setContainersPage(1);
+						}}
+						statusFilter={containerStatus}
+						onStatusFilterChange={(value) => {
+							setContainerStatus(value);
+							setContainersPage(1);
+						}}
+					/>
+					<PaginationControls
+						className="mt-4 flex items-center justify-between gap-3"
+						page={containersPage}
+						totalPages={containersResult?.totalPages ?? 0}
+						totalItems={containersResult?.totalItems ?? containers.length}
+						onPageChange={setContainersPage}
+						label="containers"
+					/>
 				</TabsContent>
 			</Tabs>
 		</div>
