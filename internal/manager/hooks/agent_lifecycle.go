@@ -48,11 +48,12 @@ func checkOfflineAgents(app core.App) {
 }
 
 // UpdateHeartbeat sets the server's last_seen to now and status to online.
-func UpdateHeartbeat(app core.App, serverID string) {
+// It returns false if the server record does not exist (e.g. deleted).
+func UpdateHeartbeat(app core.App, serverID string) bool {
 	record, err := app.FindRecordById(constants.CollServers, serverID)
 	if err != nil {
 		slog.Error("heartbeat: server not found", "server_id", serverID, "error", err)
-		return
+		return false
 	}
 
 	record.Set("last_seen", time.Now().UTC())
@@ -60,4 +61,5 @@ func UpdateHeartbeat(app core.App, serverID string) {
 	if err := app.Save(record); err != nil {
 		slog.Error("heartbeat: failed to update", "server_id", serverID, "error", err)
 	}
+	return true
 }

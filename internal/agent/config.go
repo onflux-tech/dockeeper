@@ -74,3 +74,20 @@ func (c *Config) Save() error {
 	}
 	return nil
 }
+
+// ClearEnrollment removes the server_id from config and deletes certificate
+// files, so the agent can re-enroll on next startup.
+func (c *Config) ClearEnrollment() error {
+	c.ServerID = ""
+	if err := c.Save(); err != nil {
+		return fmt.Errorf("save config after clearing enrollment: %w", err)
+	}
+
+	certsDir := c.CertsDir()
+	for _, name := range []string{"ca.pem", "client.pem", "client-key.pem"} {
+		if err := os.Remove(filepath.Join(certsDir, name)); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("remove %s: %w", name, err)
+		}
+	}
+	return nil
+}

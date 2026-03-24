@@ -33,6 +33,10 @@ func (h *DiscoveryHandler) ReportContainers(ctx context.Context, req *agentpb.Re
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
 	}
 
+	if !h.serverExists(sid) {
+		return nil, status.Error(codes.NotFound, "server not found")
+	}
+
 	count, err := h.resources.UpsertContainers(sid, req.GetContainers())
 	if err != nil {
 		slog.Error("discovery: upsert containers failed", "server_id", sid, "error", err)
@@ -48,6 +52,10 @@ func (h *DiscoveryHandler) ReportImages(ctx context.Context, req *agentpb.Report
 	sid := h.serverID(ctx, req.GetServerId())
 	if sid == "" {
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
+	}
+
+	if !h.serverExists(sid) {
+		return nil, status.Error(codes.NotFound, "server not found")
 	}
 
 	count, err := h.resources.UpsertImages(sid, req.GetImages())
@@ -67,6 +75,10 @@ func (h *DiscoveryHandler) ReportNetworks(ctx context.Context, req *agentpb.Repo
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
 	}
 
+	if !h.serverExists(sid) {
+		return nil, status.Error(codes.NotFound, "server not found")
+	}
+
 	count, err := h.resources.UpsertNetworks(sid, req.GetNetworks())
 	if err != nil {
 		slog.Error("discovery: upsert networks failed", "server_id", sid, "error", err)
@@ -82,6 +94,10 @@ func (h *DiscoveryHandler) ReportVolumes(ctx context.Context, req *agentpb.Repor
 	sid := h.serverID(ctx, req.GetServerId())
 	if sid == "" {
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
+	}
+
+	if !h.serverExists(sid) {
+		return nil, status.Error(codes.NotFound, "server not found")
 	}
 
 	count, err := h.resources.UpsertVolumes(sid, req.GetVolumes())
@@ -100,4 +116,10 @@ func (h *DiscoveryHandler) serverID(ctx context.Context, reqServerID string) str
 		return sid
 	}
 	return reqServerID
+}
+
+// serverExists checks whether the server record still exists in PocketBase.
+func (h *DiscoveryHandler) serverExists(serverID string) bool {
+	_, err := h.app.FindRecordById("servers", serverID)
+	return err == nil
 }

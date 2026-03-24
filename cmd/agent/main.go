@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -35,28 +36,40 @@ func main() {
 	// Propagate version to agent package.
 	agent.Version = Version
 
-	cfg, err := agent.LoadConfig(*dataDir)
-	if err != nil {
-		slog.Error("failed to load config", "error", err)
-		os.Exit(1)
-	}
-
-	// CLI flags override persisted config.
-	cfg.ManagerURL = *managerURL
-
-	a, err := agent.NewAgent(cfg, *token)
-	if err != nil {
-		slog.Error("failed to create agent", "error", err)
-		os.Exit(1)
-	}
-
 	// Context cancelled on SIGTERM / SIGINT.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	if err := a.Run(ctx); err != nil {
-		slog.Error("agent exited with error", "error", err)
-		os.Exit(1)
+	for {
+		cfg, err := agent.LoadConfig(*dataDir)
+		if err != nil {
+			slog.Error("failed to load config", "error", err)
+			os.Exit(1)
+		}
+
+		// CLI flags override persisted config.
+		cfg.ManagerURL = *managerURL
+
+		a, err := agent.NewAgent(cfg, *token)
+		if err != nil {
+			slog.Error("failed to create agent", "error", err)
+			os.Exit(1)
+		}
+
+		err = a.Run(ctx)
+		if errors.Is(err, agent.ErrServerGone) {
+			slog.Warn("server was deleted, agent will re-enroll")
+			// Check if the parent context is still alive before retrying.
+			if ctx.Err() != nil {
+				break
+			}
+			continue
+		}
+		if err != nil {
+			slog.Error("agent exited with error", "error", err)
+			os.Exit(1)
+		}
+		break
 	}
 
 	slog.Info("agent stopped")

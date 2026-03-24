@@ -2,11 +2,13 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/onflux-tech/dockeeper/internal/agent/cert"
@@ -16,6 +18,11 @@ import (
 
 // Version is set at build time via ldflags.
 var Version = "dev"
+
+// ErrServerGone is returned by Run when the manager reports that the server
+// record no longer exists (e.g. deleted). The caller should re-invoke Run
+// with a new enrollment token so the agent can re-enroll.
+var ErrServerGone = errors.New("server record deleted on manager")
 
 const (
 	backoffBase = 1 * time.Second
@@ -29,12 +36,14 @@ const (
 // Agent orchestrates the enrollment, mTLS connection and lifecycle of the
 // dockeeper agent process.
 type Agent struct {
-	cfg    *Config
-	certs  *cert.Manager
-	client *GRPCClient
-	orch   collector.OrchestratorClient
-	logger *slog.Logger
-	token  string // one-time enrollment token (from CLI)
+	cfg        *Config
+	certs      *cert.Manager
+	client     *GRPCClient
+	orch       collector.OrchestratorClient
+	logger     *slog.Logger
+	token      string // one-time enrollment token (from CLI)
+	serverGone bool   // set when the manager says the server was deleted
+	mu         sync.Mutex
 }
 
 // NewAgent creates an Agent from the given config and enrollment token.
@@ -59,6 +68,10 @@ func NewAgent(cfg *Config, token string) (*Agent, error) {
 
 // Run is the main agent loop. It blocks until ctx is cancelled.
 func (a *Agent) Run(ctx context.Context) error {
+	// Wrap context so we can cancel it programmatically (e.g. on uninstall).
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	if err := a.ensureEnrolled(ctx); err != nil {
 		return fmt.Errorf("enrollment: %w", err)
 	}
@@ -91,6 +104,19 @@ func (a *Agent) Run(ctx context.Context) error {
 		}()
 
 		discovery := collector.NewDiscoveryCollector(orch, a.client.Discovery(), a.cfg.ServerID, a.logger)
+		discovery.SetServerGoneCallback(func() {
+			a.mu.Lock()
+			defer a.mu.Unlock()
+			if a.serverGone {
+				return // already handling
+			}
+			a.serverGone = true
+			a.logger.Warn("server record deleted on manager, clearing enrollment for re-enrollment")
+			if clearErr := a.cfg.ClearEnrollment(); clearErr != nil {
+				a.logger.Error("failed to clear enrollment data", "error", clearErr)
+			}
+			cancel()
+		})
 		go discovery.Run(ctx)
 
 		metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, a.logger)
@@ -105,7 +131,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		if execErr != nil {
 			a.logger.Warn("failed to create docker executor, commands disabled", "error", execErr)
 		} else {
-			agentSrv := NewAgentServer(exec, orch, a.logger)
+			agentSrv := NewAgentServer(exec, orch, a.logger, cancel)
 			go func() {
 				if srvErr := agentSrv.Start(); srvErr != nil {
 					a.logger.Error("agent gRPC server exited", "error", srvErr)
@@ -118,6 +144,13 @@ func (a *Agent) Run(ctx context.Context) error {
 	// Block until shutdown signal.
 	<-ctx.Done()
 	a.logger.Info("shutting down agent")
+
+	a.mu.Lock()
+	gone := a.serverGone
+	a.mu.Unlock()
+	if gone {
+		return ErrServerGone
+	}
 	return nil
 }
 

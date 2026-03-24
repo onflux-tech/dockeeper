@@ -54,6 +54,7 @@ type Executor interface {
 	InspectVolume(ctx context.Context, name string) (*VolumeInspectResult, error)
 	BackupVolume(ctx context.Context, mountpoint string, s3 S3Config, progress func(BackupProgressInfo)) error
 	RestoreVolume(ctx context.Context, mountpoint string, s3 S3Config, progress func(BackupProgressInfo)) error
+	Uninstall(ctx context.Context) Result
 }
 
 // NetworkCreateOpts holds options for creating a Docker network.

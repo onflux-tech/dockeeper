@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -17,11 +19,12 @@ const discoveryInterval = 30 * time.Second
 // data from the orchestrator and sends it to the manager via gRPC. It uses
 // hash-based diff detection to avoid sending unchanged data.
 type DiscoveryCollector struct {
-	orch     OrchestratorClient
-	client   agentpb.AgentDiscoveryServiceClient
-	serverID string
-	logger   *slog.Logger
-	hashes   map[string][32]byte
+	orch          OrchestratorClient
+	client        agentpb.AgentDiscoveryServiceClient
+	serverID      string
+	logger        *slog.Logger
+	hashes        map[string][32]byte
+	onServerGone  func() // called when the manager reports the server was deleted
 }
 
 // NewDiscoveryCollector creates a new discovery collector.
@@ -38,6 +41,12 @@ func NewDiscoveryCollector(
 		logger:   logger,
 		hashes:   make(map[string][32]byte),
 	}
+}
+
+// SetServerGoneCallback sets the function called when a discovery report returns
+// NotFound, indicating the server record was deleted from the manager.
+func (d *DiscoveryCollector) SetServerGoneCallback(fn func()) {
+	d.onServerGone = fn
 }
 
 // Run starts the periodic discovery loop. It blocks until ctx is cancelled.
@@ -83,7 +92,7 @@ func (d *DiscoveryCollector) reportContainers(ctx context.Context) {
 
 	resp, err := d.client.ReportContainers(ctx, req)
 	if err != nil {
-		d.logger.Error("discovery: report containers failed", "error", err)
+		d.handleRPCError("containers", err)
 		return
 	}
 	d.logger.Info("discovery: containers reported", "count", resp.GetReceivedCount())
@@ -107,7 +116,7 @@ func (d *DiscoveryCollector) reportImages(ctx context.Context) {
 
 	resp, err := d.client.ReportImages(ctx, req)
 	if err != nil {
-		d.logger.Error("discovery: report images failed", "error", err)
+		d.handleRPCError("images", err)
 		return
 	}
 	d.logger.Info("discovery: images reported", "count", resp.GetReceivedCount())
@@ -131,7 +140,7 @@ func (d *DiscoveryCollector) reportNetworks(ctx context.Context) {
 
 	resp, err := d.client.ReportNetworks(ctx, req)
 	if err != nil {
-		d.logger.Error("discovery: report networks failed", "error", err)
+		d.handleRPCError("networks", err)
 		return
 	}
 	d.logger.Info("discovery: networks reported", "count", resp.GetReceivedCount())
@@ -155,10 +164,22 @@ func (d *DiscoveryCollector) reportVolumes(ctx context.Context) {
 
 	resp, err := d.client.ReportVolumes(ctx, req)
 	if err != nil {
-		d.logger.Error("discovery: report volumes failed", "error", err)
+		d.handleRPCError("volumes", err)
 		return
 	}
 	d.logger.Info("discovery: volumes reported", "count", resp.GetReceivedCount())
+}
+
+// handleRPCError logs the error and, if the manager returned NotFound
+// (server deleted), triggers the server-gone callback.
+func (d *DiscoveryCollector) handleRPCError(resource string, err error) {
+	if status.Code(err) == codes.NotFound && d.onServerGone != nil {
+		d.logger.Warn("discovery: server not found on manager, triggering re-enrollment",
+			"resource", resource)
+		d.onServerGone()
+		return
+	}
+	d.logger.Error("discovery: report failed", "resource", resource, "error", err)
 }
 
 // changed returns true if the proto message has changed since last check.

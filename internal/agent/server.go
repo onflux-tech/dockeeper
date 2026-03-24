@@ -23,10 +23,12 @@ type AgentServer struct {
 }
 
 // NewAgentServer creates a gRPC server on the agent side.
-func NewAgentServer(exec executor.Executor, orch collector.OrchestratorClient, logger *slog.Logger) *AgentServer {
+// The onShutdown callback is invoked when an uninstall command is received.
+func NewAgentServer(exec executor.Executor, orch collector.OrchestratorClient, logger *slog.Logger, onShutdown func()) *AgentServer {
 	gs := grpc.NewServer()
 
 	cmds := grpchandlers.NewCommandsHandler(exec, logger)
+	cmds.SetShutdownCallback(onShutdown)
 	agentpb.RegisterAgentCommandsServiceServer(gs, cmds)
 
 	logs := grpchandlers.NewLogsHandler(orch, logger)

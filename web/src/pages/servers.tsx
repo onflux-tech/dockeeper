@@ -8,6 +8,16 @@ import {
 	MoreHorizontal,
 	ExternalLink,
 } from "lucide-react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +34,13 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useServers, useDeleteServer } from "@/hooks/use-servers";
 import { useRealtime } from "@/hooks/use-realtime";
 import { relativeTime } from "@/lib/format";
+import type { ServerRecord } from "@/types/pocketbase";
 
 function statusVariant(
 	status: string,
@@ -52,6 +64,7 @@ export default function ServersPage() {
 	useRealtime("servers");
 
 	const [search, setSearch] = useState("");
+	const [deleteTarget, setDeleteTarget] = useState<ServerRecord | null>(null);
 
 	const filtered = servers?.filter(
 		(s) =>
@@ -188,11 +201,12 @@ export default function ServersPage() {
 													<ExternalLink className="mr-2 h-4 w-4" />
 													View Details
 												</DropdownMenuItem>
+												<DropdownMenuSeparator />
 												<DropdownMenuItem
-													className="text-destructive"
+													className="text-destructive focus:text-destructive"
 													onClick={(e) => {
 														e.stopPropagation();
-														deleteServer.mutate(server.id);
+														setDeleteTarget(server);
 													}}
 												>
 													<Trash2 className="mr-2 h-4 w-4" />
@@ -207,6 +221,42 @@ export default function ServersPage() {
 					</TableBody>
 				</Table>
 			</div>
+
+			{/* Delete confirmation dialog */}
+			<AlertDialog
+				open={deleteTarget !== null}
+				onOpenChange={(open) => {
+					if (!open) setDeleteTarget(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete server?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will permanently remove the server
+							&quot;{deleteTarget?.name ?? deleteTarget?.hostname}&quot;
+							and all associated data (containers, metrics, images, volumes,
+							networks).
+							{deleteTarget?.status === "online" &&
+								" The agent will be uninstalled from the remote machine."}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								if (deleteTarget) {
+									deleteServer.mutate(deleteTarget.id);
+								}
+								setDeleteTarget(null);
+							}}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"github.com/onflux-tech/dockeeper/internal/agent/executor"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -15,8 +16,9 @@ import (
 // It receives commands from the manager and executes them via the Docker executor.
 type CommandsHandler struct {
 	agentpb.UnimplementedAgentCommandsServiceServer
-	exec   executor.Executor
-	logger *slog.Logger
+	exec       executor.Executor
+	logger     *slog.Logger
+	onShutdown func()
 }
 
 // NewCommandsHandler creates a CommandsHandler with the given executor.
@@ -25,6 +27,12 @@ func NewCommandsHandler(exec executor.Executor, logger *slog.Logger) *CommandsHa
 		exec:   exec,
 		logger: logger,
 	}
+}
+
+// SetShutdownCallback sets the function called after an uninstall command
+// to trigger graceful agent shutdown.
+func (h *CommandsHandler) SetShutdownCallback(fn func()) {
+	h.onShutdown = fn
 }
 
 // ExecuteCommand dispatches a command to the appropriate executor method based
@@ -125,6 +133,17 @@ func (h *CommandsHandler) ExecuteCommand(ctx context.Context, req *agentpb.Execu
 
 	case agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE:
 		result = h.exec.UpdateImage(ctx, containerID)
+
+	case agentpb.CommandType_COMMAND_TYPE_UNINSTALL:
+		result = h.exec.Uninstall(ctx)
+		if result.Success && h.onShutdown != nil {
+			// Trigger agent shutdown after a brief delay so the gRPC response
+			// can be sent back to the manager before the process exits.
+			go func() {
+				time.Sleep(500 * time.Millisecond)
+				h.onShutdown()
+			}()
+		}
 
 	default:
 		return &agentpb.ExecuteCommandResponse{

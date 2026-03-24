@@ -1,17 +1,23 @@
 package routes
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // RegisterServerRoutes adds server provisioning and management endpoints.
@@ -155,6 +161,14 @@ func handleDeleteServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 		return e.JSON(http.StatusNotFound, map[string]string{"error": "server not found"})
 	}
 
+	// Best-effort: send uninstall command to agent if online.
+	if record.GetString("status") == "online" {
+		sendUninstallCommand(record.GetString("ip_address"))
+	}
+
+	// Cascade delete all related records.
+	deleteRelatedRecords(app, serverID)
+
 	if err := app.Delete(record); err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -166,6 +180,60 @@ func handleDeleteServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 	auditStore.Log("server.delete", userID, "server", serverID, e.RealIP(), nil)
 
 	return e.JSON(http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// sendUninstallCommand sends COMMAND_TYPE_UNINSTALL to the agent (best-effort, 10s timeout).
+func sendUninstallCommand(agentIP string) {
+	addr := agentIP + ":50052"
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		slog.Warn("uninstall: failed to connect to agent", "addr", addr, "error", err)
+		return
+	}
+	defer conn.Close()
+
+	client := agentpb.NewAgentCommandsServiceClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := client.ExecuteCommand(ctx, &agentpb.ExecuteCommandRequest{
+		Type: agentpb.CommandType_COMMAND_TYPE_UNINSTALL,
+	})
+	if err != nil {
+		slog.Warn("uninstall: command failed", "addr", addr, "error", err)
+		return
+	}
+	slog.Info("uninstall command sent to agent", "addr", addr, "success", resp.GetSuccess(), "output", resp.GetOutput())
+}
+
+// deleteRelatedRecords removes all PocketBase records associated with a server.
+func deleteRelatedRecords(app core.App, serverID string) {
+	collections := []string{
+		constants.CollContainers,
+		constants.CollContainerMetricsRaw,
+		constants.CollContainerMetricsHourly,
+		constants.CollContainerMetricsDaily,
+		constants.CollServerMetricsRaw,
+		constants.CollServerMetricsHourly,
+		constants.CollServerMetricsDaily,
+		constants.CollImages,
+		constants.CollVolumes,
+		constants.CollNetworks,
+		constants.CollComposeStacks,
+		constants.CollTraefikRoutes,
+	}
+
+	for _, col := range collections {
+		records, err := app.FindRecordsByFilter(col, "server = {:sid}", "", 0, 0, map[string]any{"sid": serverID})
+		if err != nil {
+			continue
+		}
+		for _, r := range records {
+			if delErr := app.Delete(r); delErr != nil {
+				slog.Warn("cascade delete failed", "collection", col, "record", r.Id, "error", delErr)
+			}
+		}
+	}
 }
 
 func generateToken(n int) (string, error) {
