@@ -435,3 +435,41 @@ message InspectVolumeResponse {
   bool success = 7;
   string error = 8;
 }
+
+// ── Backups ──────────────────────────────────────────
+
+service AgentBackupService {
+  rpc BackupVolume(BackupVolumeRequest) returns (stream BackupProgress);
+  rpc RestoreVolume(RestoreVolumeRequest) returns (stream BackupProgress);
+}
+
+message S3Config {
+  string endpoint = 1;
+  string bucket = 2;
+  string key = 3;         // object key (path in bucket)
+  string access_key = 4;
+  string secret_key = 5;
+  string region = 6;
+  bool use_ssl = 7;
+}
+
+message BackupVolumeRequest {
+  string volume_name = 1;
+  string mountpoint = 2;
+  S3Config s3 = 3;
+}
+
+message RestoreVolumeRequest {
+  string volume_name = 1;
+  string mountpoint = 2;
+  S3Config s3 = 3;
+}
+
+message BackupProgress {
+  string status = 1;         // starting, tarring, uploading, downloading, extracting, done
+  string message = 2;
+  int64 bytes_processed = 3;
+  int64 total_bytes = 4;
+  bool done = 5;
+  string error = 6;
+}

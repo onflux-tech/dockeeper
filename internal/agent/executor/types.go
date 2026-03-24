@@ -51,6 +51,8 @@ type Executor interface {
 	CreateVolume(ctx context.Context, name, driver string, labels map[string]string) (string, error)
 	RemoveVolume(ctx context.Context, name string, force bool) error
 	InspectVolume(ctx context.Context, name string) (*VolumeInspectResult, error)
+	BackupVolume(ctx context.Context, mountpoint string, s3 S3Config, progress func(BackupProgressInfo)) error
+	RestoreVolume(ctx context.Context, mountpoint string, s3 S3Config, progress func(BackupProgressInfo)) error
 }
 
 // NetworkCreateOpts holds options for creating a Docker network.
@@ -71,4 +73,23 @@ type VolumeInspectResult struct {
 	SizeBytes  int64
 	Labels     map[string]string
 	CreatedAt  string
+}
+
+// S3Config holds S3-compatible storage configuration for backup operations.
+type S3Config struct {
+	Endpoint  string
+	Bucket    string
+	Key       string
+	AccessKey string
+	SecretKey string
+	Region    string
+	UseSSL    bool
+}
+
+// BackupProgressInfo holds progress information for backup/restore operations.
+type BackupProgressInfo struct {
+	Status         string
+	Message        string
+	BytesProcessed int64
+	TotalBytes     int64
 }
