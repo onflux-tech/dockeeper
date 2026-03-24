@@ -1,0 +1,9 @@
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S dockeeper \
+    && adduser -S -G dockeeper dockeeper
+COPY dockeeper-manager /usr/local/bin/dockeeper-manager
+USER dockeeper
+WORKDIR /home/dockeeper
+EXPOSE 8090 50051
+ENTRYPOINT ["dockeeper-manager", "serve", "--http=0.0.0.0:8090"]

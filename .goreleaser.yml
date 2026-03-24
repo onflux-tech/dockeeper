@@ -1,0 +1,140 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - make build-web
+
+builds:
+  - id: manager
+    main: ./cmd/manager
+    binary: dockeeper-manager
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.Version={{ .Version }}
+      - -X main.Commit={{ .ShortCommit }}
+    flags:
+      - -trimpath
+
+  - id: agent
+    main: ./cmd/agent
+    binary: dockeeper-agent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.Version={{ .Version }}
+      - -X main.Commit={{ .ShortCommit }}
+    flags:
+      - -trimpath
+
+archives:
+  - id: manager
+    builds:
+      - manager
+    name_template: "dockeeper-manager_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+
+  - id: agent
+    builds:
+      - agent
+    name_template: "dockeeper-agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+dockers:
+  - id: manager-amd64
+    ids:
+      - manager
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/onflux-tech/dockeeper-manager:{{ .Version }}-amd64"
+    dockerfile: Dockerfile.manager.goreleaser
+    build_flag_templates:
+      - "--platform=linux/amd64"
+
+  - id: manager-arm64
+    ids:
+      - manager
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/onflux-tech/dockeeper-manager:{{ .Version }}-arm64"
+    dockerfile: Dockerfile.manager.goreleaser
+    build_flag_templates:
+      - "--platform=linux/arm64"
+
+  - id: agent-amd64
+    ids:
+      - agent
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/onflux-tech/dockeeper-agent:{{ .Version }}-amd64"
+    dockerfile: Dockerfile.agent.goreleaser
+    build_flag_templates:
+      - "--platform=linux/amd64"
+
+  - id: agent-arm64
+    ids:
+      - agent
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/onflux-tech/dockeeper-agent:{{ .Version }}-arm64"
+    dockerfile: Dockerfile.agent.goreleaser
+    build_flag_templates:
+      - "--platform=linux/arm64"
+
+docker_manifests:
+  - name_template: "ghcr.io/onflux-tech/dockeeper-manager:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/onflux-tech/dockeeper-manager:{{ .Version }}-amd64"
+      - "ghcr.io/onflux-tech/dockeeper-manager:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/onflux-tech/dockeeper-manager:latest"
+    image_templates:
+      - "ghcr.io/onflux-tech/dockeeper-manager:{{ .Version }}-amd64"
+      - "ghcr.io/onflux-tech/dockeeper-manager:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/onflux-tech/dockeeper-agent:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/onflux-tech/dockeeper-agent:{{ .Version }}-amd64"
+      - "ghcr.io/onflux-tech/dockeeper-agent:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/onflux-tech/dockeeper-agent:latest"
+    image_templates:
+      - "ghcr.io/onflux-tech/dockeeper-agent:{{ .Version }}-amd64"
+      - "ghcr.io/onflux-tech/dockeeper-agent:{{ .Version }}-arm64"
+
+release:
+  github:
+    owner: onflux-tech
+    name: dockeeper
+  prerelease: auto

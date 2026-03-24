@@ -1,0 +1,51 @@
+# ─── Stage 1: Build React frontend ────────────────────────
+FROM node:22-alpine AS frontend-builder
+WORKDIR /app/web
+
+# Install deps first (layer cache)
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --prefer-offline
+
+# Copy source and build
+COPY web/ ./
+RUN npm run build
+
+# ─── Stage 2: Build Go binary ────────────────────────────
+FROM golang:1.25-alpine AS go-builder
+RUN apk add --no-cache git ca-certificates
+
+WORKDIR /app
+
+# Install Go deps first (layer cache)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Inject frontend build from stage 1
+COPY --from=frontend-builder /app/web/dist/ web/dist/
+
+# Build static binary
+ARG VERSION=dev
+ARG COMMIT=unknown
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags "-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT}" \
+    -o /out/dockeeper-manager \
+    ./cmd/manager
+
+# ─── Stage 3: Minimal runtime ────────────────────────────
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S dockeeper \
+    && adduser -S -G dockeeper dockeeper
+
+COPY --from=go-builder /out/dockeeper-manager /usr/local/bin/dockeeper-manager
+
+USER dockeeper
+WORKDIR /home/dockeeper
+
+EXPOSE 8090 50051
+
+ENTRYPOINT ["dockeeper-manager", "serve", "--http=0.0.0.0:8090"]

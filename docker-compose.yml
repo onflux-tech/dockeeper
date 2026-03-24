@@ -1,0 +1,45 @@
+services:
+  manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.manager
+      args:
+        VERSION: "${VERSION:-dev}"
+        COMMIT: "${COMMIT:-unknown}"
+    container_name: dockeeper-manager
+    ports:
+      - "8090:8090"
+      - "50051:50051"
+    volumes:
+      - manager-data:/home/dockeeper/pb_data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/dk/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        VERSION: "${VERSION:-dev}"
+        COMMIT: "${COMMIT:-unknown}"
+    container_name: dockeeper-agent
+    command:
+      - "--manager-url=manager:50051"
+      - "--token=${AGENT_TOKEN:-}"
+      - "--data-dir=/data"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - agent-data:/data
+    depends_on:
+      manager:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  manager-data:
+  agent-data:

@@ -1,0 +1,8 @@
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S dockeeper \
+    && adduser -S -G dockeeper dockeeper
+COPY dockeeper-agent /usr/local/bin/dockeeper-agent
+USER dockeeper
+WORKDIR /home/dockeeper
+ENTRYPOINT ["dockeeper-agent"]

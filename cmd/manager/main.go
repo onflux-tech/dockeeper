@@ -7,6 +7,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
+	dockeeper "github.com/jkdesenvolvedor/dockeeper"
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager"
 	_ "github.com/jkdesenvolvedor/dockeeper/migrations"
 )
@@ -24,7 +25,7 @@ func main() {
 		Automigrate: true,
 	})
 
-	manager.Bootstrap(app, Version, Commit)
+	manager.Bootstrap(app, Version, Commit, dockeeper.FrontendDist)
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)

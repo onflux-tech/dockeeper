@@ -1,8 +1,11 @@
 package manager
 
 import (
+	"embed"
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase"
@@ -20,7 +23,7 @@ import (
 const grpcAddr = ":50051"
 
 // Bootstrap registers all custom routes, hooks, and background jobs on the PocketBase app.
-func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
+func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS embed.FS) {
 	// Auth rate limiter: 5 requests per minute.
 	authLimiter := middleware.NewRateLimiter(5, time.Minute)
 
@@ -106,6 +109,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		routes.RegisterAuditRoutes(se, app)
 		hooks.RegisterAuditHooks(app, auditStore)
 
+		// Serve embedded frontend (SPA fallback).
+		registerFrontendHandler(se, frontendFS)
+
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
 		if err != nil {
@@ -144,5 +150,40 @@ func registerHealthRoutes(se *core.ServeEvent, version, commit string) {
 			"version": version,
 			"commit":  commit,
 		})
+	})
+}
+
+// registerFrontendHandler serves the embedded React SPA.
+// API routes take precedence; all other GET requests fall back to index.html.
+func registerFrontendHandler(se *core.ServeEvent, frontendFS embed.FS) {
+	distFS, err := fs.Sub(frontendFS, "web/dist")
+	if err != nil {
+		slog.Warn("frontend embed not available, skipping SPA handler", "error", err)
+		return
+	}
+
+	fileServer := http.FileServerFS(distFS)
+
+	se.Router.GET("/{path...}", func(e *core.RequestEvent) error {
+		path := e.Request.URL.Path
+
+		// Skip API and PocketBase internal routes.
+		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/_/") {
+			return e.Next()
+		}
+
+		// Try to serve the static file directly.
+		cleanPath := strings.TrimPrefix(path, "/")
+		if cleanPath != "" {
+			if f, err := distFS.(fs.ReadFileFS).ReadFile(cleanPath); err == nil && f != nil {
+				fileServer.ServeHTTP(e.Response, e.Request)
+				return nil
+			}
+		}
+
+		// SPA fallback: serve index.html for client-side routing.
+		e.Request.URL.Path = "/"
+		fileServer.ServeHTTP(e.Response, e.Request)
+		return nil
 	})
 }

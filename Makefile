@@ -7,7 +7,8 @@ GOFLAGS  = -trimpath
 BIN_DIR  = bin
 
 .PHONY: all build-manager build-agent build lint format test clean dev proto-gen \
-        dev-web build-web lint-web format-web
+        dev-web build-web lint-web format-web \
+        build-all docker-build docker-push release
 
 all: build
 
@@ -20,6 +21,9 @@ build-manager:
 
 build-agent:
 	$(GO) build $(GOFLAGS) $(LDFLAGS) -o $(BIN_DIR)/dockeeper-agent ./cmd/agent
+
+## Build frontend then manager (production: embeds React into Go binary)
+build-all: build-web build-manager build-agent
 
 lint:
 	golangci-lint run ./...
@@ -56,3 +60,28 @@ lint-web:
 
 format-web:
 	cd web && npm run format:check
+
+## ── Docker ──────────────────────────────────────────
+
+DOCKER_REPO ?= ghcr.io/onflux-tech
+
+docker-build:
+	docker build -f Dockerfile.manager \
+		--build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
+		-t $(DOCKER_REPO)/dockeeper-manager:$(VERSION) \
+		-t $(DOCKER_REPO)/dockeeper-manager:latest .
+	docker build -f Dockerfile.agent \
+		--build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
+		-t $(DOCKER_REPO)/dockeeper-agent:$(VERSION) \
+		-t $(DOCKER_REPO)/dockeeper-agent:latest .
+
+docker-push:
+	docker push $(DOCKER_REPO)/dockeeper-manager:$(VERSION)
+	docker push $(DOCKER_REPO)/dockeeper-manager:latest
+	docker push $(DOCKER_REPO)/dockeeper-agent:$(VERSION)
+	docker push $(DOCKER_REPO)/dockeeper-agent:latest
+
+## ── Release ─────────────────────────────────────────
+
+release:
+	goreleaser release --clean

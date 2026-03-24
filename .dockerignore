@@ -1,0 +1,51 @@
+# Dependencies & build artifacts
+node_modules/
+web/node_modules/
+web/dist/
+bin/
+
+# Data & runtime
+dk_data/
+dk-agent-data/
+*.db
+*.db-wal
+*.db-shm
+
+# Version control
+.git/
+.github/
+.gitignore
+
+# IDE & editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Specs & docs
+.specs/
+*.md
+LICENSE
+
+# Docker (avoid recursive context)
+docker-compose.yml
+
+# GoReleaser
+.goreleaser.yml
+dist/
+
+# Proto source (generated code is committed)
+proto/buf.yaml
+proto/buf.gen.yaml
+proto/buf.lock
+
+# Test & temp
+*.test
+*.out
+coverage/
+tmp/
