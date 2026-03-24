@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, TerminalSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,6 +52,14 @@ export default function ContainerDetailPage() {
 						</h1>
 						{container && (
 							<Badge variant={statusVariant}>{container.status}</Badge>
+						)}
+						{id && container?.status === "running" && (
+							<Button variant="outline" size="sm" className="ml-auto" asChild>
+								<Link to={`/containers/${id}/terminal`}>
+									<TerminalSquare className="mr-1.5 h-4 w-4" />
+									Terminal
+								</Link>
+							</Button>
 						)}
 					</>
 				)}
