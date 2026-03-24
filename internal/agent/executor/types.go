@@ -48,6 +48,9 @@ type Executor interface {
 	RemoveNetwork(ctx context.Context, networkID string) error
 	ConnectContainer(ctx context.Context, networkID, containerID string) error
 	DisconnectContainer(ctx context.Context, networkID, containerID string, force bool) error
+	CreateVolume(ctx context.Context, name, driver string, labels map[string]string) (string, error)
+	RemoveVolume(ctx context.Context, name string, force bool) error
+	InspectVolume(ctx context.Context, name string) (*VolumeInspectResult, error)
 }
 
 // NetworkCreateOpts holds options for creating a Docker network.
@@ -58,4 +61,14 @@ type NetworkCreateOpts struct {
 	Gateway  string
 	Internal bool
 	Labels   map[string]string
+}
+
+// VolumeInspectResult holds the outcome of inspecting a Docker volume.
+type VolumeInspectResult struct {
+	Name       string
+	Driver     string
+	Mountpoint string
+	SizeBytes  int64
+	Labels     map[string]string
+	CreatedAt  string
 }

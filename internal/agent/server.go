@@ -41,6 +41,9 @@ func NewAgentServer(exec executor.Executor, orch collector.OrchestratorClient, l
 	nets := grpchandlers.NewNetworkHandler(exec, logger)
 	agentpb.RegisterAgentNetworkServiceServer(gs, nets)
 
+	vols := grpchandlers.NewVolumeHandler(exec, logger)
+	agentpb.RegisterAgentVolumeServiceServer(gs, vols)
+
 	execH, err := grpchandlers.NewExecHandler(logger)
 	if err != nil {
 		logger.Warn("exec handler unavailable, terminal disabled", "error", err)

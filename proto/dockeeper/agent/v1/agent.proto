@@ -390,3 +390,48 @@ message NetworkDisconnectResponse {
   bool success = 1;
   string error = 2;
 }
+
+// ── Volumes ──────────────────────────────────────────
+
+service AgentVolumeService {
+  rpc CreateVolume(CreateVolumeRequest) returns (CreateVolumeResponse);
+  rpc RemoveVolume(RemoveVolumeRequest) returns (RemoveVolumeResponse);
+  rpc InspectVolume(InspectVolumeRequest) returns (InspectVolumeResponse);
+}
+
+message CreateVolumeRequest {
+  string name = 1;
+  string driver = 2;
+  map<string, string> labels = 3;
+}
+
+message CreateVolumeResponse {
+  string name = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message RemoveVolumeRequest {
+  string name = 1;
+  bool force = 2;
+}
+
+message RemoveVolumeResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message InspectVolumeRequest {
+  string name = 1;
+}
+
+message InspectVolumeResponse {
+  string name = 1;
+  string driver = 2;
+  string mountpoint = 3;
+  int64 size_bytes = 4;
+  map<string, string> labels = 5;
+  string created_at = 6;
+  bool success = 7;
+  string error = 8;
+}

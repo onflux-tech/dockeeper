@@ -78,6 +78,10 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		networkSvc := services.NewNetworkService(app, auditStore)
 		routes.RegisterNetworkRoutes(se, networkSvc)
 
+		// Volume management routes.
+		volumeSvc := services.NewVolumeService(app, auditStore)
+		routes.RegisterVolumeRoutes(se, volumeSvc)
+
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
 		if err != nil {
