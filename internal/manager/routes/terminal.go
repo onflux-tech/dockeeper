@@ -14,8 +14,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"github.com/coder/websocket"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
-	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
+	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // RegisterTerminalRoutes adds the WebSocket terminal proxy endpoint.

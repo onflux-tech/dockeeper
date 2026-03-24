@@ -5,9 +5,9 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
+	"github.com/onflux-tech/dockeeper/internal/manager/store"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
 // RegisterAlertRoutes adds alert rule management endpoints.

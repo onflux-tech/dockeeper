@@ -5,7 +5,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/manager/services"
 )
 
 // RegisterAlertJobs registers the alert evaluation cron job (every 30s).

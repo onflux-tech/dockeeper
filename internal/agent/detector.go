@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/agent/collector"
+	"github.com/onflux-tech/dockeeper/internal/agent/collector"
 )
 
 // DetectOrchestrator probes the local environment for a supported container

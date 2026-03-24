@@ -8,9 +8,9 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/robfig/cron/v3"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/manager/store"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
 // RegisterBackupJobs registers the backup scheduler and retention cleanup jobs.

@@ -6,9 +6,9 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/models"
+	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
+	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/shared/models"
 )
 
 // RegisterContainerCreateRoutes registers POST /api/dk/containers/create.

@@ -8,7 +8,7 @@ import (
 	"os"
 	"runtime"
 
-	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )

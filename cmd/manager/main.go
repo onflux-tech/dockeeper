@@ -7,9 +7,9 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
-	dockeeper "github.com/jkdesenvolvedor/dockeeper"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager"
-	_ "github.com/jkdesenvolvedor/dockeeper/migrations"
+	dockeeper "github.com/onflux-tech/dockeeper"
+	"github.com/onflux-tech/dockeeper/internal/manager"
+	_ "github.com/onflux-tech/dockeeper/migrations"
 )
 
 // Version and Commit are set via LDFLAGS at build time.

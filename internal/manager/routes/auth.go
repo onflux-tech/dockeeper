@@ -7,8 +7,8 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/hooks"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
+	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
+	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 )
 
 const (

@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/agent/cert"
-	"github.com/jkdesenvolvedor/dockeeper/internal/agent/collector"
-	"github.com/jkdesenvolvedor/dockeeper/internal/agent/executor"
+	"github.com/onflux-tech/dockeeper/internal/agent/cert"
+	"github.com/onflux-tech/dockeeper/internal/agent/collector"
+	"github.com/onflux-tech/dockeeper/internal/agent/executor"
 )
 
 // Version is set at build time via ldflags.

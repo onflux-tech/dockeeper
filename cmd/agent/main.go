@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/agent"
+	"github.com/onflux-tech/dockeeper/internal/agent"
 )
 
 // Set at build time via ldflags.

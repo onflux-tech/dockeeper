@@ -10,7 +10,7 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
 // ── Server metrics hourly ───────────────────────────────────────────────────

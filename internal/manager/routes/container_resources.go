@@ -6,9 +6,9 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
-	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
+	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
+	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // RegisterContainerResourceRoutes adds GET/PUT routes for container resource limits.

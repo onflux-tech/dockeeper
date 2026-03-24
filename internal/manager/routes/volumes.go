@@ -5,8 +5,8 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
+	"github.com/onflux-tech/dockeeper/internal/manager/services"
 )
 
 // RegisterVolumeRoutes adds volume management endpoints.

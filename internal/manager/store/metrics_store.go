@@ -7,8 +7,8 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/constants"
-	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // MetricsStore persists raw metrics data into PocketBase collections.

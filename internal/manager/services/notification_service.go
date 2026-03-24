@@ -9,8 +9,8 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/notify"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
+	"github.com/onflux-tech/dockeeper/internal/manager/notify"
+	"github.com/onflux-tech/dockeeper/internal/manager/store"
 )
 
 const (

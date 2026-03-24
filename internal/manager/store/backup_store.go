@@ -7,7 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
 // BackupStore provides CRUD operations for backup_policies and backup_records.

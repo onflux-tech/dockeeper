@@ -7,10 +7,10 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/agent/collector"
-	"github.com/jkdesenvolvedor/dockeeper/internal/agent/executor"
-	grpchandlers "github.com/jkdesenvolvedor/dockeeper/internal/agent/grpc_handlers"
-	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
+	"github.com/onflux-tech/dockeeper/internal/agent/collector"
+	"github.com/onflux-tech/dockeeper/internal/agent/executor"
+	grpchandlers "github.com/onflux-tech/dockeeper/internal/agent/grpc_handlers"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 const agentGRPCPort = ":50052"

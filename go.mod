@@ -1,4 +1,4 @@
-module github.com/jkdesenvolvedor/dockeeper
+module github.com/onflux-tech/dockeeper
 
 go 1.25.1
 

@@ -8,10 +8,10 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/constants"
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/models"
-	agentpb "github.com/jkdesenvolvedor/dockeeper/proto/gen/dockeeper/agent/v1"
+	"github.com/onflux-tech/dockeeper/internal/manager/store"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/shared/models"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // ContainerCreateService handles container creation requests.

@@ -30,7 +30,7 @@ lint:
 
 format:
 	gofmt -s -w .
-	goimports -w -local github.com/jkdesenvolvedor/dockeeper .
+	goimports -w -local github.com/onflux-tech/dockeeper .
 
 test:
 	$(GO) test -race -count=1 ./...

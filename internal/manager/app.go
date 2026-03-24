@@ -11,13 +11,13 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 
-	dkgrpc "github.com/jkdesenvolvedor/dockeeper/internal/manager/grpc"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/hooks"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/jobs"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/routes"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
-	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
+	dkgrpc "github.com/onflux-tech/dockeeper/internal/manager/grpc"
+	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
+	"github.com/onflux-tech/dockeeper/internal/manager/jobs"
+	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
+	"github.com/onflux-tech/dockeeper/internal/manager/routes"
+	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/manager/store"
 )
 
 const grpcAddr = ":50051"

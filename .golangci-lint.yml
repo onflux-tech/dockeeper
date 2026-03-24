@@ -18,7 +18,7 @@ linters:
         - performance
     goimports:
       local-prefixes:
-        - github.com/jkdesenvolvedor/dockeeper
+        - github.com/onflux-tech/dockeeper
     misspell:
       locale: US
 

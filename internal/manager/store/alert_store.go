@@ -6,7 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/jkdesenvolvedor/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
 // AlertStore provides CRUD for alert_rules, notification_channels, and notification_logs.
