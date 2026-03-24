@@ -6,6 +6,7 @@ import {
 	Home,
 	Layers,
 	Network,
+	Rocket,
 	Server,
 	Settings,
 	Archive,
@@ -38,6 +39,7 @@ export const navigation: NavGroup[] = [
 			{ label: "Images", href: "/images", icon: Layers },
 			{ label: "Networks", href: "/networks", icon: Network },
 			{ label: "Volumes", href: "/volumes", icon: HardDrive },
+			{ label: "Compose", href: "/compose", icon: Rocket },
 		],
 	},
 	{
