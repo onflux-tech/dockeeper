@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	"google.golang.org/grpc"
@@ -101,31 +102,69 @@ func handleLogStream(e *core.RequestEvent, app core.App) error {
 	if !ok {
 		return fmt.Errorf("response writer does not support flushing")
 	}
+
+	// Disable write deadline for this long-lived SSE connection.
+	rc := http.NewResponseController(w)
+	_ = rc.SetWriteDeadline(time.Time{})
+
+	// Send initial connection confirmation event.
+	_, _ = fmt.Fprintf(w, "event: connected\ndata: {}\n\n")
 	flusher.Flush()
 
+	// Start keepalive ticker: sends SSE comments to prevent proxy/server timeout.
+	keepalive := time.NewTicker(15 * time.Second)
+	defer keepalive.Stop()
+
+	// Channel receives log entries (or errors) from the gRPC stream.
+	type recvResult struct {
+		entry *agentpb.StreamLogsResponse
+		err   error
+	}
+	ch := make(chan recvResult, 1)
+
+	go func() {
+		for {
+			entry, recvErr := stream.Recv()
+			ch <- recvResult{entry: entry, err: recvErr}
+			if recvErr != nil {
+				return
+			}
+		}
+	}()
+
 	for {
-		entry, recvErr := stream.Recv()
-		if recvErr != nil {
-			if recvErr == io.EOF {
-				// Stream ended normally.
-				_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
+		select {
+		case <-e.Request.Context().Done():
+			return nil
+
+		case <-keepalive.C:
+			_, _ = fmt.Fprintf(w, ": keepalive\n\n")
+			flusher.Flush()
+
+		case res := <-ch:
+			if res.err != nil {
+				if res.err == io.EOF {
+					_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
+					flusher.Flush()
+					return nil
+				}
+				slog.Debug("log stream ended", "error", res.err)
+				_, _ = fmt.Fprintf(w, "event: error\ndata: {\"message\":\"stream ended\"}\n\n")
 				flusher.Flush()
 				return nil
 			}
-			slog.Debug("log stream ended", "error", recvErr)
-			return nil
-		}
 
-		ev := logEvent{
-			Stream:  entry.GetStream(),
-			Message: entry.GetMessage(),
-		}
-		if entry.GetTimestamp() != nil {
-			ev.Timestamp = entry.GetTimestamp().AsTime().Format("2006-01-02T15:04:05.000Z")
-		}
+			ev := logEvent{
+				Stream:  res.entry.GetStream(),
+				Message: res.entry.GetMessage(),
+			}
+			if res.entry.GetTimestamp() != nil {
+				ev.Timestamp = res.entry.GetTimestamp().AsTime().Format("2006-01-02T15:04:05.000Z")
+			}
 
-		data, _ := json.Marshal(ev)
-		_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)
-		flusher.Flush()
+			data, _ := json.Marshal(ev)
+			_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)
+			flusher.Flush()
+		}
 	}
 }

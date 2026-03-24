@@ -8,6 +8,8 @@ export interface LogEntry {
 }
 
 const MAX_LINES = 5000;
+const RECONNECT_BASE_MS = 2000;
+const RECONNECT_MAX_MS = 30000;
 
 export function useContainerLogs(
 	containerId: string | undefined,
@@ -22,6 +24,9 @@ export function useContainerLogs(
 	pausedRef.current = paused;
 
 	const bufferRef = useRef<LogEntry[]>([]);
+	const retriesRef = useRef(0);
+	const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const mountedRef = useRef(true);
 
 	const connect = useCallback(() => {
 		if (!containerId) return;
@@ -33,15 +38,14 @@ export function useContainerLogs(
 		const token = getAccessToken();
 		const url = `/api/dk/containers/${containerId}/logs/stream?follow=${follow}&tail=${tail}`;
 
-		setConnected(true);
-
 		fetch(url, {
 			headers: token ? { Authorization: token } : {},
 			signal: controller.signal,
 		})
 			.then(async (res) => {
 				if (!res.ok || !res.body) {
-					setConnected(false);
+					if (mountedRef.current) setConnected(false);
+					scheduleReconnect();
 					return;
 				}
 
@@ -60,20 +64,30 @@ export function useContainerLogs(
 					for (const part of parts) {
 						if (!part.trim()) continue;
 
-						const dataLine = part
-							.split("\n")
-							.find((l) => l.startsWith("data: "));
-						if (!dataLine) continue;
+						// Skip SSE comments (keepalive).
+						if (part.startsWith(":")) continue;
 
 						const eventLine = part
 							.split("\n")
 							.find((l) => l.startsWith("event: "));
 						const eventType = eventLine?.slice(7).trim();
 
-						if (eventType === "done") {
-							setConnected(false);
+						if (eventType === "connected") {
+							retriesRef.current = 0;
+							if (mountedRef.current) setConnected(true);
+							continue;
+						}
+
+						if (eventType === "done" || eventType === "error") {
+							if (mountedRef.current) setConnected(false);
+							if (follow) scheduleReconnect();
 							return;
 						}
+
+						const dataLine = part
+							.split("\n")
+							.find((l) => l.startsWith("data: "));
+						if (!dataLine) continue;
 
 						try {
 							const entry = JSON.parse(dataLine.slice(6)) as LogEntry;
@@ -90,17 +104,37 @@ export function useContainerLogs(
 					}
 				}
 
-				setConnected(false);
+				if (mountedRef.current) setConnected(false);
+				if (follow) scheduleReconnect();
 			})
-			.catch(() => {
-				setConnected(false);
+			.catch((err) => {
+				if ((err as DOMException)?.name === "AbortError") return;
+				if (mountedRef.current) setConnected(false);
+				scheduleReconnect();
 			});
+
+		function scheduleReconnect() {
+			if (!mountedRef.current || !follow) return;
+			const delay = Math.min(
+				RECONNECT_BASE_MS * 2 ** retriesRef.current,
+				RECONNECT_MAX_MS,
+			);
+			retriesRef.current++;
+			reconnectTimerRef.current = setTimeout(() => {
+				if (mountedRef.current) connect();
+			}, delay);
+		}
 	}, [containerId, follow, tail]);
 
 	useEffect(() => {
+		mountedRef.current = true;
 		connect();
 		return () => {
+			mountedRef.current = false;
 			abortRef.current?.abort();
+			if (reconnectTimerRef.current) {
+				clearTimeout(reconnectTimerRef.current);
+			}
 		};
 	}, [connect]);
 

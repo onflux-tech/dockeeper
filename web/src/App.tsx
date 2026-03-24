@@ -6,6 +6,7 @@ import DashboardPage from "@/pages/dashboard";
 import ServersPage from "@/pages/servers";
 import ServerDetailPage from "@/pages/server-detail";
 import ContainersPage from "@/pages/containers";
+import ContainerCreatePage from "@/pages/container-create";
 import ContainerDetailPage from "@/pages/container-detail";
 import ContainerTerminalPage from "@/pages/container-terminal";
 import ImagesPage from "@/pages/images";
@@ -27,6 +28,7 @@ function App() {
 						<Route path="servers" element={<ServersPage />} />
 						<Route path="servers/:id" element={<ServerDetailPage />} />
 						<Route path="containers" element={<ContainersPage />} />
+						<Route path="containers/create" element={<ContainerCreatePage />} />
 						<Route path="containers/:id" element={<ContainerDetailPage />} />
 						<Route path="containers/:id/terminal" element={<ContainerTerminalPage />} />
 						<Route path="images" element={<ImagesPage />} />

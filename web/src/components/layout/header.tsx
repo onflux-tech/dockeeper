@@ -1,3 +1,4 @@
+import React from "react";
 import { useLocation } from "react-router";
 import { LogOut, Menu, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,16 +64,18 @@ export function Header() {
 					{crumbs.map((crumb, i) => {
 						const isLast = i === crumbs.length - 1;
 						return (
-							<BreadcrumbItem key={crumb.href}>
+							<React.Fragment key={crumb.href}>
 								{i > 0 && <BreadcrumbSeparator />}
-								{isLast ? (
-									<BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-								) : (
-									<BreadcrumbLink href={crumb.href}>
-										{crumb.label}
-									</BreadcrumbLink>
-								)}
-							</BreadcrumbItem>
+								<BreadcrumbItem>
+									{isLast ? (
+										<BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+									) : (
+										<BreadcrumbLink href={crumb.href}>
+											{crumb.label}
+										</BreadcrumbLink>
+									)}
+								</BreadcrumbItem>
+							</React.Fragment>
 						);
 					})}
 				</BreadcrumbList>

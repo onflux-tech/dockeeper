@@ -1,7 +1,9 @@
-import { Box } from "lucide-react";
+import { Box, Plus } from "lucide-react";
+import { Link } from "react-router";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ContainerTable } from "@/components/server/container-table";
+import { Button } from "@/components/ui/button";
 
 export default function ContainersPage() {
 	const { data: containersResult, isLoading } = useCollection("containers", {
@@ -25,6 +27,12 @@ export default function ContainersPage() {
 						</span>
 					)}
 				</div>
+				<Button asChild size="sm">
+					<Link to="/containers/create">
+						<Plus className="mr-1.5 h-4 w-4" />
+						Create
+					</Link>
+				</Button>
 			</div>
 
 			<ContainerTable
