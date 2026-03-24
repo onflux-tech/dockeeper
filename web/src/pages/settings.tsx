@@ -1,15 +1,422 @@
-import { Settings } from "lucide-react";
+import { useState } from "react";
+import {
+	Settings,
+	Server,
+	User,
+	Info,
+	Eye,
+	EyeOff,
+	Loader2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+	useSettings,
+	getSettingValue,
+	useSaveSettings,
+	useChangePassword,
+	useHealth,
+} from "@/hooks/use-settings";
 
 export default function SettingsPage() {
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
+			{/* Header */}
 			<div className="flex items-center gap-2">
 				<Settings className="h-5 w-5 text-muted-foreground" />
 				<h1 className="text-2xl font-semibold">Settings</h1>
 			</div>
-			<p className="text-muted-foreground">
-				Application settings and configuration — coming soon.
-			</p>
+
+			<Tabs defaultValue="system" className="space-y-4">
+				<TabsList>
+					<TabsTrigger value="system" className="gap-1.5">
+						<Server className="h-4 w-4" />
+						System
+					</TabsTrigger>
+					<TabsTrigger value="profile" className="gap-1.5">
+						<User className="h-4 w-4" />
+						Profile
+					</TabsTrigger>
+					<TabsTrigger value="about" className="gap-1.5">
+						<Info className="h-4 w-4" />
+						About
+					</TabsTrigger>
+				</TabsList>
+
+				<TabsContent value="system">
+					<SystemTab />
+				</TabsContent>
+				<TabsContent value="profile">
+					<ProfileTab />
+				</TabsContent>
+				<TabsContent value="about">
+					<AboutTab />
+				</TabsContent>
+			</Tabs>
+		</div>
+	);
+}
+
+/* ── System Tab ─────────────────────────────────────────── */
+
+const S3_KEYS = [
+	"s3_endpoint",
+	"s3_access_key",
+	"s3_secret_key",
+	"s3_region",
+	"s3_bucket",
+] as const;
+
+const RETENTION_KEYS = [
+	"retention_raw_hours",
+	"retention_hourly_days",
+	"retention_daily_days",
+] as const;
+
+function SystemTab() {
+	const { data: settings, isLoading } = useSettings();
+	const save = useSaveSettings();
+
+	const [s3, setS3] = useState<Record<string, string>>({});
+	const [retention, setRetention] = useState<Record<string, string>>({});
+	const [initialized, setInitialized] = useState(false);
+
+	// Initialize form from settings once loaded
+	if (settings && !initialized) {
+		const s3Values: Record<string, string> = {};
+		for (const k of S3_KEYS) {
+			s3Values[k] = getSettingValue(settings, k);
+		}
+		setS3(s3Values);
+
+		const retValues: Record<string, string> = {};
+		for (const k of RETENTION_KEYS) {
+			retValues[k] = getSettingValue(settings, k);
+		}
+		setRetention(retValues);
+		setInitialized(true);
+	}
+
+	if (isLoading) {
+		return (
+			<div className="space-y-4">
+				{[1, 2, 3, 4].map((i) => (
+					<Skeleton key={i} className="h-10 w-full" />
+				))}
+			</div>
+		);
+	}
+
+	const handleSaveS3 = () => {
+		save.mutate(s3);
+	};
+
+	const handleSaveRetention = () => {
+		save.mutate(retention);
+	};
+
+	return (
+		<div className="space-y-8">
+			{/* S3 Backup Storage */}
+			<section className="space-y-4">
+				<div>
+					<h3 className="text-lg font-medium">S3 Backup Storage</h3>
+					<p className="text-sm text-muted-foreground">
+						Configure S3-compatible storage for container backups.
+					</p>
+				</div>
+				<div className="grid gap-4 sm:grid-cols-2">
+					<div className="space-y-2">
+						<Label htmlFor="s3_endpoint">Endpoint</Label>
+						<Input
+							id="s3_endpoint"
+							placeholder="https://s3.amazonaws.com"
+							value={s3.s3_endpoint ?? ""}
+							onChange={(e) =>
+								setS3((p) => ({ ...p, s3_endpoint: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="s3_region">Region</Label>
+						<Input
+							id="s3_region"
+							placeholder="us-east-1"
+							value={s3.s3_region ?? ""}
+							onChange={(e) =>
+								setS3((p) => ({ ...p, s3_region: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="s3_bucket">Bucket</Label>
+						<Input
+							id="s3_bucket"
+							placeholder="dockeeper-backups"
+							value={s3.s3_bucket ?? ""}
+							onChange={(e) =>
+								setS3((p) => ({ ...p, s3_bucket: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="s3_access_key">Access Key</Label>
+						<Input
+							id="s3_access_key"
+							placeholder="AKIAIOSFODNN7EXAMPLE"
+							value={s3.s3_access_key ?? ""}
+							onChange={(e) =>
+								setS3((p) => ({ ...p, s3_access_key: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="space-y-2 sm:col-span-2">
+						<Label htmlFor="s3_secret_key">Secret Key</Label>
+						<Input
+							id="s3_secret_key"
+							type="password"
+							placeholder="••••••••••••••••"
+							value={s3.s3_secret_key ?? ""}
+							onChange={(e) =>
+								setS3((p) => ({ ...p, s3_secret_key: e.target.value }))
+							}
+						/>
+					</div>
+				</div>
+				<Button onClick={handleSaveS3} disabled={save.isPending}>
+					{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+					Save S3 Settings
+				</Button>
+			</section>
+
+			{/* Metric Retention */}
+			<section className="space-y-4">
+				<div>
+					<h3 className="text-lg font-medium">Metric Retention</h3>
+					<p className="text-sm text-muted-foreground">
+						Configure how long raw, hourly, and daily metrics are kept.
+					</p>
+				</div>
+				<div className="grid gap-4 sm:grid-cols-3">
+					<div className="space-y-2">
+						<Label htmlFor="retention_raw_hours">Raw (hours)</Label>
+						<Input
+							id="retention_raw_hours"
+							type="number"
+							placeholder="24"
+							value={retention.retention_raw_hours ?? ""}
+							onChange={(e) =>
+								setRetention((p) => ({
+									...p,
+									retention_raw_hours: e.target.value,
+								}))
+							}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="retention_hourly_days">Hourly (days)</Label>
+						<Input
+							id="retention_hourly_days"
+							type="number"
+							placeholder="30"
+							value={retention.retention_hourly_days ?? ""}
+							onChange={(e) =>
+								setRetention((p) => ({
+									...p,
+									retention_hourly_days: e.target.value,
+								}))
+							}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="retention_daily_days">Daily (days)</Label>
+						<Input
+							id="retention_daily_days"
+							type="number"
+							placeholder="365"
+							value={retention.retention_daily_days ?? ""}
+							onChange={(e) =>
+								setRetention((p) => ({
+									...p,
+									retention_daily_days: e.target.value,
+								}))
+							}
+						/>
+					</div>
+				</div>
+				<Button onClick={handleSaveRetention} disabled={save.isPending}>
+					{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+					Save Retention Settings
+				</Button>
+			</section>
+		</div>
+	);
+}
+
+/* ── Profile Tab ────────────────────────────────────────── */
+
+function ProfileTab() {
+	const changePassword = useChangePassword();
+
+	const [currentPassword, setCurrentPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [showCurrent, setShowCurrent] = useState(false);
+	const [showNew, setShowNew] = useState(false);
+	const [error, setError] = useState("");
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		setError("");
+
+		if (newPassword.length < 8) {
+			setError("New password must be at least 8 characters.");
+			return;
+		}
+		if (newPassword !== confirmPassword) {
+			setError("Passwords do not match.");
+			return;
+		}
+
+		changePassword.mutate(
+			{ current_password: currentPassword, new_password: newPassword },
+			{
+				onSuccess: () => {
+					setCurrentPassword("");
+					setNewPassword("");
+					setConfirmPassword("");
+				},
+			},
+		);
+	};
+
+	return (
+		<div className="max-w-md space-y-4">
+			<div>
+				<h3 className="text-lg font-medium">Change Password</h3>
+				<p className="text-sm text-muted-foreground">
+					Update your administrator password.
+				</p>
+			</div>
+			<form onSubmit={handleSubmit} className="space-y-4">
+				<div className="space-y-2">
+					<Label htmlFor="current_password">Current Password</Label>
+					<div className="relative">
+						<Input
+							id="current_password"
+							type={showCurrent ? "text" : "password"}
+							value={currentPassword}
+							onChange={(e) => setCurrentPassword(e.target.value)}
+							required
+						/>
+						<button
+							type="button"
+							className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+							onClick={() => setShowCurrent((v) => !v)}
+						>
+							{showCurrent ? (
+								<EyeOff className="h-4 w-4" />
+							) : (
+								<Eye className="h-4 w-4" />
+							)}
+						</button>
+					</div>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="new_password">New Password</Label>
+					<div className="relative">
+						<Input
+							id="new_password"
+							type={showNew ? "text" : "password"}
+							value={newPassword}
+							onChange={(e) => setNewPassword(e.target.value)}
+							required
+							minLength={8}
+						/>
+						<button
+							type="button"
+							className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+							onClick={() => setShowNew((v) => !v)}
+						>
+							{showNew ? (
+								<EyeOff className="h-4 w-4" />
+							) : (
+								<Eye className="h-4 w-4" />
+							)}
+						</button>
+					</div>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="confirm_password">Confirm New Password</Label>
+					<Input
+						id="confirm_password"
+						type="password"
+						value={confirmPassword}
+						onChange={(e) => setConfirmPassword(e.target.value)}
+						required
+						minLength={8}
+					/>
+				</div>
+				{error && <p className="text-sm text-destructive">{error}</p>}
+				<Button type="submit" disabled={changePassword.isPending}>
+					{changePassword.isPending && (
+						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+					)}
+					Change Password
+				</Button>
+			</form>
+		</div>
+	);
+}
+
+/* ── About Tab ──────────────────────────────────────────── */
+
+function AboutTab() {
+	const { data: health, isLoading } = useHealth();
+
+	return (
+		<div className="max-w-md space-y-4">
+			<div>
+				<h3 className="text-lg font-medium">About Dockeeper</h3>
+				<p className="text-sm text-muted-foreground">
+					Server version and build information.
+				</p>
+			</div>
+			{isLoading ? (
+				<div className="space-y-2">
+					<Skeleton className="h-5 w-48" />
+					<Skeleton className="h-5 w-64" />
+				</div>
+			) : health ? (
+				<dl className="space-y-3 text-sm">
+					<div className="flex gap-2">
+						<dt className="text-muted-foreground">Status:</dt>
+						<dd className="font-medium">{health.status}</dd>
+					</div>
+					<div className="flex gap-2">
+						<dt className="text-muted-foreground">Version:</dt>
+						<dd className="font-mono">{health.version || "dev"}</dd>
+					</div>
+					<div className="flex gap-2">
+						<dt className="text-muted-foreground">Commit:</dt>
+						<dd className="font-mono">
+							{health.commit ? health.commit.slice(0, 12) : "—"}
+						</dd>
+					</div>
+				</dl>
+			) : (
+				<p className="text-sm text-muted-foreground">
+					Unable to fetch server info.
+				</p>
+			)}
 		</div>
 	);
 }

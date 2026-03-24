@@ -2,6 +2,7 @@ import {
 	BarChart3,
 	Bell,
 	Container,
+	Globe,
 	HardDrive,
 	Home,
 	Layers,
@@ -48,6 +49,7 @@ export const navigation: NavGroup[] = [
 			{ label: "Metrics", href: "/metrics", icon: BarChart3 },
 			{ label: "Alerts", href: "/alerts", icon: Bell },
 			{ label: "Backups", href: "/backups", icon: Archive },
+			{ label: "Traefik", href: "/traefik", icon: Globe },
 		],
 	},
 	{

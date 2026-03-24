@@ -24,6 +24,7 @@ func RegisterAuthRoutes(se *core.ServeEvent, authLimiter *middleware.RateLimiter
 	auth.POST("/login", handleLogin).BindFunc(authLimiter.Limit)
 	auth.POST("/refresh", handleRefresh).BindFunc(middleware.RequireSuperuser)
 	auth.POST("/logout", handleLogout).BindFunc(middleware.RequireSuperuser)
+	auth.POST("/password", handleChangePassword).BindFunc(middleware.RequireSuperuser)
 	auth.GET("/me", handleMe).BindFunc(middleware.RequireSuperuser)
 	auth.GET("/status", handleStatus)
 }
@@ -141,6 +142,38 @@ func handleMe(e *core.RequestEvent) error {
 		"created": e.Auth.GetDateTime("created"),
 		"updated": e.Auth.GetDateTime("updated"),
 	})
+}
+
+// POST /api/dk/auth/password — change the authenticated admin's password.
+func handleChangePassword(e *core.RequestEvent) error {
+	var body struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := e.BindBody(&body); err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+
+	if body.CurrentPassword == "" || body.NewPassword == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "current_password and new_password are required"})
+	}
+
+	if len(body.NewPassword) < 8 {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "new password must be at least 8 characters"})
+	}
+
+	if !e.Auth.ValidatePassword(body.CurrentPassword) {
+		return e.JSON(http.StatusUnauthorized, map[string]string{"error": "current password is incorrect"})
+	}
+
+	e.Auth.SetPassword(body.NewPassword)
+	if err := e.App.Save(e.Auth); err != nil {
+		slog.Error("failed to update password", "error", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to update password"})
+	}
+
+	slog.Info("admin password changed", "email", e.Auth.Email(), "ip", e.RealIP())
+	return e.JSON(http.StatusOK, map[string]string{"status": "password_changed"})
 }
 
 // GET /api/dk/auth/status — return whether initial setup is needed.
