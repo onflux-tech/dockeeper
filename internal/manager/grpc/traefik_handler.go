@@ -32,6 +32,7 @@ func (h *TraefikHandler) ReportTraefikRoutes(ctx context.Context, req *agentpb.R
 	if sid == "" {
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
 	}
+	syncServerAddressFromContext(h.app, ctx, sid)
 
 	count, err := h.store.UpsertRoutes(sid, req.GetRoutes())
 	if err != nil {

@@ -32,6 +32,7 @@ func (h *DiscoveryHandler) ReportContainers(ctx context.Context, req *agentpb.Re
 	if sid == "" {
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
 	}
+	syncServerAddressFromContext(h.app, ctx, sid)
 
 	if !h.serverExists(sid) {
 		return nil, status.Error(codes.NotFound, "server not found")
@@ -53,6 +54,7 @@ func (h *DiscoveryHandler) ReportImages(ctx context.Context, req *agentpb.Report
 	if sid == "" {
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
 	}
+	syncServerAddressFromContext(h.app, ctx, sid)
 
 	if !h.serverExists(sid) {
 		return nil, status.Error(codes.NotFound, "server not found")
@@ -74,6 +76,7 @@ func (h *DiscoveryHandler) ReportNetworks(ctx context.Context, req *agentpb.Repo
 	if sid == "" {
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
 	}
+	syncServerAddressFromContext(h.app, ctx, sid)
 
 	if !h.serverExists(sid) {
 		return nil, status.Error(codes.NotFound, "server not found")
@@ -95,6 +98,7 @@ func (h *DiscoveryHandler) ReportVolumes(ctx context.Context, req *agentpb.Repor
 	if sid == "" {
 		return nil, status.Error(codes.Unauthenticated, "unknown server")
 	}
+	syncServerAddressFromContext(h.app, ctx, sid)
 
 	if !h.serverExists(sid) {
 		return nil, status.Error(codes.NotFound, "server not found")

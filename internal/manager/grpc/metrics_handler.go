@@ -30,6 +30,9 @@ func (h *MetricsHandler) StreamMetrics(stream agentpb.AgentMetricsService_Stream
 	if !ok {
 		slog.Warn("metrics: no server_id in context")
 	}
+	if serverID != "" {
+		syncServerAddressFromContext(h.app, stream.Context(), serverID)
+	}
 
 	var count int32
 	for {
@@ -67,6 +70,9 @@ func (h *MetricsHandler) StreamContainerMetrics(stream agentpb.AgentMetricsServi
 	serverID, ok := ServerIDFromContext(stream.Context())
 	if !ok {
 		slog.Warn("container metrics: no server_id in context")
+	}
+	if serverID != "" {
+		syncServerAddressFromContext(h.app, stream.Context(), serverID)
 	}
 
 	var count int32

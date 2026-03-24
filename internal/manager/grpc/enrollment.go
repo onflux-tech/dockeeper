@@ -62,8 +62,14 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 	}
 
 	// Update server record with agent info.
+	peerIP, hasPeerIP := peerHostFromContext(ctx)
+	ipAddress := info.GetIpAddress()
+	if hasPeerIP {
+		ipAddress = peerIP
+	}
+
 	server.Set("hostname", info.GetHostname())
-	server.Set("ip_address", info.GetIpAddress())
+	server.Set("ip_address", ipAddress)
 	server.Set("os", info.GetOs())
 	server.Set("arch", info.GetArch())
 	server.Set("docker_version", info.GetDockerVersion())
@@ -124,6 +130,7 @@ func (h *EnrollmentHandler) RenewCert(ctx context.Context, req *agentpb.RenewCer
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "server not found")
 	}
+	syncServerAddressFromContext(h.app, ctx, serverID)
 
 	// Sign new certificate.
 	certPEM, keyPEM, expiresAt, err := h.ca.SignAgentCert(serverID)
