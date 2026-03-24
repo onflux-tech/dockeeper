@@ -32,20 +32,23 @@ const (
 
 // CertAuthority manages an internal PKI for mTLS between manager and agents.
 type CertAuthority struct {
-	caCert    *x509.Certificate
-	caKey     crypto.PrivateKey
-	caCertPEM []byte
-	dir       string
+	caCert       *x509.Certificate
+	caKey        crypto.PrivateKey
+	caCertPEM    []byte
+	dir          string
+	extraSANs    []string // additional DNS names / IPs for the server cert
 }
 
 // NewCertAuthority loads or creates the internal CA inside dataDir/certs/.
-func NewCertAuthority(dataDir string) (*CertAuthority, error) {
+// extraSANs are additional DNS names or IP addresses to include in the gRPC
+// server certificate (e.g. the external domain the agents connect to).
+func NewCertAuthority(dataDir string, extraSANs []string) (*CertAuthority, error) {
 	dir := filepath.Join(dataDir, caDir)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("create CA dir: %w", err)
 	}
 
-	ca := &CertAuthority{dir: dir}
+	ca := &CertAuthority{dir: dir, extraSANs: extraSANs}
 	if err := ca.ensureCA(); err != nil {
 		return nil, fmt.Errorf("ensure CA: %w", err)
 	}
@@ -228,13 +231,20 @@ func (ca *CertAuthority) generateCA(certPath, keyPath string) error {
 	return nil
 }
 
-// ensureServerCert generates a TLS server certificate if one doesn't exist.
+// ensureServerCert generates a TLS server certificate if one doesn't exist
+// or if the SANs have changed (e.g. DK_GRPC_HOSTS was updated).
 func (ca *CertAuthority) ensureServerCert() error {
 	certPath := filepath.Join(ca.dir, serverCertFile)
 	keyPath := filepath.Join(ca.dir, serverKeyFile)
 
-	if _, err := os.Stat(certPath); err == nil {
-		return nil // already exists
+	// Check if existing cert already covers all required SANs.
+	if certData, err := os.ReadFile(certPath); err == nil {
+		if ca.serverCertCoversAllSANs(certData) {
+			return nil
+		}
+		// SANs changed — remove old cert to regenerate.
+		os.Remove(certPath)
+		os.Remove(keyPath)
 	}
 
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -247,6 +257,8 @@ func (ca *CertAuthority) ensureServerCert() error {
 		return err
 	}
 
+	dnsNames, ipAddresses := ca.buildServerSANs()
+
 	now := time.Now()
 	template := &x509.Certificate{
 		SerialNumber: serial,
@@ -254,12 +266,12 @@ func (ca *CertAuthority) ensureServerCert() error {
 			CommonName:   "dockeeper-manager",
 			Organization: []string{"dockeeper"},
 		},
-		NotBefore: now,
-		NotAfter:  now.Add(serverValidity),
-		KeyUsage:  x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IPAddresses: []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
-		DNSNames:    []string{"localhost", "dockeeper-manager"},
+		NotBefore:             now,
+		NotAfter:              now.Add(serverValidity),
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses:           ipAddresses,
+		DNSNames:              dnsNames,
 		BasicConstraintsValid: true,
 	}
 
@@ -283,6 +295,57 @@ func (ca *CertAuthority) ensureServerCert() error {
 	}
 
 	return nil
+}
+
+// buildServerSANs merges the default SANs with extraSANs, separating IPs from DNS names.
+func (ca *CertAuthority) buildServerSANs() (dnsNames []string, ipAddresses []net.IP) {
+	dnsNames = []string{"localhost", "dockeeper-manager"}
+	ipAddresses = []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback}
+
+	for _, san := range ca.extraSANs {
+		if ip := net.ParseIP(san); ip != nil {
+			ipAddresses = append(ipAddresses, ip)
+		} else {
+			dnsNames = append(dnsNames, san)
+		}
+	}
+	return dnsNames, ipAddresses
+}
+
+// serverCertCoversAllSANs checks whether the existing cert already includes all required SANs.
+func (ca *CertAuthority) serverCertCoversAllSANs(certPEM []byte) bool {
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return false
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false
+	}
+
+	wantDNS, wantIPs := ca.buildServerSANs()
+
+	dnsSet := make(map[string]bool, len(cert.DNSNames))
+	for _, d := range cert.DNSNames {
+		dnsSet[d] = true
+	}
+	for _, d := range wantDNS {
+		if !dnsSet[d] {
+			return false
+		}
+	}
+
+	ipSet := make(map[string]bool, len(cert.IPAddresses))
+	for _, ip := range cert.IPAddresses {
+		ipSet[ip.String()] = true
+	}
+	for _, ip := range wantIPs {
+		if !ipSet[ip.String()] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func randomSerial() (*big.Int, error) {

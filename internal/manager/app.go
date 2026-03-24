@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -117,7 +118,17 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		registerFrontendHandler(se, frontendFS)
 
 		// Initialize internal CA and start gRPC server.
-		ca, err := services.NewCertAuthority(app.DataDir())
+		var extraSANs []string
+		if hosts := os.Getenv("DK_GRPC_HOSTS"); hosts != "" {
+			for _, h := range strings.Split(hosts, ",") {
+				if s := strings.TrimSpace(h); s != "" {
+					extraSANs = append(extraSANs, s)
+				}
+			}
+			slog.Info("gRPC extra SANs from DK_GRPC_HOSTS", "hosts", extraSANs)
+		}
+
+		ca, err := services.NewCertAuthority(app.DataDir(), extraSANs)
 		if err != nil {
 			slog.Error("failed to initialize cert authority", "error", err)
 			return err
