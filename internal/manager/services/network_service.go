@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/pocketbase/pocketbase/core"
 	"google.golang.org/grpc"
@@ -97,6 +98,10 @@ func (s *NetworkService) CreateNetwork(
 		return nil, fmt.Errorf("create network: %w", err)
 	}
 
+	if resp.GetSuccess() {
+		s.upsertCreatedNetwork(serverID, resp.GetNetworkId(), name, driver, subnet, gateway, internal)
+	}
+
 	details["network_id"] = resp.GetNetworkId()
 	details["success"] = resp.GetSuccess()
 	s.audit.Log("network.create", userID, "network", resp.GetNetworkId(), ip, details)
@@ -132,6 +137,14 @@ func (s *NetworkService) RemoveNetwork(ctx context.Context, networkRecordID, use
 		details["error"] = err.Error()
 		s.audit.Log("network.remove.failed", userID, "network", networkRecordID, ip, details)
 		return nil, fmt.Errorf("remove network: %w", err)
+	}
+
+	if resp.GetSuccess() {
+		if rec, findErr := s.app.FindRecordById(constants.CollNetworks, networkRecordID); findErr == nil {
+			if delErr := s.app.Delete(rec); delErr != nil {
+				slog.Warn("failed to delete network record after remove", "network_record_id", networkRecordID, "error", delErr)
+			}
+		}
 	}
 
 	details["success"] = resp.GetSuccess()
@@ -250,4 +263,35 @@ func dialNetworkService(agentIP string) (*grpc.ClientConn, agentpb.AgentNetworkS
 		return nil, nil, fmt.Errorf("dial agent %s: %w", addr, err)
 	}
 	return conn, agentpb.NewAgentNetworkServiceClient(conn), nil
+}
+
+func (s *NetworkService) upsertCreatedNetwork(serverID, networkID, name, driver, subnet, gateway string, internal bool) {
+	col, err := s.app.FindCachedCollectionByNameOrId(constants.CollNetworks)
+	if err != nil {
+		slog.Warn("failed to find networks collection", "error", err)
+		return
+	}
+
+	records, err := s.app.FindRecordsByFilter(constants.CollNetworks, "server = {:sid} && network_id = {:nid}", "", 1, 0, map[string]any{
+		"sid": serverID,
+		"nid": networkID,
+	})
+	var rec *core.Record
+	if err == nil && len(records) > 0 {
+		rec = records[0]
+	} else {
+		rec = core.NewRecord(col)
+		rec.Set("server", serverID)
+		rec.Set("network_id", networkID)
+	}
+
+	rec.Set("name", name)
+	rec.Set("driver", driver)
+	rec.Set("subnet", subnet)
+	rec.Set("gateway", gateway)
+	rec.Set("internal", internal)
+
+	if saveErr := s.app.Save(rec); saveErr != nil {
+		slog.Warn("failed to save network record after create", "network_id", networkID, "error", saveErr)
+	}
 }

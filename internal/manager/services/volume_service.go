@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/pocketbase/pocketbase/core"
 	"google.golang.org/grpc"
@@ -92,6 +93,10 @@ func (s *VolumeService) CreateVolume(
 		return nil, fmt.Errorf("create volume: %w", err)
 	}
 
+	if resp.GetSuccess() {
+		s.upsertCreatedVolume(serverID, resp.GetName(), driver)
+	}
+
 	details["success"] = resp.GetSuccess()
 	s.audit.Log("volume.create", userID, "volume", resp.GetName(), ip, details)
 	return resp, nil
@@ -127,6 +132,14 @@ func (s *VolumeService) RemoveVolume(ctx context.Context, volumeRecordID string,
 		details["error"] = err.Error()
 		s.audit.Log("volume.remove.failed", userID, "volume", volumeRecordID, ip, details)
 		return nil, fmt.Errorf("remove volume: %w", err)
+	}
+
+	if resp.GetSuccess() {
+		if rec, findErr := s.app.FindRecordById(constants.CollVolumes, volumeRecordID); findErr == nil {
+			if delErr := s.app.Delete(rec); delErr != nil {
+				slog.Warn("failed to delete volume record after remove", "volume_record_id", volumeRecordID, "error", delErr)
+			}
+		}
 	}
 
 	details["success"] = resp.GetSuccess()
@@ -180,4 +193,32 @@ func dialVolumeService(agentIP string) (*grpc.ClientConn, agentpb.AgentVolumeSer
 		return nil, nil, fmt.Errorf("dial agent %s: %w", addr, err)
 	}
 	return conn, agentpb.NewAgentVolumeServiceClient(conn), nil
+}
+
+func (s *VolumeService) upsertCreatedVolume(serverID, name, driver string) {
+	col, err := s.app.FindCachedCollectionByNameOrId(constants.CollVolumes)
+	if err != nil {
+		slog.Warn("failed to find volumes collection", "error", err)
+		return
+	}
+
+	records, err := s.app.FindRecordsByFilter(constants.CollVolumes, "server = {:sid} && name = {:name}", "", 1, 0, map[string]any{
+		"sid":  serverID,
+		"name": name,
+	})
+	var rec *core.Record
+	if err == nil && len(records) > 0 {
+		rec = records[0]
+	} else {
+		rec = core.NewRecord(col)
+		rec.Set("server", serverID)
+	}
+
+	rec.Set("name", name)
+	rec.Set("driver", driver)
+	rec.Set("in_use", false)
+
+	if saveErr := s.app.Save(rec); saveErr != nil {
+		slog.Warn("failed to save volume record after create", "volume_name", name, "error", saveErr)
+	}
 }
