@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/pocketbase/pocketbase"
@@ -9,6 +10,7 @@ import (
 
 	dockeeper "github.com/onflux-tech/dockeeper"
 	"github.com/onflux-tech/dockeeper/internal/manager"
+	"github.com/onflux-tech/dockeeper/internal/shared/logging"
 	_ "github.com/onflux-tech/dockeeper/migrations"
 )
 
@@ -19,6 +21,8 @@ var (
 )
 
 func main() {
+	logging.ConfigureDefault()
+
 	app := pocketbase.New()
 
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
@@ -28,6 +32,7 @@ func main() {
 	manager.Bootstrap(app, Version, Commit, dockeeper.FrontendDist)
 
 	if err := app.Start(); err != nil {
+		slog.Error("manager exited", "error", err)
 		log.Fatal(err)
 		os.Exit(1)
 	}

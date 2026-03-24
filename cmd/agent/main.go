@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/onflux-tech/dockeeper/internal/agent"
+	"github.com/onflux-tech/dockeeper/internal/shared/logging"
 )
 
 // Set at build time via ldflags.
@@ -20,6 +21,8 @@ var (
 )
 
 func main() {
+	logging.ConfigureDefault()
+
 	managerURL := flag.String("manager-url", "", "Manager gRPC address (host:port)")
 	token := flag.String("token", "", "One-time enrollment token")
 	dataDir := flag.String("data-dir", "./dk-agent-data", "Directory for config and certificates")
