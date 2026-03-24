@@ -45,7 +45,13 @@ func syncServerAddressFromContext(app core.App, ctx context.Context, serverID st
 		return
 	}
 
-	if record.GetString("ip_address") == host {
+	current := record.GetString("ip_address")
+	if current == host {
+		return
+	}
+
+	// Don't overwrite a public IP with a private/overlay one.
+	if current != "" && net.ParseIP(host) != nil && net.ParseIP(host).IsPrivate() {
 		return
 	}
 

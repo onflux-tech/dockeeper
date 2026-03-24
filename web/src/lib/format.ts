@@ -3,15 +3,15 @@ const HOUR = 3600;
 const DAY = 86_400;
 
 /**
- * Returns a human-readable relative time string (e.g. "2 minutes ago").
- * Falls back to "just now" for times less than 30 seconds ago.
+ * Returns a human-readable relative time string (e.g. "2m ago" or "in 364d").
+ * Handles both past and future dates.
  */
 export function relativeTime(dateStr: string | undefined): string {
 	if (!dateStr) return "never";
 
 	const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
 
-	if (diff < 0) return "just now";
+	if (diff < 0) return formatFuture(-diff);
 	if (diff < 30) return "just now";
 	if (diff < MINUTE) return `${diff}s ago`;
 	if (diff < HOUR) {
@@ -24,6 +24,13 @@ export function relativeTime(dateStr: string | undefined): string {
 	}
 	const d = Math.floor(diff / DAY);
 	return `${d}d ago`;
+}
+
+function formatFuture(secs: number): string {
+	if (secs < MINUTE) return "in <1m";
+	if (secs < HOUR) return `in ${Math.floor(secs / MINUTE)}m`;
+	if (secs < DAY) return `in ${Math.floor(secs / HOUR)}h`;
+	return `in ${Math.floor(secs / DAY)}d`;
 }
 
 /** Simple human-readable cron description. */

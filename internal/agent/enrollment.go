@@ -5,9 +5,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"runtime"
 
+	dockerclient "github.com/docker/docker/client"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -86,11 +88,30 @@ func collectServerInfo() (*agentpb.ServerInfo, error) {
 		return nil, fmt.Errorf("get hostname: %w", err)
 	}
 
-	return &agentpb.ServerInfo{
-		Hostname:      hostname,
-		Os:            runtime.GOOS,
-		Arch:          runtime.GOARCH,
-		AgentVersion:  Version,
-		Orchestrator:  "docker",
-	}, nil
+	info := &agentpb.ServerInfo{
+		Hostname:     hostname,
+		Os:           runtime.GOOS,
+		Arch:         runtime.GOARCH,
+		AgentVersion: Version,
+		Orchestrator: "docker",
+	}
+
+	// Detect outbound IP by dialing a public address (no actual traffic is sent).
+	if conn, err := net.Dial("udp4", "8.8.8.8:53"); err == nil {
+		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+			info.IpAddress = addr.IP.String()
+		}
+		conn.Close()
+	}
+
+	// Get Docker version from the daemon.
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
+	if err == nil {
+		if sv, verErr := cli.ServerVersion(context.Background()); verErr == nil {
+			info.DockerVersion = sv.Version
+		}
+		cli.Close()
+	}
+
+	return info, nil
 }

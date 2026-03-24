@@ -62,10 +62,12 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 	}
 
 	// Update server record with agent info.
-	peerIP, hasPeerIP := peerHostFromContext(ctx)
+	// Prefer the IP reported by the agent (outbound-detected), fall back to gRPC peer.
 	ipAddress := info.GetIpAddress()
-	if hasPeerIP {
-		ipAddress = peerIP
+	if ipAddress == "" {
+		if peerIP, ok := peerHostFromContext(ctx); ok {
+			ipAddress = peerIP
+		}
 	}
 
 	server.Set("hostname", info.GetHostname())
