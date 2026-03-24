@@ -151,6 +151,8 @@ func mapNetworkServiceError(e *core.RequestEvent, err error) error {
 		return e.JSON(http.StatusServiceUnavailable, map[string]string{"error": "server is offline"})
 	case services.ErrContainerNotFound:
 		return e.JSON(http.StatusNotFound, map[string]string{"error": "container not found"})
+	case services.ErrProtectedNetwork:
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "docker built-in networks cannot be removed"})
 	default:
 		if err.Error() == "network not found" {
 			return e.JSON(http.StatusNotFound, map[string]string{"error": "network not found"})

@@ -113,4 +113,12 @@ func TestSentinelErrors(t *testing.T) {
 	assert.Equal(t, "container not found", ErrContainerNotFound.Error())
 	assert.Equal(t, "server not found", ErrServerNotFound.Error())
 	assert.Equal(t, "server is offline", ErrServerOffline.Error())
+	assert.Equal(t, "network is protected", ErrProtectedNetwork.Error())
+}
+
+func TestIsProtectedDockerNetwork(t *testing.T) {
+	assert.True(t, isProtectedDockerNetwork("bridge"))
+	assert.True(t, isProtectedDockerNetwork("HOST"))
+	assert.True(t, isProtectedDockerNetwork(" none "))
+	assert.False(t, isProtectedDockerNetwork("my-app-network"))
 }

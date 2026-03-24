@@ -40,6 +40,7 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { useRemoveNetwork } from "@/hooks/use-networks";
 import { CreateNetworkDialog } from "@/components/networks/create-network-dialog";
 import { ConnectDialog } from "@/components/networks/connect-dialog";
+import { isProtectedDockerNetwork } from "@/lib/docker-networks";
 import type { NetworkRecord, ServerRecord, ContainerRecord } from "@/types/pocketbase";
 
 export default function NetworksPage() {
@@ -94,6 +95,7 @@ export default function NetworksPage() {
 	};
 
 	const serverContainers = (serverId: string) => containers.filter((c) => c.server === serverId);
+	const canRemoveNetwork = (network: NetworkRecord) => !isProtectedDockerNetwork(network);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -214,10 +216,15 @@ export default function NetworksPage() {
 												</DropdownMenuItem>
 												<DropdownMenuItem
 													className="text-destructive"
-													onClick={() => setRemoveTarget(net)}
+													disabled={!canRemoveNetwork(net)}
+													onClick={() => {
+														if (canRemoveNetwork(net)) {
+															setRemoveTarget(net);
+														}
+													}}
 												>
 													<Trash2 className="mr-2 h-3.5 w-3.5" />
-													Remove
+													{canRemoveNetwork(net) ? "Remove" : "Protected"}
 												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
@@ -265,7 +272,8 @@ export default function NetworksPage() {
 						<AlertDialogDescription>
 							Are you sure you want to remove the network{" "}
 							<span className="font-mono font-semibold">{removeTarget?.name}</span>? This action
-							cannot be undone. Networks with active containers cannot be removed.
+							cannot be undone. Networks with active containers cannot be removed. Docker built-in
+							networks like bridge, host, and none are protected and cannot be deleted.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

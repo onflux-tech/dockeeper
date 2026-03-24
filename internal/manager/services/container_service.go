@@ -22,6 +22,7 @@ var (
 	ErrContainerNotFound = errors.New("container not found")
 	ErrServerNotFound    = errors.New("server not found")
 	ErrServerOffline     = errors.New("server is offline")
+	ErrProtectedNetwork  = errors.New("network is protected")
 )
 
 const (

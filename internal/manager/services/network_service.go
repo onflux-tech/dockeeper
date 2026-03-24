@@ -115,6 +115,10 @@ func (s *NetworkService) RemoveNetwork(ctx context.Context, networkRecordID, use
 		return nil, err
 	}
 
+	if isProtectedDockerNetwork(info.Name) {
+		return nil, ErrProtectedNetwork
+	}
+
 	conn, client, err := dialNetworkService(info.AgentAddr)
 	if err != nil {
 		return nil, err
