@@ -88,6 +88,14 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		routes.RegisterBackupRoutes(se, app, backupSvc, backupStore)
 		jobs.RegisterBackupJobs(app, backupSvc, backupStore)
 
+		// Alert engine + notification routes.
+		alertStore := store.NewAlertStore(app)
+		notifySvc := services.NewNotificationService(alertStore)
+		alertEngine := services.NewAlertEngine(app, alertStore, notifySvc)
+		routes.RegisterAlertRoutes(se, app, alertStore)
+		routes.RegisterNotificationRoutes(se, app, alertStore)
+		jobs.RegisterAlertJobs(app, alertEngine)
+
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
 		if err != nil {

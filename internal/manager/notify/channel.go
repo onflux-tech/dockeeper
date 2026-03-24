@@ -1,0 +1,24 @@
+package notify
+
+import "context"
+
+// AlertMessage contains alert information to be sent via notification channels.
+type AlertMessage struct {
+	RuleName   string
+	Metric     string
+	Operator   string
+	Threshold  float64
+	Value      float64
+	TargetType string
+	TargetName string
+	State      string // "firing" or "resolved"
+}
+
+// Channel sends alert notifications through a specific delivery mechanism.
+type Channel interface {
+	// Send delivers an alert message. Returns nil on success.
+	Send(ctx context.Context, msg AlertMessage) error
+
+	// Type returns the channel type identifier.
+	Type() string
+}
