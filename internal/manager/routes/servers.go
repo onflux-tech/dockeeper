@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -19,6 +20,13 @@ import (
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
+
+// RegisterAgentDownloadRoute serves the pre-built agent binary (public, no auth).
+func RegisterAgentDownloadRoute(se *core.ServeEvent) {
+	se.Router.GET("/api/dk/agent/download", func(e *core.RequestEvent) error {
+		return handleAgentDownload(e)
+	})
+}
 
 // RegisterServerRoutes adds server provisioning and management endpoints.
 func RegisterServerRoutes(se *core.ServeEvent, app core.App, auditStore *store.AuditStore, version string) {
@@ -108,6 +116,38 @@ func handleProvisionServer(e *core.RequestEvent, app core.App, auditStore *store
 	})
 }
 
+func handleAgentDownload(e *core.RequestEvent) error {
+	arch := e.Request.URL.Query().Get("arch")
+	if arch != "amd64" && arch != "arm64" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "arch must be 'amd64' or 'arm64'"})
+	}
+
+	filename := fmt.Sprintf("dockeeper-agent-linux-%s", arch)
+
+	// Docker runtime path, then local dev fallback.
+	paths := []string{
+		fmt.Sprintf("/app/agents/%s", filename),
+		fmt.Sprintf("./bin/%s", filename),
+	}
+
+	var filePath string
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			filePath = p
+			break
+		}
+	}
+
+	if filePath == "" {
+		return e.JSON(http.StatusNotFound, map[string]string{"error": "agent binary not found for arch " + arch})
+	}
+
+	e.Response.Header().Set("Content-Type", "application/octet-stream")
+	e.Response.Header().Set("Content-Disposition", "attachment; filename=dockeeper-agent")
+	http.ServeFile(e.Response, e.Request, filePath)
+	return nil
+}
+
 func handleInstallScript(e *core.RequestEvent, app core.App, version string) error {
 	serverID := e.Request.PathValue("id")
 
@@ -133,6 +173,9 @@ func handleInstallScript(e *core.RequestEvent, app core.App, version string) err
 	}
 	grpcAddr := host + ":50051"
 
+	// Derive manager HTTP URL for binary download.
+	managerHTTPURL := resolveManagerHTTPURL(e)
+
 	if version == "" {
 		version = "latest"
 	}
@@ -142,7 +185,7 @@ func handleInstallScript(e *core.RequestEvent, app core.App, version string) err
 	case "docker":
 		script = generateDockerScript(grpcAddr, token, version)
 	case "binary":
-		script = generateBinaryScript(grpcAddr, token, version)
+		script = generateBinaryScript(grpcAddr, token, managerHTTPURL)
 	default:
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "mode must be 'docker' or 'binary'"})
 	}
@@ -151,6 +194,19 @@ func handleInstallScript(e *core.RequestEvent, app core.App, version string) err
 		"mode":   mode,
 		"script": script,
 	})
+}
+
+// resolveManagerHTTPURL builds the public HTTP(S) URL of the manager from the request.
+func resolveManagerHTTPURL(e *core.RequestEvent) string {
+	scheme := e.Request.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		if e.Request.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	return scheme + "://" + e.Request.Host
 }
 
 func handleDeleteServer(e *core.RequestEvent, app core.App, auditStore *store.AuditStore) error {
@@ -325,17 +381,17 @@ func generateDockerScript(grpcAddr, token, version string) string {
   --data-dir=/data`, version, grpcAddr, token)
 }
 
-func generateBinaryScript(grpcAddr, token, version string) string {
+func generateBinaryScript(grpcAddr, token, managerHTTPURL string) string {
 	return fmt.Sprintf(`#!/bin/bash
 set -euo pipefail
 
 MANAGER_URL="%s"
 TOKEN="%s"
-VERSION="%s"
+MANAGER_HTTP_URL="%s"
 INSTALL_DIR="/usr/local/bin"
 DATA_DIR="/var/lib/dockeeper-agent"
 
-echo "==> Installing Dockeeper Agent ${VERSION}..."
+echo "==> Installing Dockeeper Agent..."
 
 # Detect architecture
 ARCH=$(uname -m)
@@ -345,10 +401,10 @@ case "${ARCH}" in
   *) echo "Unsupported architecture: ${ARCH}"; exit 1 ;;
 esac
 
-# Download and extract
-DOWNLOAD_URL="https://github.com/onflux-tech/dockeeper/releases/download/v${VERSION}/dockeeper-agent_${VERSION}_linux_${ARCH}.tar.gz"
+# Download agent binary from manager
+DOWNLOAD_URL="${MANAGER_HTTP_URL}/api/dk/agent/download?arch=${ARCH}"
 echo "==> Downloading from ${DOWNLOAD_URL}"
-curl -sSL "${DOWNLOAD_URL}" | tar xz -C "${INSTALL_DIR}" dockeeper-agent
+curl -sSL -o "${INSTALL_DIR}/dockeeper-agent" "${DOWNLOAD_URL}"
 chmod +x "${INSTALL_DIR}/dockeeper-agent"
 
 # Create data directory
@@ -376,5 +432,5 @@ systemctl daemon-reload
 systemctl enable --now dockeeper-agent
 
 echo "==> Dockeeper Agent installed and running!"
-echo "==> Check status: systemctl status dockeeper-agent"`, grpcAddr, token, version)
+echo "==> Check status: systemctl status dockeeper-agent"`, grpcAddr, token, managerHTTPURL)
 }

@@ -48,6 +48,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		registerHealthRoutes(se, version, commit)
+		routes.RegisterAgentDownloadRoute(se)
 		routes.RegisterAuthRoutes(se, authLimiter)
 
 		// Container action routes.

@@ -37,6 +37,14 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -o /out/dockeeper-manager \
     ./cmd/manager
 
+# Cross-compile agent binaries for distribution (both architectures).
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+    -ldflags "-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT}" \
+    -o /out/agents/dockeeper-agent-linux-amd64 ./cmd/agent
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
+    -ldflags "-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT}" \
+    -o /out/agents/dockeeper-agent-linux-arm64 ./cmd/agent
+
 # ─── Stage 3: Minimal runtime ────────────────────────────
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata \
@@ -44,6 +52,7 @@ RUN apk add --no-cache ca-certificates tzdata \
     && adduser -S -G dockeeper dockeeper
 
 COPY --from=go-builder /out/dockeeper-manager /usr/local/bin/dockeeper-manager
+COPY --from=go-builder /out/agents/ /app/agents/
 
 RUN mkdir -p /home/dockeeper/pb_data && chown -R dockeeper:dockeeper /home/dockeeper
 

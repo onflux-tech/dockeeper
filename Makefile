@@ -8,7 +8,7 @@ BIN_DIR  = bin
 
 .PHONY: all build-manager build-agent build lint format test clean dev proto-gen \
         dev-web build-web lint-web format-web test-web \
-        build-all docker-build docker-push release
+        build-all build-agent-dist docker-build docker-push release
 
 all: build
 
@@ -21,6 +21,11 @@ build-manager:
 
 build-agent:
 	$(GO) build $(GOFLAGS) $(LDFLAGS) -o $(BIN_DIR)/dockeeper-agent ./cmd/agent
+
+## Cross-compile agent for linux/amd64 and linux/arm64 (dev testing for download endpoint)
+build-agent-dist:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o $(BIN_DIR)/dockeeper-agent-linux-amd64 ./cmd/agent
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o $(BIN_DIR)/dockeeper-agent-linux-arm64 ./cmd/agent
 
 ## Build frontend then manager (production: embeds React into Go binary)
 build-all: build-web build-manager build-agent
