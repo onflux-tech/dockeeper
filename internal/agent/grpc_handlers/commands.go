@@ -61,6 +61,33 @@ func (h *CommandsHandler) ExecuteCommand(ctx context.Context, req *agentpb.Execu
 	case agentpb.CommandType_COMMAND_TYPE_UNPAUSE:
 		result = h.exec.Unpause(ctx, containerID)
 
+	case agentpb.CommandType_COMMAND_TYPE_CREATE:
+		specJSON, ok := params["spec"]
+		if !ok || specJSON == "" {
+			return &agentpb.ExecuteCommandResponse{
+				Success: false,
+				Error:   "missing 'spec' param for CREATE command",
+			}, nil
+		}
+		spec, parseErr := executor.ParseContainerSpec(specJSON)
+		if parseErr != nil {
+			return &agentpb.ExecuteCommandResponse{
+				Success: false,
+				Error:   parseErr.Error(),
+			}, nil
+		}
+		result = h.exec.Create(ctx, spec)
+
+	case agentpb.CommandType_COMMAND_TYPE_PULL_IMAGE:
+		imageRef, ok := params["image"]
+		if !ok || imageRef == "" {
+			return &agentpb.ExecuteCommandResponse{
+				Success: false,
+				Error:   "missing 'image' param for PULL_IMAGE command",
+			}, nil
+		}
+		result = h.exec.PullImage(ctx, imageRef)
+
 	default:
 		return &agentpb.ExecuteCommandResponse{
 			Success: false,

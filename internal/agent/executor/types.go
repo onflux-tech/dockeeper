@@ -18,4 +18,6 @@ type Executor interface {
 	Rename(ctx context.Context, containerID string, newName string) Result
 	Pause(ctx context.Context, containerID string) Result
 	Unpause(ctx context.Context, containerID string) Result
+	Create(ctx context.Context, spec *ContainerSpec) Result
+	PullImage(ctx context.Context, imageRef string) Result
 }

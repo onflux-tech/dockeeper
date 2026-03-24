@@ -50,6 +50,10 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
 		routes.RegisterContainerRoutes(se, containerSvc)
 
+		// Container creation route.
+		containerCreateSvc := services.NewContainerCreateService(app, dispatcher, auditStore)
+		routes.RegisterContainerCreateRoutes(se, containerCreateSvc)
+
 		// Container logs SSE streaming route.
 		routes.RegisterContainerLogRoutes(se, app)
 
