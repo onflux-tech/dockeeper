@@ -77,9 +77,7 @@ export function GeneralStep() {
 						</SelectContent>
 					</Select>
 				)}
-				{errors.server_id && (
-					<p className="text-xs text-destructive">{errors.server_id.message}</p>
-				)}
+				{errors.server_id && <p className="text-xs text-destructive">{errors.server_id.message}</p>}
 			</div>
 
 			{/* Name */}
@@ -122,7 +120,12 @@ export function GeneralStep() {
 				<label className="text-sm font-medium">Restart Policy</label>
 				<Select
 					value={restartPolicy || "__none__"}
-					onValueChange={(v) => setValue("restart_policy", (v === "__none__" ? "" : v) as ContainerWizardData["restart_policy"])}
+					onValueChange={(v) =>
+						setValue(
+							"restart_policy",
+							(v === "__none__" ? "" : v) as ContainerWizardData["restart_policy"],
+						)
+					}
 				>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder="None" />

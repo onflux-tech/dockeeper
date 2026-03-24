@@ -102,37 +102,19 @@ export function ContainerMetrics({ data, isLoading }: ContainerMetricsProps) {
 				<CardContent>
 					<ResponsiveContainer width="100%" height={200}>
 						<AreaChart data={chartData}>
-							<CartesianGrid
-								strokeDasharray="3 3"
-								className="stroke-border"
-							/>
-							<XAxis
-								dataKey="time"
-								tick={{ fontSize: 11 }}
-								className="text-muted-foreground"
-							/>
+							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 							<YAxis
 								domain={[0, "auto"]}
 								tick={{ fontSize: 11 }}
 								tickFormatter={formatPercent}
 								className="text-muted-foreground"
 							/>
-							<Tooltip
-								formatter={tooltipPercent}
-								{...tooltipStyle}
-							/>
+							<Tooltip formatter={tooltipPercent} {...tooltipStyle} />
 							<defs>
 								<linearGradient id="fillCpuC" x1="0" y1="0" x2="0" y2="1">
-									<stop
-										offset="0%"
-										stopColor={chartColors.cpu}
-										stopOpacity={0.3}
-									/>
-									<stop
-										offset="100%"
-										stopColor={chartColors.cpu}
-										stopOpacity={0}
-									/>
+									<stop offset="0%" stopColor={chartColors.cpu} stopOpacity={0.3} />
+									<stop offset="100%" stopColor={chartColors.cpu} stopOpacity={0} />
 								</linearGradient>
 							</defs>
 							<Area
@@ -157,36 +139,18 @@ export function ContainerMetrics({ data, isLoading }: ContainerMetricsProps) {
 				<CardContent>
 					<ResponsiveContainer width="100%" height={200}>
 						<AreaChart data={chartData}>
-							<CartesianGrid
-								strokeDasharray="3 3"
-								className="stroke-border"
-							/>
-							<XAxis
-								dataKey="time"
-								tick={{ fontSize: 11 }}
-								className="text-muted-foreground"
-							/>
+							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 							<YAxis
 								tick={{ fontSize: 11 }}
 								tickFormatter={formatBytes}
 								className="text-muted-foreground"
 							/>
-							<Tooltip
-								formatter={tooltipBytes}
-								{...tooltipStyle}
-							/>
+							<Tooltip formatter={tooltipBytes} {...tooltipStyle} />
 							<defs>
 								<linearGradient id="fillMemC" x1="0" y1="0" x2="0" y2="1">
-									<stop
-										offset="0%"
-										stopColor={chartColors.mem}
-										stopOpacity={0.3}
-									/>
-									<stop
-										offset="100%"
-										stopColor={chartColors.mem}
-										stopOpacity={0}
-									/>
+									<stop offset="0%" stopColor={chartColors.mem} stopOpacity={0.3} />
+									<stop offset="100%" stopColor={chartColors.mem} stopOpacity={0} />
 								</linearGradient>
 							</defs>
 							<Area
@@ -211,48 +175,22 @@ export function ContainerMetrics({ data, isLoading }: ContainerMetricsProps) {
 				<CardContent>
 					<ResponsiveContainer width="100%" height={200}>
 						<AreaChart data={chartData}>
-							<CartesianGrid
-								strokeDasharray="3 3"
-								className="stroke-border"
-							/>
-							<XAxis
-								dataKey="time"
-								tick={{ fontSize: 11 }}
-								className="text-muted-foreground"
-							/>
+							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 							<YAxis
 								tick={{ fontSize: 11 }}
 								tickFormatter={formatBytes}
 								className="text-muted-foreground"
 							/>
-							<Tooltip
-								formatter={tooltipBytes}
-								{...tooltipStyle}
-							/>
+							<Tooltip formatter={tooltipBytes} {...tooltipStyle} />
 							<defs>
 								<linearGradient id="fillBlockRead" x1="0" y1="0" x2="0" y2="1">
-									<stop
-										offset="0%"
-										stopColor={chartColors.blockRead}
-										stopOpacity={0.3}
-									/>
-									<stop
-										offset="100%"
-										stopColor={chartColors.blockRead}
-										stopOpacity={0}
-									/>
+									<stop offset="0%" stopColor={chartColors.blockRead} stopOpacity={0.3} />
+									<stop offset="100%" stopColor={chartColors.blockRead} stopOpacity={0} />
 								</linearGradient>
 								<linearGradient id="fillBlockWrite" x1="0" y1="0" x2="0" y2="1">
-									<stop
-										offset="0%"
-										stopColor={chartColors.blockWrite}
-										stopOpacity={0.3}
-									/>
-									<stop
-										offset="100%"
-										stopColor={chartColors.blockWrite}
-										stopOpacity={0}
-									/>
+									<stop offset="0%" stopColor={chartColors.blockWrite} stopOpacity={0.3} />
+									<stop offset="100%" stopColor={chartColors.blockWrite} stopOpacity={0} />
 								</linearGradient>
 							</defs>
 							<Area
@@ -286,48 +224,22 @@ export function ContainerMetrics({ data, isLoading }: ContainerMetricsProps) {
 				<CardContent>
 					<ResponsiveContainer width="100%" height={200}>
 						<AreaChart data={chartData}>
-							<CartesianGrid
-								strokeDasharray="3 3"
-								className="stroke-border"
-							/>
-							<XAxis
-								dataKey="time"
-								tick={{ fontSize: 11 }}
-								className="text-muted-foreground"
-							/>
+							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 							<YAxis
 								tick={{ fontSize: 11 }}
 								tickFormatter={formatBytes}
 								className="text-muted-foreground"
 							/>
-							<Tooltip
-								formatter={tooltipBytes}
-								{...tooltipStyle}
-							/>
+							<Tooltip formatter={tooltipBytes} {...tooltipStyle} />
 							<defs>
 								<linearGradient id="fillNetRxC" x1="0" y1="0" x2="0" y2="1">
-									<stop
-										offset="0%"
-										stopColor={chartColors.netRx}
-										stopOpacity={0.3}
-									/>
-									<stop
-										offset="100%"
-										stopColor={chartColors.netRx}
-										stopOpacity={0}
-									/>
+									<stop offset="0%" stopColor={chartColors.netRx} stopOpacity={0.3} />
+									<stop offset="100%" stopColor={chartColors.netRx} stopOpacity={0} />
 								</linearGradient>
 								<linearGradient id="fillNetTxC" x1="0" y1="0" x2="0" y2="1">
-									<stop
-										offset="0%"
-										stopColor={chartColors.netTx}
-										stopOpacity={0.3}
-									/>
-									<stop
-										offset="100%"
-										stopColor={chartColors.netTx}
-										stopOpacity={0}
-									/>
+									<stop offset="0%" stopColor={chartColors.netTx} stopOpacity={0.3} />
+									<stop offset="100%" stopColor={chartColors.netTx} stopOpacity={0} />
 								</linearGradient>
 							</defs>
 							<Area

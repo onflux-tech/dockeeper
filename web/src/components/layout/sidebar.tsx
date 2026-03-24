@@ -5,12 +5,7 @@ import { navigation } from "@/lib/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSidebar } from "./sidebar-context";
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -30,9 +25,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 					<nav className="flex flex-col gap-0.5 px-2">
 						{group.items.map((item) => {
 							const isActive =
-								item.href === "/"
-									? pathname === "/"
-									: pathname.startsWith(item.href);
+								item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 							return (
 								<Link
 									key={item.href}
@@ -65,9 +58,7 @@ function SidebarHeader() {
 		<div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
 			<Container className="h-5 w-5 shrink-0 text-sidebar-primary" />
 			{!collapsed && (
-				<span className="text-lg font-semibold text-sidebar-foreground">
-					Dockeeper
-				</span>
+				<span className="text-lg font-semibold text-sidebar-foreground">Dockeeper</span>
 			)}
 			<Button
 				variant="ghost"
@@ -75,11 +66,7 @@ function SidebarHeader() {
 				onClick={() => setCollapsed(!collapsed)}
 				className="ml-auto hidden text-sidebar-foreground/50 hover:text-sidebar-foreground lg:flex"
 			>
-				{collapsed ? (
-					<PanelLeft className="h-4 w-4" />
-				) : (
-					<PanelLeftClose className="h-4 w-4" />
-				)}
+				{collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
 			</Button>
 		</div>
 	);

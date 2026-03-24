@@ -92,7 +92,9 @@ export function CreateContainerWizard() {
 				<Card>
 					<CardHeader>
 						<CardTitle>{STEPS[step].label}</CardTitle>
-						<CardDescription>Step {step + 1} of {STEPS.length}</CardDescription>
+						<CardDescription>
+							Step {step + 1} of {STEPS.length}
+						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<StepComponent />
@@ -100,12 +102,7 @@ export function CreateContainerWizard() {
 				</Card>
 
 				<div className="flex items-center justify-between">
-					<Button
-						type="button"
-						variant="outline"
-						onClick={handleBack}
-						disabled={isFirstStep}
-					>
+					<Button type="button" variant="outline" onClick={handleBack} disabled={isFirstStep}>
 						<ArrowLeft className="mr-1.5 h-4 w-4" />
 						Back
 					</Button>

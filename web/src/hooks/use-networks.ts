@@ -107,7 +107,11 @@ export function useConnectContainer() {
 export function useDisconnectContainer() {
 	const queryClient = useQueryClient();
 
-	return useMutation<NetworkResponse, Error, { networkId: string; containerId: string; force?: boolean }>({
+	return useMutation<
+		NetworkResponse,
+		Error,
+		{ networkId: string; containerId: string; force?: boolean }
+	>({
 		mutationFn: async ({ networkId, containerId, force }) => {
 			const token = getAccessToken();
 			const res = await fetch(`/api/dk/networks/${networkId}/disconnect`, {

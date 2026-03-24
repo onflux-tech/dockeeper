@@ -55,7 +55,10 @@ function buildWsUrl(containerId: string, token: string, cmd: string, tty: boolea
 	return `${proto}//${host}/api/dk/containers/${containerId}/terminal?${params}`;
 }
 
-export function useTerminal(containerId: string | undefined, options: UseTerminalOptions = {}): UseTerminalReturn {
+export function useTerminal(
+	containerId: string | undefined,
+	options: UseTerminalOptions = {},
+): UseTerminalReturn {
 	const { cmd = "/bin/sh", tty = true } = options;
 
 	const [connected, setConnected] = useState(false);

@@ -82,8 +82,7 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 	const chartData = data.map((p) => ({
 		...p,
 		time: formatTime(p.timestamp, range),
-		mem_used_pct:
-			p.disk_total > 0 ? (p.disk_used / p.disk_total) * 100 : 0,
+		mem_used_pct: p.disk_total > 0 ? (p.disk_used / p.disk_total) * 100 : 0,
 	}));
 
 	return (
@@ -98,10 +97,19 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 						<AreaChart data={chartData}>
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-							<YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={formatPercent} className="text-muted-foreground" />
+							<YAxis
+								domain={[0, 100]}
+								tick={{ fontSize: 11 }}
+								tickFormatter={formatPercent}
+								className="text-muted-foreground"
+							/>
 							<Tooltip
 								formatter={tooltipPercent}
-								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								contentStyle={{
+									backgroundColor: "var(--color-popover)",
+									borderColor: "var(--color-border)",
+									color: "var(--color-popover-foreground)",
+								}}
 								labelStyle={{ color: "var(--color-muted-foreground)" }}
 							/>
 							<defs>
@@ -110,7 +118,15 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 									<stop offset="100%" stopColor={chartColors.cpu} stopOpacity={0} />
 								</linearGradient>
 							</defs>
-							<Area type="monotone" dataKey="cpu_percent" stroke={chartColors.cpu} fill="url(#fillCpu)" strokeWidth={1.5} isAnimationActive={false} name="CPU" />
+							<Area
+								type="monotone"
+								dataKey="cpu_percent"
+								stroke={chartColors.cpu}
+								fill="url(#fillCpu)"
+								strokeWidth={1.5}
+								isAnimationActive={false}
+								name="CPU"
+							/>
 						</AreaChart>
 					</ResponsiveContainer>
 				</CardContent>
@@ -126,10 +142,19 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 						<AreaChart data={chartData}>
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-							<YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={formatPercent} className="text-muted-foreground" />
+							<YAxis
+								domain={[0, 100]}
+								tick={{ fontSize: 11 }}
+								tickFormatter={formatPercent}
+								className="text-muted-foreground"
+							/>
 							<Tooltip
 								formatter={tooltipPercent}
-								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								contentStyle={{
+									backgroundColor: "var(--color-popover)",
+									borderColor: "var(--color-border)",
+									color: "var(--color-popover-foreground)",
+								}}
 								labelStyle={{ color: "var(--color-muted-foreground)" }}
 							/>
 							<defs>
@@ -138,7 +163,15 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 									<stop offset="100%" stopColor={chartColors.mem} stopOpacity={0} />
 								</linearGradient>
 							</defs>
-							<Area type="monotone" dataKey="mem_percent" stroke={chartColors.mem} fill="url(#fillMem)" strokeWidth={1.5} isAnimationActive={false} name="Memory" />
+							<Area
+								type="monotone"
+								dataKey="mem_percent"
+								stroke={chartColors.mem}
+								fill="url(#fillMem)"
+								strokeWidth={1.5}
+								isAnimationActive={false}
+								name="Memory"
+							/>
 						</AreaChart>
 					</ResponsiveContainer>
 				</CardContent>
@@ -154,10 +187,18 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 						<AreaChart data={chartData}>
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-							<YAxis tick={{ fontSize: 11 }} tickFormatter={formatBytes} className="text-muted-foreground" />
+							<YAxis
+								tick={{ fontSize: 11 }}
+								tickFormatter={formatBytes}
+								className="text-muted-foreground"
+							/>
 							<Tooltip
 								formatter={tooltipBytes}
-								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								contentStyle={{
+									backgroundColor: "var(--color-popover)",
+									borderColor: "var(--color-border)",
+									color: "var(--color-popover-foreground)",
+								}}
 								labelStyle={{ color: "var(--color-muted-foreground)" }}
 							/>
 							<defs>
@@ -166,7 +207,15 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 									<stop offset="100%" stopColor={chartColors.disk} stopOpacity={0} />
 								</linearGradient>
 							</defs>
-							<Area type="monotone" dataKey="disk_used" stroke={chartColors.disk} fill="url(#fillDisk)" strokeWidth={1.5} isAnimationActive={false} name="Disk Used" />
+							<Area
+								type="monotone"
+								dataKey="disk_used"
+								stroke={chartColors.disk}
+								fill="url(#fillDisk)"
+								strokeWidth={1.5}
+								isAnimationActive={false}
+								name="Disk Used"
+							/>
 						</AreaChart>
 					</ResponsiveContainer>
 				</CardContent>
@@ -182,10 +231,18 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 						<AreaChart data={chartData}>
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 							<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-							<YAxis tick={{ fontSize: 11 }} tickFormatter={formatBytes} className="text-muted-foreground" />
+							<YAxis
+								tick={{ fontSize: 11 }}
+								tickFormatter={formatBytes}
+								className="text-muted-foreground"
+							/>
 							<Tooltip
 								formatter={tooltipBytes}
-								contentStyle={{ backgroundColor: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }}
+								contentStyle={{
+									backgroundColor: "var(--color-popover)",
+									borderColor: "var(--color-border)",
+									color: "var(--color-popover-foreground)",
+								}}
 								labelStyle={{ color: "var(--color-muted-foreground)" }}
 							/>
 							<defs>
@@ -198,8 +255,24 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 									<stop offset="100%" stopColor={chartColors.netTx} stopOpacity={0} />
 								</linearGradient>
 							</defs>
-							<Area type="monotone" dataKey="net_rx" stroke={chartColors.netRx} fill="url(#fillRx)" strokeWidth={1.5} isAnimationActive={false} name="RX" />
-							<Area type="monotone" dataKey="net_tx" stroke={chartColors.netTx} fill="url(#fillTx)" strokeWidth={1.5} isAnimationActive={false} name="TX" />
+							<Area
+								type="monotone"
+								dataKey="net_rx"
+								stroke={chartColors.netRx}
+								fill="url(#fillRx)"
+								strokeWidth={1.5}
+								isAnimationActive={false}
+								name="RX"
+							/>
+							<Area
+								type="monotone"
+								dataKey="net_tx"
+								stroke={chartColors.netTx}
+								fill="url(#fillTx)"
+								strokeWidth={1.5}
+								isAnimationActive={false}
+								name="TX"
+							/>
 						</AreaChart>
 					</ResponsiveContainer>
 				</CardContent>

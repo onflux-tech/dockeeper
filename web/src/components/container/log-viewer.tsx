@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-	Search,
-	Pause,
-	Play,
-	Trash2,
-	Circle,
-} from "lucide-react";
+import { Search, Pause, Play, Trash2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,9 +22,7 @@ function LogLine({ entry }: { entry: LogEntry }) {
 
 	return (
 		<div className="flex gap-2 py-px font-mono text-xs leading-5 hover:bg-muted/30">
-			<span className="shrink-0 text-muted-foreground select-none w-18 text-right">
-				{ts}
-			</span>
+			<span className="shrink-0 text-muted-foreground select-none w-18 text-right">{ts}</span>
 			<span
 				className={`shrink-0 w-12 text-center select-none ${entry.stream === "stderr" ? "text-destructive" : "text-muted-foreground"}`}
 			>
@@ -42,8 +34,10 @@ function LogLine({ entry }: { entry: LogEntry }) {
 }
 
 export function LogViewer({ containerId }: LogViewerProps) {
-	const { lines, connected, paused, pause, resume, clear } =
-		useContainerLogs(containerId, { follow: true, tail: 100 });
+	const { lines, connected, paused, pause, resume, clear } = useContainerLogs(containerId, {
+		follow: true,
+		tail: 100,
+	});
 	const [search, setSearch] = useState("");
 	const [autoScroll, setAutoScroll] = useState(true);
 	const scrollRef = useRef<HTMLDivElement>(null);
@@ -72,10 +66,7 @@ export function LogViewer({ containerId }: LogViewerProps) {
 			<CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
 				<CardTitle className="text-sm flex items-center gap-2">
 					Logs
-					<Badge
-						variant={connected ? "default" : "secondary"}
-						className="text-xs"
-					>
+					<Badge variant={connected ? "default" : "secondary"} className="text-xs">
 						<Circle
 							className={`h-2 w-2 mr-1 ${connected ? "fill-current" : "fill-muted-foreground"}`}
 						/>
@@ -99,19 +90,9 @@ export function LogViewer({ containerId }: LogViewerProps) {
 						onClick={paused ? resume : pause}
 						title={paused ? "Resume" : "Pause"}
 					>
-						{paused ? (
-							<Play className="h-3.5 w-3.5" />
-						) : (
-							<Pause className="h-3.5 w-3.5" />
-						)}
+						{paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
 					</Button>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="h-8 w-8"
-						onClick={clear}
-						title="Clear"
-					>
+					<Button variant="ghost" size="icon" className="h-8 w-8" onClick={clear} title="Clear">
 						<Trash2 className="h-3.5 w-3.5" />
 					</Button>
 				</div>
@@ -124,9 +105,7 @@ export function LogViewer({ containerId }: LogViewerProps) {
 				>
 					{filtered.length === 0 ? (
 						<div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-							{lines.length === 0
-								? "Waiting for logs..."
-								: "No matching log lines"}
+							{lines.length === 0 ? "Waiting for logs..." : "No matching log lines"}
 						</div>
 					) : (
 						filtered.map((entry, i) => <LogLine key={i} entry={entry} />)
@@ -134,7 +113,8 @@ export function LogViewer({ containerId }: LogViewerProps) {
 				</div>
 				{paused && (
 					<div className="text-center py-1 text-xs text-muted-foreground bg-muted/50 border-t">
-						Paused — {lines.length - filtered.length > 0 ? "new lines buffered" : "click play to resume"}
+						Paused —{" "}
+						{lines.length - filtered.length > 0 ? "new lines buffered" : "click play to resume"}
 					</div>
 				)}
 			</CardContent>

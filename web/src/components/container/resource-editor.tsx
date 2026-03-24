@@ -130,11 +130,7 @@ export function ResourceEditor({ container, isLoading }: ResourceEditorProps) {
 		<Card>
 			<CardHeader className="flex flex-row items-center justify-between">
 				<CardTitle className="text-sm">Resource Limits</CardTitle>
-				<Button
-					size="sm"
-					onClick={handleSave}
-					disabled={!dirty || saving}
-				>
+				<Button size="sm" onClick={handleSave} disabled={!dirty || saving}>
 					<Save className="mr-1.5 h-3.5 w-3.5" />
 					{saving ? "Applying..." : "Apply"}
 				</Button>
@@ -185,9 +181,7 @@ export function ResourceEditor({ container, isLoading }: ResourceEditorProps) {
 							<HardDrive className="h-4 w-4 text-muted-foreground" />
 							Memory Limit
 						</label>
-						<span className="text-sm text-muted-foreground">
-							{formatBytes(mbToBytes(memMb))}
-						</span>
+						<span className="text-sm text-muted-foreground">{formatBytes(mbToBytes(memMb))}</span>
 					</div>
 					<div className="flex items-center gap-3">
 						<Slider
@@ -223,9 +217,7 @@ export function ResourceEditor({ container, isLoading }: ResourceEditorProps) {
 							<Users className="h-4 w-4 text-muted-foreground" />
 							PIDs Limit
 						</label>
-						<span className="text-sm text-muted-foreground">
-							{pids === 0 ? "No limit" : pids}
-						</span>
+						<span className="text-sm text-muted-foreground">{pids === 0 ? "No limit" : pids}</span>
 					</div>
 					<div className="flex items-center gap-3">
 						<Slider
@@ -254,8 +246,8 @@ export function ResourceEditor({ container, isLoading }: ResourceEditorProps) {
 				</div>
 
 				<p className="text-xs text-muted-foreground">
-					Resource limits are applied immediately without restarting the container (Docker hot-update).
-					Set to 0 to remove the limit.
+					Resource limits are applied immediately without restarting the container (Docker
+					hot-update). Set to 0 to remove the limit.
 				</p>
 			</CardContent>
 		</Card>

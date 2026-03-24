@@ -1,10 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getAccessToken } from "@/lib/api";
-import type {
-	BackupPolicyRecord,
-	BackupRecordRecord,
-} from "@/types/pocketbase";
+import type { BackupPolicyRecord, BackupRecordRecord } from "@/types/pocketbase";
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -124,11 +121,7 @@ export function useDeletePolicy() {
 
 export function useTriggerBackup() {
 	const qc = useQueryClient();
-	return useMutation<
-		{ record_id: string; status: string },
-		Error,
-		string
-	>({
+	return useMutation<{ record_id: string; status: string }, Error, string>({
 		mutationFn: (policyId) =>
 			fetchJson(`/api/dk/backups/policies/${policyId}/trigger`, {
 				method: "POST",

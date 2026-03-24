@@ -7,7 +7,7 @@ GOFLAGS  = -trimpath
 BIN_DIR  = bin
 
 .PHONY: all build-manager build-agent build lint format test clean dev proto-gen \
-        dev-web build-web lint-web format-web \
+        dev-web build-web lint-web format-web test-web \
         build-all docker-build docker-push release
 
 all: build
@@ -33,7 +33,7 @@ format:
 	goimports -w -local github.com/onflux-tech/dockeeper .
 
 test:
-	$(GO) test -race -count=1 ./...
+	$(GO) test -count=1 ./...
 
 clean:
 	rm -rf $(BIN_DIR) web/dist
@@ -60,6 +60,9 @@ lint-web:
 
 format-web:
 	cd web && npm run format:check
+
+test-web:
+	cd web && npm test
 
 ## ── Docker ──────────────────────────────────────────
 

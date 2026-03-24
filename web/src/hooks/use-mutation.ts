@@ -34,11 +34,7 @@ export function useCreateRecord<T extends CollectionName>(name: T) {
 export function useUpdateRecord<T extends CollectionName>(name: T) {
 	const queryClient = useQueryClient();
 
-	return useMutation<
-		Collections[T],
-		Error,
-		{ id: string } & Partial<Collections[T]>
-	>({
+	return useMutation<Collections[T], Error, { id: string } & Partial<Collections[T]>>({
 		mutationFn: ({ id, ...data }) => pb.collection(name).update(id, data),
 		onSuccess: () => {
 			void queryClient.invalidateQueries({

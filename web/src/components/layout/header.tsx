@@ -42,9 +42,7 @@ export function Header() {
 	const { open: openCommand } = useCommandMenu();
 
 	const crumbs = buildBreadcrumbs(pathname);
-	const initials = admin?.email
-		? admin.email.substring(0, 2).toUpperCase()
-		: "DK";
+	const initials = admin?.email ? admin.email.substring(0, 2).toUpperCase() : "DK";
 
 	return (
 		<header className="flex h-14 items-center gap-3 border-b border-border bg-background px-4">
@@ -70,9 +68,7 @@ export function Header() {
 									{isLast ? (
 										<BreadcrumbPage>{crumb.label}</BreadcrumbPage>
 									) : (
-										<BreadcrumbLink href={crumb.href}>
-											{crumb.label}
-										</BreadcrumbLink>
+										<BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
 									)}
 								</BreadcrumbItem>
 							</React.Fragment>
@@ -97,27 +93,16 @@ export function Header() {
 					⌘K
 				</kbd>
 			</Button>
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				onClick={openCommand}
-				className="sm:hidden"
-			>
+			<Button variant="ghost" size="icon-sm" onClick={openCommand} className="sm:hidden">
 				<Search className="h-4 w-4" />
 			</Button>
 
 			{/* User menu */}
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						className="rounded-full"
-					>
+					<Button variant="ghost" size="icon-sm" className="rounded-full">
 						<Avatar className="h-7 w-7">
-							<AvatarFallback className="text-xs">
-								{initials}
-							</AvatarFallback>
+							<AvatarFallback className="text-xs">{initials}</AvatarFallback>
 						</Avatar>
 					</Button>
 				</DropdownMenuTrigger>

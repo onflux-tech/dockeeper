@@ -40,11 +40,7 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { useRemoveNetwork } from "@/hooks/use-networks";
 import { CreateNetworkDialog } from "@/components/networks/create-network-dialog";
 import { ConnectDialog } from "@/components/networks/connect-dialog";
-import type {
-	NetworkRecord,
-	ServerRecord,
-	ContainerRecord,
-} from "@/types/pocketbase";
+import type { NetworkRecord, ServerRecord, ContainerRecord } from "@/types/pocketbase";
 
 export default function NetworksPage() {
 	const [serverFilter, setServerFilter] = useState<string>("all");
@@ -60,15 +56,11 @@ export default function NetworksPage() {
 	const { data: networksResult, isLoading } = useCollection("networks", {
 		perPage: 200,
 		sort: "name",
-		...(serverFilter !== "all"
-			? { filter: `server = '${serverFilter}'` }
-			: {}),
+		...(serverFilter !== "all" ? { filter: `server = '${serverFilter}'` } : {}),
 	});
 	const { data: containersResult } = useCollection("containers", {
 		perPage: 500,
-		...(serverFilter !== "all"
-			? { filter: `server = '${serverFilter}'` }
-			: {}),
+		...(serverFilter !== "all" ? { filter: `server = '${serverFilter}'` } : {}),
 	});
 
 	useRealtime("networks");
@@ -101,8 +93,7 @@ export default function NetworksPage() {
 		return s?.hostname ?? "—";
 	};
 
-	const serverContainers = (serverId: string) =>
-		containers.filter((c) => c.server === serverId);
+	const serverContainers = (serverId: string) => containers.filter((c) => c.server === serverId);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -111,17 +102,9 @@ export default function NetworksPage() {
 				<div className="flex items-center gap-2">
 					<Network className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Networks</h1>
-					{!isLoading && (
-						<span className="text-sm text-muted-foreground">
-							({filtered.length})
-						</span>
-					)}
+					{!isLoading && <span className="text-sm text-muted-foreground">({filtered.length})</span>}
 				</div>
-				<Button
-					size="sm"
-					onClick={() => setCreateOpen(true)}
-					disabled={serverFilter === "all"}
-				>
+				<Button size="sm" onClick={() => setCreateOpen(true)} disabled={serverFilter === "all"}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />
 					Create Network
 				</Button>
@@ -170,9 +153,7 @@ export default function NetworksPage() {
 								<TableHead>Subnet</TableHead>
 								<TableHead>Gateway</TableHead>
 								<TableHead>Internal</TableHead>
-								{serverFilter === "all" && (
-									<TableHead>Server</TableHead>
-								)}
+								{serverFilter === "all" && <TableHead>Server</TableHead>}
 								<TableHead className="w-12" />
 							</TableRow>
 						</TableHeader>
@@ -186,12 +167,8 @@ export default function NetworksPage() {
 									<TableCell className="text-xs text-muted-foreground">
 										{net.scope || "—"}
 									</TableCell>
-									<TableCell className="font-mono text-xs">
-										{net.subnet || "—"}
-									</TableCell>
-									<TableCell className="font-mono text-xs">
-										{net.gateway || "—"}
-									</TableCell>
+									<TableCell className="font-mono text-xs">{net.subnet || "—"}</TableCell>
+									<TableCell className="font-mono text-xs">{net.gateway || "—"}</TableCell>
 									<TableCell>
 										{net.internal ? (
 											<Badge variant="outline">Yes</Badge>
@@ -287,11 +264,8 @@ export default function NetworksPage() {
 						<AlertDialogTitle>Remove Network</AlertDialogTitle>
 						<AlertDialogDescription>
 							Are you sure you want to remove the network{" "}
-							<span className="font-mono font-semibold">
-								{removeTarget?.name}
-							</span>
-							? This action cannot be undone. Networks with active containers
-							cannot be removed.
+							<span className="font-mono font-semibold">{removeTarget?.name}</span>? This action
+							cannot be undone. Networks with active containers cannot be removed.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

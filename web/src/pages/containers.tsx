@@ -22,9 +22,7 @@ export default function ContainersPage() {
 					<Box className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Containers</h1>
 					{!isLoading && (
-						<span className="text-sm text-muted-foreground">
-							({containers.length})
-						</span>
+						<span className="text-sm text-muted-foreground">({containers.length})</span>
 					)}
 				</div>
 				<Button asChild size="sm">
@@ -35,11 +33,7 @@ export default function ContainersPage() {
 				</Button>
 			</div>
 
-			<ContainerTable
-				containers={containers}
-				isLoading={isLoading}
-				showServer
-			/>
+			<ContainerTable containers={containers} isLoading={isLoading} showServer />
 		</div>
 	);
 }

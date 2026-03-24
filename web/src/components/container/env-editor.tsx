@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-	Eye,
-	EyeOff,
-	Plus,
-	Save,
-	Trash2,
-	AlertTriangle,
-} from "lucide-react";
+import { Eye, EyeOff, Plus, Save, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -195,11 +188,7 @@ export function EnvEditor({ container, isLoading }: EnvEditorProps) {
 							<Plus className="mr-1.5 h-3.5 w-3.5" />
 							Add
 						</Button>
-						<Button
-							size="sm"
-							onClick={() => setConfirmOpen(true)}
-							disabled={!hasChanges || saving}
-						>
+						<Button size="sm" onClick={() => setConfirmOpen(true)} disabled={!hasChanges || saving}>
 							<Save className="mr-1.5 h-3.5 w-3.5" />
 							{saving ? "Saving..." : "Apply"}
 						</Button>
@@ -257,9 +246,9 @@ export function EnvEditor({ container, isLoading }: EnvEditorProps) {
 					)}
 
 					<p className="mt-4 text-xs text-muted-foreground">
-						Changing environment variables requires the container to be recreated.
-						The container will be stopped, removed, and re-created with the same
-						configuration but updated environment.
+						Changing environment variables requires the container to be recreated. The container
+						will be stopped, removed, and re-created with the same configuration but updated
+						environment.
 					</p>
 				</CardContent>
 			</Card>
@@ -273,8 +262,8 @@ export function EnvEditor({ container, isLoading }: EnvEditorProps) {
 							Confirm Environment Update
 						</DialogTitle>
 						<DialogDescription>
-							This will recreate the container with updated environment
-							variables. The container will be briefly stopped.
+							This will recreate the container with updated environment variables. The container
+							will be briefly stopped.
 						</DialogDescription>
 					</DialogHeader>
 
@@ -301,9 +290,7 @@ export function EnvEditor({ container, isLoading }: EnvEditorProps) {
 												{item.oldValue}
 											</span>
 											<span className="text-muted-foreground">&rarr;</span>
-											<span className="text-green-500 truncate max-w-32">
-												{item.newValue}
-											</span>
+											<span className="text-green-500 truncate max-w-32">{item.newValue}</span>
 										</>
 									)}
 								</div>

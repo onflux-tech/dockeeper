@@ -45,8 +45,12 @@ export function ReviewStep() {
 				<Field label="Name" value={data.name} />
 				{data.network && <Field label="Network" value={data.network} />}
 				{data.restart_policy && <Field label="Restart policy" value={data.restart_policy} />}
-				{data.command && <Field label="Command" value={<code className="text-xs">{data.command}</code>} />}
-				{data.entrypoint && <Field label="Entrypoint" value={<code className="text-xs">{data.entrypoint}</code>} />}
+				{data.command && (
+					<Field label="Command" value={<code className="text-xs">{data.command}</code>} />
+				)}
+				{data.entrypoint && (
+					<Field label="Entrypoint" value={<code className="text-xs">{data.entrypoint}</code>} />
+				)}
 			</Section>
 
 			{/* Ports */}

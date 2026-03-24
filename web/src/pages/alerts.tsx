@@ -1,25 +1,11 @@
 import { useMemo, useState } from "react";
-import {
-	Bell,
-	Plus,
-	Pencil,
-	Trash2,
-	Radio,
-	Send,
-	Loader2,
-	History,
-} from "lucide-react";
+import { Bell, Plus, Pencil, Trash2, Radio, Send, Loader2, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import {
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	Table,
 	TableBody,
@@ -46,11 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
-import {
-	useAlertRules,
-	useDeleteRule,
-	useToggleRule,
-} from "@/hooks/use-alerts";
+import { useAlertRules, useDeleteRule, useToggleRule } from "@/hooks/use-alerts";
 import {
 	useNotificationChannels,
 	useNotificationLogs,
@@ -84,14 +66,13 @@ export default function AlertsPage() {
 	const [ruleSearch, setRuleSearch] = useState("");
 	const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
 	const [editRule, setEditRule] = useState<AlertRuleRecord | null>(null);
-	const [deleteRuleTarget, setDeleteRuleTarget] =
-		useState<AlertRuleRecord | null>(null);
+	const [deleteRuleTarget, setDeleteRuleTarget] = useState<AlertRuleRecord | null>(null);
 
 	const [channelDialogOpen, setChannelDialogOpen] = useState(false);
-	const [editChannel, setEditChannel] =
-		useState<NotificationChannelRecord | null>(null);
-	const [deleteChannelTarget, setDeleteChannelTarget] =
-		useState<NotificationChannelRecord | null>(null);
+	const [editChannel, setEditChannel] = useState<NotificationChannelRecord | null>(null);
+	const [deleteChannelTarget, setDeleteChannelTarget] = useState<NotificationChannelRecord | null>(
+		null,
+	);
 
 	// Data
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
@@ -104,8 +85,7 @@ export default function AlertsPage() {
 	useRealtime("notification_logs");
 
 	const { data: rules, isLoading: rulesLoading } = useAlertRules();
-	const { data: channels, isLoading: channelsLoading } =
-		useNotificationChannels();
+	const { data: channels, isLoading: channelsLoading } = useNotificationChannels();
 	const { data: logs, isLoading: logsLoading } = useNotificationLogs();
 
 	const toggleMut = useToggleRule();
@@ -126,9 +106,7 @@ export default function AlertsPage() {
 		if (!ruleSearch) return list;
 		const q = ruleSearch.toLowerCase();
 		return list.filter(
-			(r) =>
-				r.name.toLowerCase().includes(q) ||
-				r.metric.toLowerCase().includes(q),
+			(r) => r.name.toLowerCase().includes(q) || r.metric.toLowerCase().includes(q),
 		);
 	}, [rules, ruleSearch]);
 
@@ -204,8 +182,7 @@ export default function AlertsPage() {
 						</div>
 					) : filteredRules.length === 0 ? (
 						<p className="text-sm text-muted-foreground">
-							No alert rules found. Click "New Rule" to create
-							one.
+							No alert rules found. Click "New Rule" to create one.
 						</p>
 					) : (
 						<div className="rounded-md border">
@@ -223,75 +200,39 @@ export default function AlertsPage() {
 								<TableBody>
 									{filteredRules.map((rule) => (
 										<TableRow key={rule.id}>
-											<TableCell className="font-medium">
-												{rule.name}
-											</TableCell>
+											<TableCell className="font-medium">{rule.name}</TableCell>
 											<TableCell className="font-mono text-xs">
-												{rule.metric}{" "}
-												{OPERATOR_SYMBOLS[rule.operator] ??
-													rule.operator}{" "}
+												{rule.metric} {OPERATOR_SYMBOLS[rule.operator] ?? rule.operator}{" "}
 												{rule.threshold}
 											</TableCell>
 											<TableCell className="text-xs">
-												<Badge
-													variant="outline"
-													className="mr-1"
-												>
+												<Badge variant="outline" className="mr-1">
 													{rule.target_type}
 												</Badge>
-												{resolveTargetName(
-													rule.target_type,
-													rule.target_id,
-												)}
+												{resolveTargetName(rule.target_type, rule.target_id)}
 											</TableCell>
 											<TableCell>
-												<Badge
-													variant={
-														STATE_VARIANT[
-															rule.state
-														] ?? "outline"
-													}
-												>
-													{rule.state}
-												</Badge>
+												<Badge variant={STATE_VARIANT[rule.state] ?? "outline"}>{rule.state}</Badge>
 											</TableCell>
 											<TableCell>
 												<Switch
 													checked={rule.enabled}
-													onCheckedChange={() =>
-														toggleMut.mutate(
-															rule.id,
-														)
-													}
+													onCheckedChange={() => toggleMut.mutate(rule.id)}
 												/>
 											</TableCell>
 											<TableCell>
 												<DropdownMenu>
-													<DropdownMenuTrigger
-														asChild
-													>
-														<Button
-															variant="ghost"
-															size="icon"
-															className="h-7 w-7"
-														>
-															<span className="sr-only">
-																Actions
-															</span>
-															<span className="text-xs">
-																...
-															</span>
+													<DropdownMenuTrigger asChild>
+														<Button variant="ghost" size="icon" className="h-7 w-7">
+															<span className="sr-only">Actions</span>
+															<span className="text-xs">...</span>
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end">
 														<DropdownMenuItem
 															onClick={() => {
-																setEditRule(
-																	rule,
-																);
-																setRuleDialogOpen(
-																	true,
-																);
+																setEditRule(rule);
+																setRuleDialogOpen(true);
 															}}
 														>
 															<Pencil className="mr-2 h-3.5 w-3.5" />
@@ -299,11 +240,7 @@ export default function AlertsPage() {
 														</DropdownMenuItem>
 														<DropdownMenuItem
 															className="text-destructive"
-															onClick={() =>
-																setDeleteRuleTarget(
-																	rule,
-																)
-															}
+															onClick={() => setDeleteRuleTarget(rule)}
 														>
 															<Trash2 className="mr-2 h-3.5 w-3.5" />
 															Delete
@@ -342,8 +279,7 @@ export default function AlertsPage() {
 						</div>
 					) : (channels ?? []).length === 0 ? (
 						<p className="text-sm text-muted-foreground">
-							No notification channels configured. Click "New
-							Channel" to add one.
+							No notification channels configured. Click "New Channel" to add one.
 						</p>
 					) : (
 						<div className="rounded-md border">
@@ -359,25 +295,13 @@ export default function AlertsPage() {
 								<TableBody>
 									{(channels ?? []).map((ch) => (
 										<TableRow key={ch.id}>
-											<TableCell className="font-medium">
-												{ch.name}
+											<TableCell className="font-medium">{ch.name}</TableCell>
+											<TableCell>
+												<Badge variant="outline">{ch.type}</Badge>
 											</TableCell>
 											<TableCell>
-												<Badge variant="outline">
-													{ch.type}
-												</Badge>
-											</TableCell>
-											<TableCell>
-												<Badge
-													variant={
-														ch.enabled
-															? "default"
-															: "secondary"
-													}
-												>
-													{ch.enabled
-														? "Enabled"
-														: "Disabled"}
+												<Badge variant={ch.enabled ? "default" : "secondary"}>
+													{ch.enabled ? "Enabled" : "Disabled"}
 												</Badge>
 											</TableCell>
 											<TableCell>
@@ -385,14 +309,8 @@ export default function AlertsPage() {
 													<Button
 														variant="ghost"
 														size="sm"
-														onClick={() =>
-															testChannelMut.mutate(
-																ch.id,
-															)
-														}
-														disabled={
-															testChannelMut.isPending
-														}
+														onClick={() => testChannelMut.mutate(ch.id)}
+														disabled={testChannelMut.isPending}
 													>
 														{testChannelMut.isPending ? (
 															<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -402,31 +320,17 @@ export default function AlertsPage() {
 														Test
 													</Button>
 													<DropdownMenu>
-														<DropdownMenuTrigger
-															asChild
-														>
-															<Button
-																variant="ghost"
-																size="icon"
-																className="h-7 w-7"
-															>
-																<span className="sr-only">
-																	Actions
-																</span>
-																<span className="text-xs">
-																	...
-																</span>
+														<DropdownMenuTrigger asChild>
+															<Button variant="ghost" size="icon" className="h-7 w-7">
+																<span className="sr-only">Actions</span>
+																<span className="text-xs">...</span>
 															</Button>
 														</DropdownMenuTrigger>
 														<DropdownMenuContent align="end">
 															<DropdownMenuItem
 																onClick={() => {
-																	setEditChannel(
-																		ch,
-																	);
-																	setChannelDialogOpen(
-																		true,
-																	);
+																	setEditChannel(ch);
+																	setChannelDialogOpen(true);
 																}}
 															>
 																<Pencil className="mr-2 h-3.5 w-3.5" />
@@ -434,11 +338,7 @@ export default function AlertsPage() {
 															</DropdownMenuItem>
 															<DropdownMenuItem
 																className="text-destructive"
-																onClick={() =>
-																	setDeleteChannelTarget(
-																		ch,
-																	)
-																}
+																onClick={() => setDeleteChannelTarget(ch)}
 															>
 																<Trash2 className="mr-2 h-3.5 w-3.5" />
 																Delete
@@ -465,8 +365,7 @@ export default function AlertsPage() {
 						</div>
 					) : (logs ?? []).length === 0 ? (
 						<p className="text-sm text-muted-foreground">
-							No notification history yet. Alerts will appear here
-							once triggered.
+							No notification history yet. Alerts will appear here once triggered.
 						</p>
 					) : (
 						<div className="rounded-md border">
@@ -477,41 +376,23 @@ export default function AlertsPage() {
 										<TableHead>Channel</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead>Retries</TableHead>
-										<TableHead className="max-w-xs">
-											Message
-										</TableHead>
-										<TableHead className="max-w-xs">
-											Error
-										</TableHead>
+										<TableHead className="max-w-xs">Message</TableHead>
+										<TableHead className="max-w-xs">Error</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
 									{(logs ?? []).map((log) => (
 										<TableRow key={log.id}>
 											<TableCell className="text-xs whitespace-nowrap">
-												{log.sent_at
-													? new Date(
-															log.sent_at,
-														).toLocaleString()
-													: "—"}
+												{log.sent_at ? new Date(log.sent_at).toLocaleString() : "—"}
 											</TableCell>
-											<TableCell className="text-xs">
-												{channelName(log.channel)}
-											</TableCell>
+											<TableCell className="text-xs">{channelName(log.channel)}</TableCell>
 											<TableCell>
-												<Badge
-													variant={
-														log.status === "sent"
-															? "default"
-															: "destructive"
-													}
-												>
+												<Badge variant={log.status === "sent" ? "default" : "destructive"}>
 													{log.status}
 												</Badge>
 											</TableCell>
-											<TableCell className="text-xs text-center">
-												{log.retries}
-											</TableCell>
+											<TableCell className="text-xs text-center">{log.retries}</TableCell>
 											<TableCell className="max-w-xs truncate text-xs text-muted-foreground">
 												{log.message}
 											</TableCell>
@@ -564,10 +445,8 @@ export default function AlertsPage() {
 						<AlertDialogTitle>Delete Alert Rule</AlertDialogTitle>
 						<AlertDialogDescription>
 							Are you sure you want to delete the alert rule{" "}
-							<span className="font-semibold">
-								{deleteRuleTarget?.name}
-							</span>
-							? This action cannot be undone.
+							<span className="font-semibold">{deleteRuleTarget?.name}</span>? This action cannot be
+							undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -595,16 +474,11 @@ export default function AlertsPage() {
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Delete Notification Channel
-						</AlertDialogTitle>
+						<AlertDialogTitle>Delete Notification Channel</AlertDialogTitle>
 						<AlertDialogDescription>
 							Are you sure you want to delete the channel{" "}
-							<span className="font-semibold">
-								{deleteChannelTarget?.name}
-							</span>
-							? Rules using this channel will no longer send
-							notifications to it.
+							<span className="font-semibold">{deleteChannelTarget?.name}</span>? Rules using this
+							channel will no longer send notifications to it.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -612,9 +486,7 @@ export default function AlertsPage() {
 						<AlertDialogAction
 							onClick={() => {
 								if (deleteChannelTarget) {
-									deleteChannelMut.mutate(
-										deleteChannelTarget.id,
-									);
+									deleteChannelMut.mutate(deleteChannelTarget.id);
 									setDeleteChannelTarget(null);
 								}
 							}}

@@ -1,11 +1,5 @@
 import { useRef } from "react";
-import {
-	Search,
-	ChevronUp,
-	ChevronDown,
-	X,
-	Circle,
-} from "lucide-react";
+import { Search, ChevronUp, ChevronDown, X, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -42,16 +36,10 @@ export function TerminalView({ containerId, cmd, active = true }: TerminalViewPr
 	};
 
 	return (
-		<div
-			className="flex flex-col h-full"
-			style={{ display: active ? "flex" : "none" }}
-		>
+		<div className="flex flex-col h-full" style={{ display: active ? "flex" : "none" }}>
 			{/* Toolbar */}
 			<div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b bg-card">
-				<Badge
-					variant={connected ? "default" : "secondary"}
-					className="text-xs"
-				>
+				<Badge variant={connected ? "default" : "secondary"} className="text-xs">
 					<Circle
 						className={`h-2 w-2 mr-1 ${connected ? "fill-current" : "fill-muted-foreground"}`}
 					/>
@@ -117,10 +105,7 @@ export function TerminalView({ containerId, cmd, active = true }: TerminalViewPr
 			</div>
 
 			{/* Terminal */}
-			<div
-				ref={containerRef}
-				className="flex-1 min-h-0 bg-[#0a0a0a] p-1"
-			/>
+			<div ref={containerRef} className="flex-1 min-h-0 bg-[#0a0a0a] p-1" />
 		</div>
 	);
 }

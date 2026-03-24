@@ -17,10 +17,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	useCreateChannel,
-	useUpdateChannel,
-} from "@/hooks/use-notifications";
+import { useCreateChannel, useUpdateChannel } from "@/hooks/use-notifications";
 import type { NotificationChannelRecord } from "@/types/pocketbase";
 
 interface ChannelDialogProps {
@@ -29,19 +26,13 @@ interface ChannelDialogProps {
 	editChannel?: NotificationChannelRecord | null;
 }
 
-export function ChannelDialog({
-	open,
-	onOpenChange,
-	editChannel,
-}: ChannelDialogProps) {
+export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialogProps) {
 	const isEdit = !!editChannel;
 	const editConfig = (editChannel?.config ?? {}) as Record<string, string>;
 
 	const [name, setName] = useState(editChannel?.name ?? "");
 	const [type, setType] = useState<string>(editChannel?.type ?? "webhook");
-	const [enabled, setEnabled] = useState(
-		editChannel?.enabled !== false ? "yes" : "no",
-	);
+	const [enabled, setEnabled] = useState(editChannel?.enabled !== false ? "yes" : "no");
 
 	// WhatsApp config
 	const [waEndpoint, setWaEndpoint] = useState(editConfig.endpoint ?? "");
@@ -104,10 +95,7 @@ export function ChannelDialog({
 		};
 
 		if (isEdit && editChannel) {
-			updateMut.mutate(
-				{ id: editChannel.id, fields },
-				{ onSuccess: () => onOpenChange(false) },
-			);
+			updateMut.mutate({ id: editChannel.id, fields }, { onSuccess: () => onOpenChange(false) });
 		} else {
 			createMut.mutate(fields, {
 				onSuccess: () => onOpenChange(false),
@@ -147,24 +135,14 @@ export function ChannelDialog({
 						</div>
 						<div className="space-y-1.5">
 							<label className="text-xs font-medium">Type</label>
-							<Select
-								value={type}
-								onValueChange={setType}
-								disabled={isEdit}
-							>
+							<Select value={type} onValueChange={setType} disabled={isEdit}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="whatsapp">
-										WhatsApp
-									</SelectItem>
-									<SelectItem value="telegram">
-										Telegram
-									</SelectItem>
-									<SelectItem value="webhook">
-										Webhook
-									</SelectItem>
+									<SelectItem value="whatsapp">WhatsApp</SelectItem>
+									<SelectItem value="telegram">Telegram</SelectItem>
+									<SelectItem value="webhook">Webhook</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -173,41 +151,29 @@ export function ChannelDialog({
 					{type === "whatsapp" && (
 						<div className="space-y-3">
 							<div className="space-y-1.5">
-								<label className="text-xs font-medium">
-									WuzAPI Endpoint
-								</label>
+								<label className="text-xs font-medium">WuzAPI Endpoint</label>
 								<Input
 									placeholder="http://localhost:8080"
 									value={waEndpoint}
-									onChange={(e) =>
-										setWaEndpoint(e.target.value)
-									}
+									onChange={(e) => setWaEndpoint(e.target.value)}
 								/>
 							</div>
 							<div className="grid grid-cols-2 gap-3">
 								<div className="space-y-1.5">
-									<label className="text-xs font-medium">
-										Phone
-									</label>
+									<label className="text-xs font-medium">Phone</label>
 									<Input
 										placeholder="5511999999999"
 										value={waPhone}
-										onChange={(e) =>
-											setWaPhone(e.target.value)
-										}
+										onChange={(e) => setWaPhone(e.target.value)}
 									/>
 								</div>
 								<div className="space-y-1.5">
-									<label className="text-xs font-medium">
-										Token
-									</label>
+									<label className="text-xs font-medium">Token</label>
 									<Input
 										type="password"
 										placeholder="API token"
 										value={waToken}
-										onChange={(e) =>
-											setWaToken(e.target.value)
-										}
+										onChange={(e) => setWaToken(e.target.value)}
 									/>
 								</div>
 							</div>
@@ -217,28 +183,20 @@ export function ChannelDialog({
 					{type === "telegram" && (
 						<div className="grid grid-cols-2 gap-3">
 							<div className="space-y-1.5">
-								<label className="text-xs font-medium">
-									Bot Token
-								</label>
+								<label className="text-xs font-medium">Bot Token</label>
 								<Input
 									type="password"
 									placeholder="123456:ABC-DEF..."
 									value={tgBotToken}
-									onChange={(e) =>
-										setTgBotToken(e.target.value)
-									}
+									onChange={(e) => setTgBotToken(e.target.value)}
 								/>
 							</div>
 							<div className="space-y-1.5">
-								<label className="text-xs font-medium">
-									Chat ID
-								</label>
+								<label className="text-xs font-medium">Chat ID</label>
 								<Input
 									placeholder="-1001234567890"
 									value={tgChatId}
-									onChange={(e) =>
-										setTgChatId(e.target.value)
-									}
+									onChange={(e) => setTgChatId(e.target.value)}
 								/>
 							</div>
 						</div>
@@ -246,9 +204,7 @@ export function ChannelDialog({
 
 					{type === "webhook" && (
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Webhook URL
-							</label>
+							<label className="text-xs font-medium">Webhook URL</label>
 							<Input
 								placeholder="https://example.com/webhook"
 								value={whUrl}
@@ -272,16 +228,10 @@ export function ChannelDialog({
 				</div>
 
 				<DialogFooter>
-					<Button
-						variant="outline"
-						onClick={() => handleClose(false)}
-					>
+					<Button variant="outline" onClick={() => handleClose(false)}>
 						Cancel
 					</Button>
-					<Button
-						onClick={handleSubmit}
-						disabled={!isValid() || isPending}
-					>
+					<Button onClick={handleSubmit} disabled={!isValid() || isPending}>
 						{isPending
 							? isEdit
 								? "Saving..."

@@ -41,9 +41,7 @@ export function ResourcesStep() {
 					aria-invalid={!!errors.cpu_limit}
 					{...register("cpu_limit", { valueAsNumber: true })}
 				/>
-				{errors.cpu_limit && (
-					<p className="text-xs text-destructive">{errors.cpu_limit.message}</p>
-				)}
+				{errors.cpu_limit && <p className="text-xs text-destructive">{errors.cpu_limit.message}</p>}
 				<p className="text-xs text-muted-foreground">
 					Number of CPU cores (e.g. 0.5 = half a core, 2 = two cores)
 				</p>
@@ -70,9 +68,7 @@ export function ResourcesStep() {
 					aria-invalid={!!errors.mem_limit}
 					{...register("mem_limit", { valueAsNumber: true })}
 				/>
-				{errors.mem_limit && (
-					<p className="text-xs text-destructive">{errors.mem_limit.message}</p>
-				)}
+				{errors.mem_limit && <p className="text-xs text-destructive">{errors.mem_limit.message}</p>}
 				<p className="text-xs text-muted-foreground">
 					Memory in megabytes (e.g. 512 = 512 MB, 2048 = 2 GB)
 				</p>

@@ -36,7 +36,8 @@ export function SparklineChart({
 						const v = payload[0].value as number;
 						return (
 							<div className="rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md">
-								{v.toFixed(1)}{unit}
+								{v.toFixed(1)}
+								{unit}
 							</div>
 						);
 					}}

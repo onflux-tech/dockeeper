@@ -70,9 +70,7 @@ export function PullDialog({ open, onOpenChange, serverID }: PullDialogProps) {
 						</div>
 					)}
 
-					{error && !pulling && (
-						<p className="text-sm text-destructive">{error}</p>
-					)}
+					{error && !pulling && <p className="text-sm text-destructive">{error}</p>}
 				</div>
 
 				<DialogFooter>

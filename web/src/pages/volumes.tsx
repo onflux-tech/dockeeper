@@ -65,9 +65,7 @@ export default function VolumesPage() {
 	const { data: volumesResult, isLoading } = useCollection("volumes", {
 		perPage: 200,
 		sort: "name",
-		...(serverFilter !== "all"
-			? { filter: `server = '${serverFilter}'` }
-			: {}),
+		...(serverFilter !== "all" ? { filter: `server = '${serverFilter}'` } : {}),
 	});
 
 	useRealtime("volumes");
@@ -85,9 +83,7 @@ export default function VolumesPage() {
 		if (!search) return volumes;
 		const q = search.toLowerCase();
 		return volumes.filter(
-			(v) =>
-				v.name.toLowerCase().includes(q) ||
-				(v.driver ?? "").toLowerCase().includes(q),
+			(v) => v.name.toLowerCase().includes(q) || (v.driver ?? "").toLowerCase().includes(q),
 		);
 	}, [volumes, search]);
 
@@ -109,17 +105,9 @@ export default function VolumesPage() {
 				<div className="flex items-center gap-2">
 					<HardDrive className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Volumes</h1>
-					{!isLoading && (
-						<span className="text-sm text-muted-foreground">
-							({filtered.length})
-						</span>
-					)}
+					{!isLoading && <span className="text-sm text-muted-foreground">({filtered.length})</span>}
 				</div>
-				<Button
-					size="sm"
-					onClick={() => setCreateOpen(true)}
-					disabled={serverFilter === "all"}
-				>
+				<Button size="sm" onClick={() => setCreateOpen(true)} disabled={serverFilter === "all"}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />
 					Create Volume
 				</Button>
@@ -181,9 +169,7 @@ export default function VolumesPage() {
 									<TableCell className="max-w-48 truncate font-mono text-xs text-muted-foreground">
 										{vol.mountpoint || "—"}
 									</TableCell>
-									<TableCell className="text-xs">
-										{formatSize(vol.size)}
-									</TableCell>
+									<TableCell className="text-xs">{formatSize(vol.size)}</TableCell>
 									<TableCell>
 										{vol.in_use ? (
 											<Badge variant="default">In Use</Badge>
@@ -266,23 +252,15 @@ export default function VolumesPage() {
 						<AlertDialogDescription>
 							{removeTarget?.in_use ? (
 								<>
-									<span className="font-semibold text-destructive">
-										Warning:
-									</span>{" "}
-									Volume{" "}
-									<span className="font-mono font-semibold">
-										{removeTarget?.name}
-									</span>{" "}
-									is currently in use by one or more containers. Removing it may
-									cause data loss.
+									<span className="font-semibold text-destructive">Warning:</span> Volume{" "}
+									<span className="font-mono font-semibold">{removeTarget?.name}</span> is currently
+									in use by one or more containers. Removing it may cause data loss.
 								</>
 							) : (
 								<>
 									Are you sure you want to remove the volume{" "}
-									<span className="font-mono font-semibold">
-										{removeTarget?.name}
-									</span>
-									? This action cannot be undone and all data will be lost.
+									<span className="font-mono font-semibold">{removeTarget?.name}</span>? This action
+									cannot be undone and all data will be lost.
 								</>
 							)}
 						</AlertDialogDescription>

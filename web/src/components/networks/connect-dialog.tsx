@@ -74,9 +74,8 @@ export function ConnectDialog({
 						{isConnect ? "Connect" : "Disconnect"} Container
 					</DialogTitle>
 					<DialogDescription>
-						{isConnect ? "Connect" : "Disconnect"} a container{" "}
-						{isConnect ? "to" : "from"} the network{" "}
-						<span className="font-mono font-semibold">{networkName}</span>.
+						{isConnect ? "Connect" : "Disconnect"} a container {isConnect ? "to" : "from"} the
+						network <span className="font-mono font-semibold">{networkName}</span>.
 					</DialogDescription>
 				</DialogHeader>
 

@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import {
-	Server,
-	Plus,
-	Search,
-	Trash2,
-	MoreHorizontal,
-	ExternalLink,
-} from "lucide-react";
+import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink } from "lucide-react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -42,9 +35,7 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { relativeTime } from "@/lib/format";
 import type { ServerRecord } from "@/types/pocketbase";
 
-function statusVariant(
-	status: string,
-): "default" | "secondary" | "destructive" | "outline" {
+function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
 	switch (status) {
 		case "online":
 			return "default";
@@ -131,10 +122,7 @@ export default function ServersPage() {
 							))
 						) : filtered?.length === 0 ? (
 							<TableRow>
-								<TableCell
-									colSpan={8}
-									className="h-32 text-center text-muted-foreground"
-								>
+								<TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
 									{servers?.length === 0
 										? 'No servers yet. Click "Add Server" to get started.'
 										: "No servers match your search."}
@@ -155,29 +143,19 @@ export default function ServersPage() {
 											</p>
 										)}
 									</TableCell>
-									<TableCell className="font-mono text-xs">
-										{server.hostname || "—"}
-									</TableCell>
-									<TableCell className="font-mono text-xs">
-										{server.ip_address || "—"}
-									</TableCell>
+									<TableCell className="font-mono text-xs">{server.hostname || "—"}</TableCell>
+									<TableCell className="font-mono text-xs">{server.ip_address || "—"}</TableCell>
 									<TableCell className="text-xs text-muted-foreground">
-										{server.os && server.arch
-											? `${server.os}/${server.arch}`
-											: "—"}
+										{server.os && server.arch ? `${server.os}/${server.arch}` : "—"}
 									</TableCell>
 									<TableCell className="text-xs text-muted-foreground">
 										{server.agent_version || "—"}
 									</TableCell>
 									<TableCell>
-										<Badge variant={statusVariant(server.status)}>
-											{server.status}
-										</Badge>
+										<Badge variant={statusVariant(server.status)}>{server.status}</Badge>
 									</TableCell>
 									<TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-										{server.last_seen
-											? relativeTime(server.last_seen)
-											: "never"}
+										{server.last_seen ? relativeTime(server.last_seen) : "never"}
 									</TableCell>
 									<TableCell>
 										<DropdownMenu>
@@ -233,10 +211,9 @@ export default function ServersPage() {
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete server?</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will permanently remove the server
-							&quot;{deleteTarget?.name ?? deleteTarget?.hostname}&quot;
-							and all associated data (containers, metrics, images, volumes,
-							networks).
+							This will permanently remove the server &quot;
+							{deleteTarget?.name ?? deleteTarget?.hostname}&quot; and all associated data
+							(containers, metrics, images, volumes, networks).
 							{deleteTarget?.status === "online" &&
 								" The agent will be uninstalled from the remote machine."}
 						</AlertDialogDescription>

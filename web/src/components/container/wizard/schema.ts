@@ -66,7 +66,10 @@ export type ContainerWizardData = z.infer<typeof containerWizardSchema>;
 
 export const STEPS = [
 	{ label: "Image", fields: ["image", "auto_start"] },
-	{ label: "General", fields: ["server_id", "name", "network", "restart_policy", "command", "entrypoint"] },
+	{
+		label: "General",
+		fields: ["server_id", "name", "network", "restart_policy", "command", "entrypoint"],
+	},
 	{ label: "Ports", fields: ["ports"] },
 	{ label: "Volumes", fields: ["volumes"] },
 	{ label: "Env", fields: ["env"] },

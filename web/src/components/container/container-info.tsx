@@ -41,11 +41,7 @@ function InfoItem({ icon, label, value }: InfoItemProps) {
 
 function StatusBadge({ status }: { status: string }) {
 	const variant =
-		status === "running"
-			? "default"
-			: status === "paused"
-				? "secondary"
-				: "destructive";
+		status === "running" ? "default" : status === "paused" ? "secondary" : "destructive";
 	return <Badge variant={variant}>{status}</Badge>;
 }
 
@@ -121,8 +117,7 @@ function NetworksList({ networks }: { networks: unknown }) {
 
 function VolumesList({ volumes }: { volumes: unknown }) {
 	const parsed = parseJSON(volumes);
-	if (!parsed || !Array.isArray(parsed) || parsed.length === 0)
-		return <span>—</span>;
+	if (!parsed || !Array.isArray(parsed) || parsed.length === 0) return <span>—</span>;
 
 	return (
 		<div className="flex flex-col gap-0.5">
@@ -132,9 +127,7 @@ function VolumesList({ volumes }: { volumes: unknown }) {
 				</span>
 			))}
 			{parsed.length > 5 && (
-				<span className="text-xs text-muted-foreground">
-					+{parsed.length - 5} more
-				</span>
+				<span className="text-xs text-muted-foreground">+{parsed.length - 5} more</span>
 			)}
 		</div>
 	);
@@ -146,9 +139,7 @@ function EnvVarsList({ envVars }: { envVars: unknown }) {
 
 	const entries = Array.isArray(parsed)
 		? (parsed as string[])
-		: Object.entries(parsed as Record<string, string>).map(
-				([k, v]) => `${k}=${v}`,
-			);
+		: Object.entries(parsed as Record<string, string>).map(([k, v]) => `${k}=${v}`);
 
 	if (entries.length === 0) return <span>—</span>;
 
@@ -165,9 +156,7 @@ function EnvVarsList({ envVars }: { envVars: unknown }) {
 				);
 			})}
 			{entries.length > 6 && (
-				<span className="text-xs text-muted-foreground">
-					+{entries.length - 6} more
-				</span>
+				<span className="text-xs text-muted-foreground">+{entries.length - 6} more</span>
 			)}
 		</div>
 	);
@@ -208,17 +197,9 @@ export function ContainerInfo({ container, isLoading }: ContainerInfoProps) {
 						<InfoItem
 							icon={<Box className="h-4 w-4" />}
 							label="Container ID"
-							value={
-								<span className="font-mono text-xs">
-									{container.container_id}
-								</span>
-							}
+							value={<span className="font-mono text-xs">{container.container_id}</span>}
 						/>
-						<InfoItem
-							icon={<Tag className="h-4 w-4" />}
-							label="Image"
-							value={container.image}
-						/>
+						<InfoItem icon={<Tag className="h-4 w-4" />} label="Image" value={container.image} />
 						<InfoItem
 							icon={<Play className="h-4 w-4" />}
 							label="Status"
@@ -227,20 +208,12 @@ export function ContainerInfo({ container, isLoading }: ContainerInfoProps) {
 						<InfoItem
 							icon={<FileText className="h-4 w-4" />}
 							label="Command"
-							value={
-								<span className="font-mono text-xs">
-									{container.command || "—"}
-								</span>
-							}
+							value={<span className="font-mono text-xs">{container.command || "—"}</span>}
 						/>
 						<InfoItem
 							icon={<FileText className="h-4 w-4" />}
 							label="Entrypoint"
-							value={
-								<span className="font-mono text-xs">
-									{container.entrypoint || "—"}
-								</span>
-							}
+							value={<span className="font-mono text-xs">{container.entrypoint || "—"}</span>}
 						/>
 						<InfoItem
 							icon={<HardDrive className="h-4 w-4" />}

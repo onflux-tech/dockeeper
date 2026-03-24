@@ -108,11 +108,7 @@ export function PolicyDialog({
 				<div className="space-y-4">
 					<div className="space-y-1.5">
 						<label className="text-xs font-medium">Volume</label>
-						<Select
-							value={volume}
-							onValueChange={setVolume}
-							disabled={isEdit}
-						>
+						<Select value={volume} onValueChange={setVolume} disabled={isEdit}>
 							<SelectTrigger>
 								<SelectValue placeholder="Select a volume" />
 							</SelectTrigger>
@@ -128,22 +124,16 @@ export function PolicyDialog({
 
 					<div className="grid grid-cols-2 gap-3">
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Schedule (cron)
-							</label>
+							<label className="text-xs font-medium">Schedule (cron)</label>
 							<Input
 								placeholder="0 2 * * *"
 								value={schedule}
 								onChange={(e) => setSchedule(e.target.value)}
 							/>
-							<p className="text-[10px] text-muted-foreground">
-								{describeCron(schedule)}
-							</p>
+							<p className="text-[10px] text-muted-foreground">{describeCron(schedule)}</p>
 						</div>
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Retention (days)
-							</label>
+							<label className="text-xs font-medium">Retention (days)</label>
 							<Input
 								type="number"
 								min={1}
@@ -191,10 +181,7 @@ export function PolicyDialog({
 					<Button variant="outline" onClick={() => handleClose(false)}>
 						Cancel
 					</Button>
-					<Button
-						onClick={handleSubmit}
-						disabled={!volume || !schedule.trim() || isPending}
-					>
+					<Button onClick={handleSubmit} disabled={!volume || !schedule.trim() || isPending}>
 						{isPending
 							? isEdit
 								? "Saving..."

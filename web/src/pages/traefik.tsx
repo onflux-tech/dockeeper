@@ -60,9 +60,7 @@ export default function TraefikPage() {
 				<Globe className="h-5 w-5 text-muted-foreground" />
 				<h1 className="text-2xl font-semibold">Traefik Routes</h1>
 				{!isLoading && (
-					<span className="text-sm text-muted-foreground">
-						({filteredRoutes.length} routes)
-					</span>
+					<span className="text-sm text-muted-foreground">({filteredRoutes.length} routes)</span>
 				)}
 			</div>
 
@@ -116,34 +114,21 @@ export default function TraefikPage() {
 								<TableHead>Middlewares</TableHead>
 								<TableHead>Provider</TableHead>
 								<TableHead>Status</TableHead>
-								{serverFilter === "all" && (
-									<TableHead>Server</TableHead>
-								)}
+								{serverFilter === "all" && <TableHead>Server</TableHead>}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{filteredRoutes.map((route) => (
 								<TableRow key={route.id}>
-									<TableCell className="font-medium">
-										{route.name}
-									</TableCell>
+									<TableCell className="font-medium">{route.name}</TableCell>
 									<TableCell className="max-w-xs truncate font-mono text-xs">
 										{route.rule}
 									</TableCell>
-									<TableCell className="text-xs">
-										{route.service}
-									</TableCell>
+									<TableCell className="text-xs">{route.service}</TableCell>
 									<TableCell>
 										<div className="flex flex-wrap gap-1">
-											{(Array.isArray(route.entrypoints)
-												? route.entrypoints
-												: []
-											).map((ep) => (
-												<Badge
-													key={ep}
-													variant="outline"
-													className="text-[10px]"
-												>
+											{(Array.isArray(route.entrypoints) ? route.entrypoints : []).map((ep) => (
+												<Badge key={ep} variant="outline" className="text-[10px]">
 													{ep}
 												</Badge>
 											))}
@@ -162,31 +147,18 @@ export default function TraefikPage() {
 												? (route.middlewares as string[])
 												: []
 											).map((mw) => (
-												<Badge
-													key={mw}
-													variant="secondary"
-													className="text-[10px]"
-												>
+												<Badge key={mw} variant="secondary" className="text-[10px]">
 													{mw}
 												</Badge>
 											))}
 											{(!Array.isArray(route.middlewares) ||
-												(route.middlewares as string[])
-													.length === 0) &&
+												(route.middlewares as string[]).length === 0) &&
 												"—"}
 										</div>
 									</TableCell>
-									<TableCell className="text-xs text-muted-foreground">
-										{route.provider}
-									</TableCell>
+									<TableCell className="text-xs text-muted-foreground">{route.provider}</TableCell>
 									<TableCell>
-										<Badge
-											variant={
-												route.status === "enabled"
-													? "default"
-													: "secondary"
-											}
-										>
+										<Badge variant={route.status === "enabled" ? "default" : "secondary"}>
 											{route.status}
 										</Badge>
 									</TableCell>

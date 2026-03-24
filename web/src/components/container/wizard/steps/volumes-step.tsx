@@ -41,17 +41,13 @@ export function VolumesStep() {
 							{...register(`volumes.${index}.target`)}
 						/>
 						{errors.volumes?.[index]?.target && (
-							<p className="text-xs text-destructive">
-								{errors.volumes[index].target.message}
-							</p>
+							<p className="text-xs text-destructive">{errors.volumes[index].target.message}</p>
 						)}
 					</div>
 					<div className="flex h-9 items-center justify-center">
 						<Checkbox
 							checked={watch(`volumes.${index}.read_only`)}
-							onCheckedChange={(checked) =>
-								setValue(`volumes.${index}.read_only`, !!checked)
-							}
+							onCheckedChange={(checked) => setValue(`volumes.${index}.read_only`, !!checked)}
 						/>
 					</div>
 					<Button

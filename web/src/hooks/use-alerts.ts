@@ -28,8 +28,7 @@ export function useAlertRules(serverId?: string) {
 	const qs = serverId ? `?server_id=${serverId}` : "";
 	return useQuery<AlertRuleRecord[]>({
 		queryKey: ["alert-rules", serverId ?? "all"],
-		queryFn: () =>
-			fetchJson(`/api/dk/alerts${qs}`, { headers: authHeaders() }),
+		queryFn: () => fetchJson(`/api/dk/alerts${qs}`, { headers: authHeaders() }),
 	});
 }
 

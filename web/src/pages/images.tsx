@@ -101,11 +101,7 @@ export default function ImagesPage() {
 				<div className="flex items-center gap-2">
 					<Layers className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Images</h1>
-					{!isLoading && (
-						<span className="text-sm text-muted-foreground">
-							({filtered.length})
-						</span>
-					)}
+					{!isLoading && <span className="text-sm text-muted-foreground">({filtered.length})</span>}
 				</div>
 				<div className="flex items-center gap-2">
 					<Button
@@ -117,11 +113,7 @@ export default function ImagesPage() {
 						<Eraser className="mr-1.5 h-3.5 w-3.5" />
 						Prune
 					</Button>
-					<Button
-						size="sm"
-						onClick={() => setPullOpen(true)}
-						disabled={serverFilter === "all"}
-					>
+					<Button size="sm" onClick={() => setPullOpen(true)} disabled={serverFilter === "all"}>
 						<Download className="mr-1.5 h-3.5 w-3.5" />
 						Pull
 					</Button>
@@ -182,9 +174,7 @@ export default function ImagesPage() {
 									<TableCell className="font-mono text-xs text-muted-foreground max-w-32 truncate">
 										{img.image_id?.slice(7, 19) ?? "—"}
 									</TableCell>
-									<TableCell className="text-right text-xs">
-										{formatSize(img.size)}
-									</TableCell>
+									<TableCell className="text-right text-xs">{formatSize(img.size)}</TableCell>
 									<TableCell>
 										<Badge variant={img.in_use ? "default" : "secondary"}>
 											{img.in_use ? "Yes" : "No"}
@@ -220,11 +210,7 @@ export default function ImagesPage() {
 
 			{/* Pull Dialog */}
 			{serverFilter !== "all" && (
-				<PullDialog
-					open={pullOpen}
-					onOpenChange={setPullOpen}
-					serverID={serverFilter}
-				/>
+				<PullDialog open={pullOpen} onOpenChange={setPullOpen} serverID={serverFilter} />
 			)}
 
 			{/* Remove Confirmation */}
@@ -239,10 +225,8 @@ export default function ImagesPage() {
 						<AlertDialogTitle>Remove Image</AlertDialogTitle>
 						<AlertDialogDescription>
 							Are you sure you want to remove{" "}
-							<span className="font-mono font-semibold">
-								{removeTarget?.name}
-							</span>
-							? This action cannot be undone.
+							<span className="font-mono font-semibold">{removeTarget?.name}</span>? This action
+							cannot be undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

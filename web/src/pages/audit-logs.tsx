@@ -129,10 +129,7 @@ export default function AuditLogsPage() {
 							))
 						) : data?.items.length === 0 ? (
 							<TableRow>
-								<TableCell
-									colSpan={6}
-									className="h-32 text-center text-muted-foreground"
-								>
+								<TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
 									No audit logs found.
 								</TableCell>
 							</TableRow>
@@ -140,13 +137,9 @@ export default function AuditLogsPage() {
 							data?.items.map((log) => (
 								<TableRow key={log.id}>
 									<TableCell>
-										<Badge variant={actionColor(log.action)}>
-											{log.action}
-										</Badge>
+										<Badge variant={actionColor(log.action)}>{log.action}</Badge>
 									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{log.target_type || "—"}
-									</TableCell>
+									<TableCell className="text-muted-foreground">{log.target_type || "—"}</TableCell>
 									<TableCell className="max-w-[120px] truncate font-mono text-xs">
 										{log.target_id || "—"}
 									</TableCell>

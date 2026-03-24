@@ -99,11 +99,7 @@ export function DeployDialog({ open, onOpenChange, servers }: DeployDialogProps)
 						</div>
 						<div className="space-y-1.5">
 							<label className="text-xs font-medium">Stack Name</label>
-							<Input
-								placeholder="my-app"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-							/>
+							<Input placeholder="my-app" value={name} onChange={(e) => setName(e.target.value)} />
 						</div>
 					</div>
 

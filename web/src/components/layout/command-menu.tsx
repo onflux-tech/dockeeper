@@ -41,10 +41,7 @@ export function CommandMenu() {
 				{navigation.map((group) => (
 					<CommandGroup key={group.label} heading={group.label}>
 						{group.items.map((item) => (
-							<CommandItem
-								key={item.href}
-								onSelect={() => runCommand(item.href)}
-							>
+							<CommandItem key={item.href} onSelect={() => runCommand(item.href)}>
 								<item.icon className="mr-2 h-4 w-4" />
 								{item.label}
 							</CommandItem>

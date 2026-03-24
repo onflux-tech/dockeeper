@@ -17,13 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProvisionServer, useInstallScript } from "@/hooks/use-servers";
 
 type Step = 0 | 1 | 2;
@@ -45,10 +39,7 @@ export default function ServerCreatePage() {
 	const [copied, setCopied] = useState(false);
 
 	const provision = useProvisionServer();
-	const { data: scriptData, isLoading: scriptLoading } = useInstallScript(
-		serverId,
-		mode,
-	);
+	const { data: scriptData, isLoading: scriptLoading } = useInstallScript(serverId, mode);
 
 	const handleProvision = () => {
 		provision.mutate(
@@ -138,7 +129,9 @@ export default function ServerCreatePage() {
 			<Card>
 				<CardHeader>
 					<CardTitle>{STEPS[step].label}</CardTitle>
-					<CardDescription>Step {step + 1} of {STEPS.length}</CardDescription>
+					<CardDescription>
+						Step {step + 1} of {STEPS.length}
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					{/* Step 1: Name + Description */}
@@ -156,18 +149,13 @@ export default function ServerCreatePage() {
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="server-desc">
-									Description{" "}
-									<span className="text-muted-foreground">
-										(optional)
-									</span>
+									Description <span className="text-muted-foreground">(optional)</span>
 								</Label>
 								<Input
 									id="server-desc"
 									placeholder="e.g. Main web server"
 									value={description}
-									onChange={(e) =>
-										setDescription(e.target.value)
-									}
+									onChange={(e) => setDescription(e.target.value)}
 								/>
 							</div>
 						</div>
@@ -179,9 +167,7 @@ export default function ServerCreatePage() {
 							<button
 								type="button"
 								className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent ${
-									mode === "docker"
-										? "border-primary bg-accent"
-										: ""
+									mode === "docker" ? "border-primary bg-accent" : ""
 								}`}
 								onClick={() => setMode("docker")}
 							>
@@ -189,28 +175,22 @@ export default function ServerCreatePage() {
 								<div>
 									<p className="font-medium">Docker</p>
 									<p className="text-sm text-muted-foreground">
-										Run agent as a Docker container.
-										Requires Docker installed.
+										Run agent as a Docker container. Requires Docker installed.
 									</p>
 								</div>
 							</button>
 							<button
 								type="button"
 								className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent ${
-									mode === "binary"
-										? "border-primary bg-accent"
-										: ""
+									mode === "binary" ? "border-primary bg-accent" : ""
 								}`}
 								onClick={() => setMode("binary")}
 							>
 								<Terminal className="h-5 w-5 shrink-0 text-muted-foreground" />
 								<div>
-									<p className="font-medium">
-										Install Script
-									</p>
+									<p className="font-medium">Install Script</p>
 									<p className="text-sm text-muted-foreground">
-										Download binary and install as systemd
-										service.
+										Download binary and install as systemd service.
 									</p>
 								</div>
 							</button>
@@ -227,11 +207,7 @@ export default function ServerCreatePage() {
 							) : (
 								<>
 									<div className="flex items-center gap-2">
-										<Badge variant="secondary">
-											{mode === "docker"
-												? "Docker"
-												: "Binary"}
-										</Badge>
+										<Badge variant="secondary">{mode === "docker" ? "Docker" : "Binary"}</Badge>
 										<span className="text-sm text-muted-foreground">
 											{mode === "docker"
 												? "Run this command on your target server:"
@@ -245,11 +221,7 @@ export default function ServerCreatePage() {
 										spellCheck={false}
 									/>
 									<div className="flex items-center gap-2">
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={handleCopy}
-										>
+										<Button variant="outline" size="sm" onClick={handleCopy}>
 											{copied ? (
 												<Check className="mr-1.5 h-3.5 w-3.5" />
 											) : (
@@ -257,27 +229,20 @@ export default function ServerCreatePage() {
 											)}
 											{copied ? "Copied" : "Copy"}
 										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={handleDownload}
-										>
+										<Button variant="outline" size="sm" onClick={handleDownload}>
 											<Download className="mr-1.5 h-3.5 w-3.5" />
 											Download .sh
 										</Button>
 									</div>
 									<p className="text-xs text-muted-foreground">
-										After downloading, run on the target
-										server:{" "}
+										After downloading, run on the target server:{" "}
 										<code className="rounded bg-muted px-1 py-0.5 font-mono">
-											chmod +x dockeeper-install-*.sh
-											&& sudo ./dockeeper-install-*.sh
+											chmod +x dockeeper-install-*.sh && sudo ./dockeeper-install-*.sh
 										</code>
 									</p>
 									<p className="text-xs text-muted-foreground">
-										The server will appear as{" "}
-										<strong>online</strong> once the agent
-										connects successfully.
+										The server will appear as <strong>online</strong> once the agent connects
+										successfully.
 									</p>
 								</>
 							)}
@@ -304,13 +269,8 @@ export default function ServerCreatePage() {
 				{step === 2 ? (
 					<Button onClick={() => navigate("/servers")}>Done</Button>
 				) : step === 0 ? (
-					<Button
-						onClick={handleProvision}
-						disabled={!name.trim() || provision.isPending}
-					>
-						{provision.isPending ? (
-							<Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-						) : null}
+					<Button onClick={handleProvision} disabled={!name.trim() || provision.isPending}>
+						{provision.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
 						Next
 						<ArrowRight className="ml-1.5 h-4 w-4" />
 					</Button>

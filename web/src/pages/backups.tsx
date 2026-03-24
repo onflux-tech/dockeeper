@@ -1,12 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-	Archive,
-	Plus,
-	Pencil,
-	Trash2,
-	Play,
-	Loader2,
-} from "lucide-react";
+import { Archive, Plus, Pencil, Trash2, Play, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,11 +47,7 @@ import {
 import { PolicyDialog } from "@/components/backups/policy-dialog";
 import { describeCron } from "@/lib/format";
 import { RecordsTable } from "@/components/backups/records-table";
-import type {
-	ServerRecord,
-	VolumeRecord,
-	BackupPolicyRecord,
-} from "@/types/pocketbase";
+import type { ServerRecord, VolumeRecord, BackupPolicyRecord } from "@/types/pocketbase";
 
 export default function BackupsPage() {
 	const [serverFilter, setServerFilter] = useState<string>("all");
@@ -158,10 +147,13 @@ export default function BackupsPage() {
 
 			{/* Filters */}
 			<div className="flex items-center gap-3">
-				<Select value={serverFilter} onValueChange={(v) => {
-					setServerFilter(v);
-					setSelectedPolicyId("");
-				}}>
+				<Select
+					value={serverFilter}
+					onValueChange={(v) => {
+						setServerFilter(v);
+						setSelectedPolicyId("");
+					}}
+				>
 					<SelectTrigger className="w-48">
 						<SelectValue placeholder="All Servers" />
 					</SelectTrigger>
@@ -196,7 +188,7 @@ export default function BackupsPage() {
 						No backup policies found.{" "}
 						{serverFilter === "all"
 							? "Select a server to create one."
-							: "Click \"New Policy\" to create one."}
+							: 'Click "New Policy" to create one.'}
 					</p>
 				) : (
 					<div className="rounded-md border">
@@ -208,9 +200,7 @@ export default function BackupsPage() {
 									<TableHead>Retention</TableHead>
 									<TableHead>S3 Bucket</TableHead>
 									<TableHead>Status</TableHead>
-									{serverFilter === "all" && (
-										<TableHead>Server</TableHead>
-									)}
+									{serverFilter === "all" && <TableHead>Server</TableHead>}
 									<TableHead className="w-12" />
 								</TableRow>
 							</TableHeader>
@@ -224,27 +214,19 @@ export default function BackupsPage() {
 												: "cursor-pointer hover:bg-muted/30"
 										}
 										onClick={() =>
-											setSelectedPolicyId(
-												selectedPolicyId === policy.id ? "" : policy.id,
-											)
+											setSelectedPolicyId(selectedPolicyId === policy.id ? "" : policy.id)
 										}
 									>
-										<TableCell className="font-medium">
-											{policy.volume}
-										</TableCell>
+										<TableCell className="font-medium">{policy.volume}</TableCell>
 										<TableCell>
 											<div className="flex flex-col">
-												<span className="font-mono text-xs">
-													{policy.schedule}
-												</span>
+												<span className="font-mono text-xs">{policy.schedule}</span>
 												<span className="text-[10px] text-muted-foreground">
 													{describeCron(policy.schedule)}
 												</span>
 											</div>
 										</TableCell>
-										<TableCell className="text-xs">
-											{policy.retention_days}d
-										</TableCell>
+										<TableCell className="text-xs">{policy.retention_days}d</TableCell>
 										<TableCell className="font-mono text-xs text-muted-foreground">
 											{policy.s3_bucket || "—"}
 										</TableCell>
@@ -327,20 +309,14 @@ export default function BackupsPage() {
 					{selectedPolicyId && (
 						<span className="ml-2 text-sm font-normal text-muted-foreground">
 							(filtered by selected policy —{" "}
-							<button
-								className="underline"
-								onClick={() => setSelectedPolicyId("")}
-							>
+							<button className="underline" onClick={() => setSelectedPolicyId("")}>
 								show all
 							</button>
 							)
 						</span>
 					)}
 				</h2>
-				<RecordsTable
-					records={records ?? []}
-					isLoading={recordsLoading}
-				/>
+				<RecordsTable records={records ?? []} isLoading={recordsLoading} />
 			</div>
 
 			{/* Policy Dialog (Create/Edit) */}
@@ -370,11 +346,8 @@ export default function BackupsPage() {
 						<AlertDialogTitle>Delete Backup Policy</AlertDialogTitle>
 						<AlertDialogDescription>
 							Are you sure you want to delete the backup policy for volume{" "}
-							<span className="font-mono font-semibold">
-								{deleteTarget?.volume}
-							</span>
-							? Existing backup records will remain but no new backups will
-							be scheduled.
+							<span className="font-mono font-semibold">{deleteTarget?.volume}</span>? Existing
+							backup records will remain but no new backups will be scheduled.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

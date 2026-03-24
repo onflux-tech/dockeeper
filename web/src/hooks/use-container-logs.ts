@@ -67,9 +67,7 @@ export function useContainerLogs(
 						// Skip SSE comments (keepalive).
 						if (part.startsWith(":")) continue;
 
-						const eventLine = part
-							.split("\n")
-							.find((l) => l.startsWith("event: "));
+						const eventLine = part.split("\n").find((l) => l.startsWith("event: "));
 						const eventType = eventLine?.slice(7).trim();
 
 						if (eventType === "connected") {
@@ -84,16 +82,12 @@ export function useContainerLogs(
 							return;
 						}
 
-						const dataLine = part
-							.split("\n")
-							.find((l) => l.startsWith("data: "));
+						const dataLine = part.split("\n").find((l) => l.startsWith("data: "));
 						if (!dataLine) continue;
 
 						try {
 							const entry = JSON.parse(dataLine.slice(6)) as LogEntry;
-							bufferRef.current = [...bufferRef.current, entry].slice(
-								-MAX_LINES,
-							);
+							bufferRef.current = [...bufferRef.current, entry].slice(-MAX_LINES);
 
 							if (!pausedRef.current) {
 								setLines([...bufferRef.current]);
@@ -115,10 +109,7 @@ export function useContainerLogs(
 
 		function scheduleReconnect() {
 			if (!mountedRef.current || !follow) return;
-			const delay = Math.min(
-				RECONNECT_BASE_MS * 2 ** retriesRef.current,
-				RECONNECT_MAX_MS,
-			);
+			const delay = Math.min(RECONNECT_BASE_MS * 2 ** retriesRef.current, RECONNECT_MAX_MS);
 			retriesRef.current++;
 			reconnectTimerRef.current = setTimeout(() => {
 				if (mountedRef.current) connect();

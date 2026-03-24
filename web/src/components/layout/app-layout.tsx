@@ -10,9 +10,7 @@ export default function AppLayout() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 
 	return (
-		<SidebarContext.Provider
-			value={{ collapsed, setCollapsed, mobileOpen, setMobileOpen }}
-		>
+		<SidebarContext.Provider value={{ collapsed, setCollapsed, mobileOpen, setMobileOpen }}>
 			<div className="flex h-screen overflow-hidden bg-background">
 				<DesktopSidebar />
 				<MobileSidebar />

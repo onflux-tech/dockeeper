@@ -3,10 +3,7 @@ import { ServerCog } from "lucide-react";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import { StatsOverview } from "@/components/dashboard/stats-overview";
-import {
-	ServerCard,
-	ServerCardSkeleton,
-} from "@/components/dashboard/server-card";
+import { ServerCard, ServerCardSkeleton } from "@/components/dashboard/server-card";
 import type { SparklinePoint } from "@/components/dashboard/sparkline-chart";
 import type { ServerMetricsRawRecord } from "@/types/pocketbase";
 
@@ -34,10 +31,8 @@ export default function DashboardPage() {
 		return d.toISOString().replace("T", " ");
 	});
 
-	const { data: serversResult, isLoading: loadingServers } =
-		useCollection("servers");
-	const { data: containersResult, isLoading: loadingContainers } =
-		useCollection("containers");
+	const { data: serversResult, isLoading: loadingServers } = useCollection("servers");
+	const { data: containersResult, isLoading: loadingContainers } = useCollection("containers");
 	const { data: metricsResult } = useCollection("server_metrics_raw", {
 		filter: `timestamp >= "${fiveMinAgo}"`,
 		sort: "timestamp",
@@ -58,11 +53,7 @@ export default function DashboardPage() {
 		<div className="flex flex-col gap-6">
 			<h1 className="text-2xl font-semibold">Dashboard</h1>
 
-			<StatsOverview
-				servers={servers}
-				containers={containers}
-				isLoading={isLoading}
-			/>
+			<StatsOverview servers={servers} containers={containers} isLoading={isLoading} />
 
 			<div>
 				<h2 className="mb-3 text-lg font-medium">Servers</h2>
@@ -76,9 +67,7 @@ export default function DashboardPage() {
 				) : servers.length === 0 ? (
 					<div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-16 text-center">
 						<ServerCog className="h-10 w-10 text-muted-foreground/50" />
-						<p className="text-sm text-muted-foreground">
-							No servers registered yet.
-						</p>
+						<p className="text-sm text-muted-foreground">No servers registered yet.</p>
 						<p className="text-xs text-muted-foreground/70">
 							Enroll an agent to see your infrastructure here.
 						</p>

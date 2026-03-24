@@ -15,10 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRecord } from "@/hooks/use-record";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
-import {
-	useServerMetrics,
-	type TimeRange,
-} from "@/hooks/use-server-metrics";
+import { useServerMetrics, type TimeRange } from "@/hooks/use-server-metrics";
 import { ServerInfo } from "@/components/server/server-info";
 import { MetricsCharts } from "@/components/server/metrics-charts";
 import { ContainerTable } from "@/components/server/container-table";
@@ -36,12 +33,11 @@ export default function ServerDetailPage() {
 
 	const { data: server, isLoading: loadingServer } = useRecord("servers", id);
 	const { data: metricsData, isLoading: loadingMetrics } = useServerMetrics(id, range);
-	const { data: containersResult, isLoading: loadingContainers } =
-		useCollection("containers", {
-			filter: `server = "${id}"`,
-			perPage: 200,
-			enabled: !!id,
-		});
+	const { data: containersResult, isLoading: loadingContainers } = useCollection("containers", {
+		filter: `server = "${id}"`,
+		perPage: 200,
+		enabled: !!id,
+	});
 
 	useRealtime("servers");
 	useRealtime("server_metrics_raw");
@@ -76,9 +72,7 @@ export default function ServerDetailPage() {
 						<h1 className="text-2xl font-semibold">
 							{server?.hostname || server?.name || "Server"}
 						</h1>
-						{server && (
-							<Badge variant={statusVariant}>{server.status}</Badge>
-						)}
+						{server && <Badge variant={statusVariant}>{server.status}</Badge>}
 					</>
 				)}
 			</div>
@@ -87,9 +81,7 @@ export default function ServerDetailPage() {
 			<Tabs defaultValue="overview">
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="containers">
-						Containers ({containers.length})
-					</TabsTrigger>
+					<TabsTrigger value="containers">Containers ({containers.length})</TabsTrigger>
 				</TabsList>
 
 				{/* Overview Tab */}
@@ -98,10 +90,7 @@ export default function ServerDetailPage() {
 
 					<div className="flex items-center justify-between">
 						<h2 className="text-lg font-medium">Metrics</h2>
-						<Select
-							value={range}
-							onValueChange={(v) => setRange(v as TimeRange)}
-						>
+						<Select value={range} onValueChange={(v) => setRange(v as TimeRange)}>
 							<SelectTrigger className="w-44">
 								<SelectValue />
 							</SelectTrigger>
@@ -115,19 +104,12 @@ export default function ServerDetailPage() {
 						</Select>
 					</div>
 
-					<MetricsCharts
-						data={metrics}
-						range={range}
-						isLoading={loadingMetrics}
-					/>
+					<MetricsCharts data={metrics} range={range} isLoading={loadingMetrics} />
 				</TabsContent>
 
 				{/* Containers Tab */}
 				<TabsContent value="containers" className="mt-4">
-					<ContainerTable
-						containers={containers}
-						isLoading={loadingContainers}
-					/>
+					<ContainerTable containers={containers} isLoading={loadingContainers} />
 				</TabsContent>
 			</Tabs>
 		</div>

@@ -37,7 +37,7 @@ function App() {
 						<Route path="containers/:id" element={<ContainerDetailPage />} />
 						<Route path="containers/:id/terminal" element={<ContainerTerminalPage />} />
 						<Route path="images" element={<ImagesPage />} />
-					<Route path="compose" element={<ComposePage />} />
+						<Route path="compose" element={<ComposePage />} />
 						<Route path="networks" element={<NetworksPage />} />
 						<Route path="volumes" element={<VolumesPage />} />
 						<Route path="metrics" element={<MetricsPage />} />

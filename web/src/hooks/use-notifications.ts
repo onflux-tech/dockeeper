@@ -1,10 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getAccessToken } from "@/lib/api";
-import type {
-	NotificationChannelRecord,
-	NotificationLogRecord,
-} from "@/types/pocketbase";
+import type { NotificationChannelRecord, NotificationLogRecord } from "@/types/pocketbase";
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -37,10 +34,7 @@ export function useNotificationChannels() {
 	});
 }
 
-export function useNotificationLogs(
-	alertRuleId?: string,
-	channelId?: string,
-) {
+export function useNotificationLogs(alertRuleId?: string, channelId?: string) {
 	const params = new URLSearchParams();
 	if (alertRuleId) params.set("alert_rule_id", alertRuleId);
 	else if (channelId) params.set("channel_id", channelId);

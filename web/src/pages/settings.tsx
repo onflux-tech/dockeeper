@@ -15,12 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	useSettings,
 	getSettingValue,
@@ -148,9 +143,7 @@ function SystemTab() {
 							id="s3_endpoint"
 							placeholder="https://s3.amazonaws.com"
 							value={s3.s3_endpoint ?? ""}
-							onChange={(e) =>
-								setS3((p) => ({ ...p, s3_endpoint: e.target.value }))
-							}
+							onChange={(e) => setS3((p) => ({ ...p, s3_endpoint: e.target.value }))}
 						/>
 					</div>
 					<div className="space-y-2">
@@ -159,9 +152,7 @@ function SystemTab() {
 							id="s3_region"
 							placeholder="us-east-1"
 							value={s3.s3_region ?? ""}
-							onChange={(e) =>
-								setS3((p) => ({ ...p, s3_region: e.target.value }))
-							}
+							onChange={(e) => setS3((p) => ({ ...p, s3_region: e.target.value }))}
 						/>
 					</div>
 					<div className="space-y-2">
@@ -170,9 +161,7 @@ function SystemTab() {
 							id="s3_bucket"
 							placeholder="dockeeper-backups"
 							value={s3.s3_bucket ?? ""}
-							onChange={(e) =>
-								setS3((p) => ({ ...p, s3_bucket: e.target.value }))
-							}
+							onChange={(e) => setS3((p) => ({ ...p, s3_bucket: e.target.value }))}
 						/>
 					</div>
 					<div className="space-y-2">
@@ -181,9 +170,7 @@ function SystemTab() {
 							id="s3_access_key"
 							placeholder="AKIAIOSFODNN7EXAMPLE"
 							value={s3.s3_access_key ?? ""}
-							onChange={(e) =>
-								setS3((p) => ({ ...p, s3_access_key: e.target.value }))
-							}
+							onChange={(e) => setS3((p) => ({ ...p, s3_access_key: e.target.value }))}
 						/>
 					</div>
 					<div className="space-y-2 sm:col-span-2">
@@ -193,9 +180,7 @@ function SystemTab() {
 							type="password"
 							placeholder="••••••••••••••••"
 							value={s3.s3_secret_key ?? ""}
-							onChange={(e) =>
-								setS3((p) => ({ ...p, s3_secret_key: e.target.value }))
-							}
+							onChange={(e) => setS3((p) => ({ ...p, s3_secret_key: e.target.value }))}
 						/>
 					</div>
 				</div>
@@ -288,8 +273,8 @@ function EnrollmentTokenSection() {
 			<div>
 				<h3 className="text-lg font-medium">Global Enrollment Token</h3>
 				<p className="text-sm text-muted-foreground">
-					Used by agents to authenticate during initial enrollment via CLI.
-					This token is also available in the server provisioning wizard.
+					Used by agents to authenticate during initial enrollment via CLI. This token is also
+					available in the server provisioning wizard.
 				</p>
 			</div>
 			{isLoading ? (
@@ -300,12 +285,7 @@ function EnrollmentTokenSection() {
 						<code className="flex-1 rounded-md bg-muted px-3 py-2 font-mono text-sm break-all">
 							{data?.token}
 						</code>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={handleCopy}
-							className="shrink-0"
-						>
+						<Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
 							{copied ? (
 								<Check className="mr-1.5 h-3.5 w-3.5" />
 							) : (
@@ -330,8 +310,7 @@ function EnrollmentTokenSection() {
 					<p className="text-xs text-muted-foreground">
 						Usage:{" "}
 						<code className="rounded bg-muted px-1 py-0.5">
-							./dockeeper-agent --manager-url=HOST:50051
-							--token=TOKEN --data-dir=./data
+							./dockeeper-agent --manager-url=HOST:50051 --token=TOKEN --data-dir=./data
 						</code>
 					</p>
 				</div>
@@ -381,9 +360,7 @@ function ProfileTab() {
 		<div className="max-w-md space-y-4">
 			<div>
 				<h3 className="text-lg font-medium">Change Password</h3>
-				<p className="text-sm text-muted-foreground">
-					Update your administrator password.
-				</p>
+				<p className="text-sm text-muted-foreground">Update your administrator password.</p>
 			</div>
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<div className="space-y-2">
@@ -401,11 +378,7 @@ function ProfileTab() {
 							className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 							onClick={() => setShowCurrent((v) => !v)}
 						>
-							{showCurrent ? (
-								<EyeOff className="h-4 w-4" />
-							) : (
-								<Eye className="h-4 w-4" />
-							)}
+							{showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
 						</button>
 					</div>
 				</div>
@@ -425,11 +398,7 @@ function ProfileTab() {
 							className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 							onClick={() => setShowNew((v) => !v)}
 						>
-							{showNew ? (
-								<EyeOff className="h-4 w-4" />
-							) : (
-								<Eye className="h-4 w-4" />
-							)}
+							{showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
 						</button>
 					</div>
 				</div>
@@ -446,9 +415,7 @@ function ProfileTab() {
 				</div>
 				{error && <p className="text-sm text-destructive">{error}</p>}
 				<Button type="submit" disabled={changePassword.isPending}>
-					{changePassword.isPending && (
-						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-					)}
+					{changePassword.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 					Change Password
 				</Button>
 			</form>
@@ -465,9 +432,7 @@ function AboutTab() {
 		<div className="max-w-md space-y-4">
 			<div>
 				<h3 className="text-lg font-medium">About Dockeeper</h3>
-				<p className="text-sm text-muted-foreground">
-					Server version and build information.
-				</p>
+				<p className="text-sm text-muted-foreground">Server version and build information.</p>
 			</div>
 			{isLoading ? (
 				<div className="space-y-2">
@@ -486,15 +451,11 @@ function AboutTab() {
 					</div>
 					<div className="flex gap-2">
 						<dt className="text-muted-foreground">Commit:</dt>
-						<dd className="font-mono">
-							{health.commit ? health.commit.slice(0, 12) : "—"}
-						</dd>
+						<dd className="font-mono">{health.commit ? health.commit.slice(0, 12) : "—"}</dd>
 					</div>
 				</dl>
 			) : (
-				<p className="text-sm text-muted-foreground">
-					Unable to fetch server info.
-				</p>
+				<p className="text-sm text-muted-foreground">Unable to fetch server info.</p>
 			)}
 		</div>
 	);

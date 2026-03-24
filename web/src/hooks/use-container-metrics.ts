@@ -23,12 +23,10 @@ export function useContainerMetrics(containerId: string | undefined) {
 		queryKey: ["container-metrics", containerId],
 		queryFn: async () => {
 			const cutoff = cutoffTimestamp(1);
-			const result = await pb
-				.collection("container_metrics_raw")
-				.getList(1, 200, {
-					filter: `container = "${containerId}" && timestamp >= "${cutoff}"`,
-					sort: "timestamp",
-				});
+			const result = await pb.collection("container_metrics_raw").getList(1, 200, {
+				filter: `container = "${containerId}" && timestamp >= "${cutoff}"`,
+				sort: "timestamp",
+			});
 			return result.items.map((r) => ({
 				timestamp: r.timestamp as string,
 				cpu_percent: r.cpu_percent as number,

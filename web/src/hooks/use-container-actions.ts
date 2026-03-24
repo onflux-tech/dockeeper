@@ -2,14 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getAccessToken } from "@/lib/api";
 
-type ContainerAction =
-	| "start"
-	| "stop"
-	| "restart"
-	| "remove"
-	| "pause"
-	| "unpause"
-	| "update";
+type ContainerAction = "start" | "stop" | "restart" | "remove" | "pause" | "unpause" | "update";
 
 interface ActionResponse {
 	success: boolean;

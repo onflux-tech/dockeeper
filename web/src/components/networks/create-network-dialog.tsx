@@ -25,11 +25,7 @@ interface CreateNetworkDialogProps {
 	serverID: string;
 }
 
-export function CreateNetworkDialog({
-	open,
-	onOpenChange,
-	serverID,
-}: CreateNetworkDialogProps) {
+export function CreateNetworkDialog({ open, onOpenChange, serverID }: CreateNetworkDialogProps) {
 	const [name, setName] = useState("");
 	const [driver, setDriver] = useState("bridge");
 	const [subnet, setSubnet] = useState("");
@@ -79,9 +75,7 @@ export function CreateNetworkDialog({
 						<Network className="h-5 w-5" />
 						Create Network
 					</DialogTitle>
-					<DialogDescription>
-						Create a new Docker network on the selected server.
-					</DialogDescription>
+					<DialogDescription>Create a new Docker network on the selected server.</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4">
@@ -151,10 +145,7 @@ export function CreateNetworkDialog({
 					<Button variant="outline" onClick={() => handleClose(false)}>
 						Cancel
 					</Button>
-					<Button
-						onClick={handleCreate}
-						disabled={!name.trim() || createMut.isPending}
-					>
+					<Button onClick={handleCreate} disabled={!name.trim() || createMut.isPending}>
 						{createMut.isPending ? "Creating..." : "Create Network"}
 					</Button>
 				</DialogFooter>

@@ -54,9 +54,7 @@ export function PortsStep() {
 					</div>
 					<Select
 						value={watch(`ports.${index}.protocol`) || "tcp"}
-						onValueChange={(v) =>
-							setValue(`ports.${index}.protocol`, v as "tcp" | "udp")
-						}
+						onValueChange={(v) => setValue(`ports.${index}.protocol`, v as "tcp" | "udp")}
 					>
 						<SelectTrigger className="w-full">
 							<SelectValue />

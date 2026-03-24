@@ -32,7 +32,8 @@ export function ImageStep() {
 				</div>
 				{errors.image && <p className="text-xs text-destructive">{errors.image.message}</p>}
 				<p className="text-xs text-muted-foreground">
-					Docker image name with optional tag. The image will be pulled automatically if not present.
+					Docker image name with optional tag. The image will be pulled automatically if not
+					present.
 				</p>
 			</div>
 

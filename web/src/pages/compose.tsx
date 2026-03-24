@@ -58,9 +58,7 @@ export default function ComposePage() {
 		return stacks.filter((s) => s.name.toLowerCase().includes(q));
 	}, [stacks, search]);
 
-	const selectedStack = selectedId
-		? stacks.find((s) => s.id === selectedId) ?? null
-		: null;
+	const selectedStack = selectedId ? (stacks.find((s) => s.id === selectedId) ?? null) : null;
 
 	// If the selected stack was deleted, deselect
 	if (selectedId && !selectedStack) {
@@ -80,11 +78,7 @@ export default function ComposePage() {
 				<div className="flex items-center gap-2">
 					<Rocket className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Compose Stacks</h1>
-					{!isLoading && (
-						<span className="text-sm text-muted-foreground">
-							({filtered.length})
-						</span>
-					)}
+					{!isLoading && <span className="text-sm text-muted-foreground">({filtered.length})</span>}
 				</div>
 				<Button size="sm" onClick={() => setDeployOpen(true)}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -140,12 +134,8 @@ export default function ComposePage() {
 							{filtered.map((stack) => (
 								<TableRow
 									key={stack.id}
-									className={`cursor-pointer ${
-										selectedId === stack.id ? "bg-muted/50" : ""
-									}`}
-									onClick={() =>
-										setSelectedId(selectedId === stack.id ? null : stack.id)
-									}
+									className={`cursor-pointer ${selectedId === stack.id ? "bg-muted/50" : ""}`}
+									onClick={() => setSelectedId(selectedId === stack.id ? null : stack.id)}
 								>
 									<TableCell className="font-medium">{stack.name}</TableCell>
 									<TableCell className="text-xs text-muted-foreground">
@@ -160,9 +150,7 @@ export default function ComposePage() {
 										{stack.services_count || "—"}
 									</TableCell>
 									<TableCell className="text-xs text-muted-foreground">
-										{stack.deployed_at
-											? new Date(stack.deployed_at).toLocaleDateString()
-											: "—"}
+										{stack.deployed_at ? new Date(stack.deployed_at).toLocaleDateString() : "—"}
 									</TableCell>
 								</TableRow>
 							))}
@@ -172,19 +160,10 @@ export default function ComposePage() {
 			)}
 
 			{/* Stack Detail */}
-			{selectedStack && (
-				<StackDetail
-					stack={selectedStack}
-					onDeleted={() => setSelectedId(null)}
-				/>
-			)}
+			{selectedStack && <StackDetail stack={selectedStack} onDeleted={() => setSelectedId(null)} />}
 
 			{/* Deploy Dialog */}
-			<DeployDialog
-				open={deployOpen}
-				onOpenChange={setDeployOpen}
-				servers={servers}
-			/>
+			<DeployDialog open={deployOpen} onOpenChange={setDeployOpen} servers={servers} />
 		</div>
 	);
 }

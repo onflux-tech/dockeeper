@@ -36,10 +36,7 @@ export function useSettings() {
 }
 
 /** Get a setting value by key from the settings list. */
-export function getSettingValue(
-	settings: SettingRecord[] | undefined,
-	key: string,
-): string {
+export function getSettingValue(settings: SettingRecord[] | undefined, key: string): string {
 	const rec = settings?.find((s) => s.key === key);
 	if (!rec) return "";
 	if (typeof rec.value === "string") return rec.value;
@@ -53,9 +50,7 @@ export function useSaveSettings() {
 	return useMutation<void, Error, Record<string, string>>({
 		mutationFn: async (keyValues) => {
 			const existing = await pb.collection("settings").getFullList();
-			const existingMap = new Map(
-				existing.map((r) => [r.key, r.id]),
-			);
+			const existingMap = new Map(existing.map((r) => [r.key, r.id]));
 
 			for (const [key, value] of Object.entries(keyValues)) {
 				const id = existingMap.get(key);
@@ -138,7 +133,6 @@ export function useRegenerateEnrollmentToken() {
 			void qc.invalidateQueries({ queryKey: ["enrollment-token"] });
 			toast.success("Enrollment token regenerated");
 		},
-		onError: (err) =>
-			toast.error(`Failed to regenerate token: ${err.message}`),
+		onError: (err) => toast.error(`Failed to regenerate token: ${err.message}`),
 	});
 }

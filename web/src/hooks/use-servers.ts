@@ -21,8 +21,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function useServers() {
 	return useQuery<ServerRecord[]>({
 		queryKey: ["servers"],
-		queryFn: () =>
-			fetchJson("/api/dk/servers", { headers: authHeaders() }),
+		queryFn: () => fetchJson("/api/dk/servers", { headers: authHeaders() }),
 	});
 }
 

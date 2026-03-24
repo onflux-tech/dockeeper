@@ -1,13 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import {
-	Play,
-	Square,
-	Download,
-	Trash2,
-	Save,
-	FileCode,
-	Loader2,
-} from "lucide-react";
+import { Play, Square, Download, Trash2, Save, FileCode, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -124,9 +116,7 @@ export function StackDetail({ stack, onDeleted }: StackDetailProps) {
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-3">
 					<h2 className="text-lg font-semibold">{stack.name}</h2>
-					<Badge variant={statusVariant[stack.status] ?? "secondary"}>
-						{stack.status}
-					</Badge>
+					<Badge variant={statusVariant[stack.status] ?? "secondary"}>{stack.status}</Badge>
 					{stack.services_count > 0 && (
 						<span className="text-xs text-muted-foreground">
 							{stack.services_count} service{stack.services_count !== 1 && "s"}
@@ -135,30 +125,15 @@ export function StackDetail({ stack, onDeleted }: StackDetailProps) {
 				</div>
 
 				<div className="flex items-center gap-2">
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => runOp("pull")}
-						disabled={opRunning}
-					>
+					<Button variant="outline" size="sm" onClick={() => runOp("pull")} disabled={opRunning}>
 						<Download className="mr-1.5 h-3.5 w-3.5" />
 						Pull
 					</Button>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => runOp("up")}
-						disabled={opRunning}
-					>
+					<Button variant="outline" size="sm" onClick={() => runOp("up")} disabled={opRunning}>
 						<Play className="mr-1.5 h-3.5 w-3.5" />
 						Up
 					</Button>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => runOp("down")}
-						disabled={opRunning}
-					>
+					<Button variant="outline" size="sm" onClick={() => runOp("down")} disabled={opRunning}>
 						<Square className="mr-1.5 h-3.5 w-3.5" />
 						Down
 					</Button>
@@ -222,17 +197,14 @@ export function StackDetail({ stack, onDeleted }: StackDetailProps) {
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete Stack</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will run <span className="font-mono">compose down</span> and
-							permanently delete the stack{" "}
-							<span className="font-mono font-semibold">{stack.name}</span>.
-							This action cannot be undone.
+							This will run <span className="font-mono">compose down</span> and permanently delete
+							the stack <span className="font-mono font-semibold">{stack.name}</span>. This action
+							cannot be undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleDelete}>
-							Delete
-						</AlertDialogAction>
+						<AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

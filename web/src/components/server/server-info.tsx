@@ -1,12 +1,4 @@
-import {
-	Globe,
-	Cpu,
-	HardDrive,
-	Network,
-	Shield,
-	Clock,
-	Tag,
-} from "lucide-react";
+import { Globe, Cpu, HardDrive, Network, Shield, Clock, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";

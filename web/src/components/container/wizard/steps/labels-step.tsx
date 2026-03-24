@@ -36,9 +36,7 @@ export function LabelsStep() {
 							{...register(`labels.${index}.key`)}
 						/>
 						{errors.labels?.[index]?.key && (
-							<p className="text-xs text-destructive">
-								{errors.labels[index].key.message}
-							</p>
+							<p className="text-xs text-destructive">{errors.labels[index].key.message}</p>
 						)}
 					</div>
 					<Input placeholder="my-app" {...register(`labels.${index}.value`)} />

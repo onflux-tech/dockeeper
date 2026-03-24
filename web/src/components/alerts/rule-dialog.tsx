@@ -66,22 +66,14 @@ export function RuleDialog({
 	const [name, setName] = useState(editRule?.name ?? "");
 	const [metric, setMetric] = useState(editRule?.metric ?? "cpu_percent");
 	const [operator, setOperator] = useState<string>(editRule?.operator ?? "gt");
-	const [threshold, setThreshold] = useState(
-		editRule ? String(editRule.threshold) : "80",
-	);
-	const [duration, setDuration] = useState(
-		editRule ? String(editRule.duration) : "60",
-	);
+	const [threshold, setThreshold] = useState(editRule ? String(editRule.threshold) : "80");
+	const [duration, setDuration] = useState(editRule ? String(editRule.duration) : "60");
 	const [targetType, setTargetType] = useState<"server" | "container">(
 		editRule?.target_type ?? "server",
 	);
 	const [targetId, setTargetId] = useState(editRule?.target_id ?? "");
-	const [selectedChannels, setSelectedChannels] = useState<string[]>(
-		editRule?.channels ?? [],
-	);
-	const [enabled, setEnabled] = useState(
-		editRule?.enabled !== false ? "yes" : "no",
-	);
+	const [selectedChannels, setSelectedChannels] = useState<string[]>(editRule?.channels ?? []);
+	const [enabled, setEnabled] = useState(editRule?.enabled !== false ? "yes" : "no");
 
 	const createMut = useCreateRule();
 	const updateMut = useUpdateRule();
@@ -111,10 +103,7 @@ export function RuleDialog({
 		};
 
 		if (isEdit && editRule) {
-			updateMut.mutate(
-				{ id: editRule.id, fields },
-				{ onSuccess: () => onOpenChange(false) },
-			);
+			updateMut.mutate({ id: editRule.id, fields }, { onSuccess: () => onOpenChange(false) });
 		} else {
 			createMut.mutate(fields, {
 				onSuccess: () => onOpenChange(false),
@@ -154,9 +143,7 @@ export function RuleDialog({
 
 					<div className="grid grid-cols-2 gap-3">
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Target Type
-							</label>
+							<label className="text-xs font-medium">Target Type</label>
 							<Select
 								value={targetType}
 								onValueChange={(v) => {
@@ -168,32 +155,21 @@ export function RuleDialog({
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="server">
-										Server
-									</SelectItem>
-									<SelectItem value="container">
-										Container
-									</SelectItem>
+									<SelectItem value="server">Server</SelectItem>
+									<SelectItem value="container">Container</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Target
-							</label>
-							<Select
-								value={targetId}
-								onValueChange={setTargetId}
-							>
+							<label className="text-xs font-medium">Target</label>
+							<Select value={targetId} onValueChange={setTargetId}>
 								<SelectTrigger>
 									<SelectValue placeholder="Select target" />
 								</SelectTrigger>
 								<SelectContent>
 									{targets.map((t) => (
 										<SelectItem key={t.id} value={t.id}>
-											{"hostname" in t
-												? (t as ServerRecord).hostname
-												: (t as ContainerRecord).name}
+											{"hostname" in t ? (t as ServerRecord).hostname : (t as ContainerRecord).name}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -203,19 +179,14 @@ export function RuleDialog({
 
 					<div className="grid grid-cols-3 gap-3">
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Metric
-							</label>
+							<label className="text-xs font-medium">Metric</label>
 							<Select value={metric} onValueChange={setMetric}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
 									{METRICS.map((m) => (
-										<SelectItem
-											key={m.value}
-											value={m.value}
-										>
+										<SelectItem key={m.value} value={m.value}>
 											{m.label}
 										</SelectItem>
 									))}
@@ -223,22 +194,14 @@ export function RuleDialog({
 							</Select>
 						</div>
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Operator
-							</label>
-							<Select
-								value={operator}
-								onValueChange={setOperator}
-							>
+							<label className="text-xs font-medium">Operator</label>
+							<Select value={operator} onValueChange={setOperator}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
 									{OPERATORS.map((op) => (
-										<SelectItem
-											key={op.value}
-											value={op.value}
-										>
+										<SelectItem key={op.value} value={op.value}>
 											{op.label}
 										</SelectItem>
 									))}
@@ -246,9 +209,7 @@ export function RuleDialog({
 							</Select>
 						</div>
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Threshold
-							</label>
+							<label className="text-xs font-medium">Threshold</label>
 							<Input
 								type="number"
 								value={threshold}
@@ -259,9 +220,7 @@ export function RuleDialog({
 
 					<div className="grid grid-cols-2 gap-3">
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Duration (seconds)
-							</label>
+							<label className="text-xs font-medium">Duration (seconds)</label>
 							<Input
 								type="number"
 								min={10}
@@ -273,9 +232,7 @@ export function RuleDialog({
 							</p>
 						</div>
 						<div className="space-y-1.5">
-							<label className="text-xs font-medium">
-								Enabled
-							</label>
+							<label className="text-xs font-medium">Enabled</label>
 							<Select value={enabled} onValueChange={setEnabled}>
 								<SelectTrigger className="w-32">
 									<SelectValue />
@@ -289,13 +246,10 @@ export function RuleDialog({
 					</div>
 
 					<div className="space-y-1.5">
-						<label className="text-xs font-medium">
-							Notification Channels
-						</label>
+						<label className="text-xs font-medium">Notification Channels</label>
 						{channels.length === 0 ? (
 							<p className="text-xs text-muted-foreground">
-								No channels configured yet. Create one in the
-								Channels tab first.
+								No channels configured yet. Create one in the Channels tab first.
 							</p>
 						) : (
 							<div className="flex flex-wrap gap-2">
@@ -303,15 +257,9 @@ export function RuleDialog({
 									<Button
 										key={ch.id}
 										type="button"
-										variant={
-											selectedChannels.includes(ch.id)
-												? "default"
-												: "outline"
-										}
+										variant={selectedChannels.includes(ch.id) ? "default" : "outline"}
 										size="sm"
-										onClick={() =>
-											handleToggleChannel(ch.id)
-										}
+										onClick={() => handleToggleChannel(ch.id)}
 									>
 										{ch.name}
 									</Button>
@@ -322,18 +270,10 @@ export function RuleDialog({
 				</div>
 
 				<DialogFooter>
-					<Button
-						variant="outline"
-						onClick={() => handleClose(false)}
-					>
+					<Button variant="outline" onClick={() => handleClose(false)}>
 						Cancel
 					</Button>
-					<Button
-						onClick={handleSubmit}
-						disabled={
-							!name.trim() || !targetId || isPending
-						}
-					>
+					<Button onClick={handleSubmit} disabled={!name.trim() || !targetId || isPending}>
 						{isPending
 							? isEdit
 								? "Saving..."

@@ -14,13 +14,7 @@ interface SessionListProps {
 	onClose: (id: string) => void;
 }
 
-export function SessionList({
-	sessions,
-	activeId,
-	onSelect,
-	onAdd,
-	onClose,
-}: SessionListProps) {
+export function SessionList({ sessions, activeId, onSelect, onAdd, onClose }: SessionListProps) {
 	return (
 		<div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/30 overflow-x-auto">
 			{sessions.map((s) => (

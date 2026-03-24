@@ -74,11 +74,7 @@ export function RecordsTable({ records, isLoading }: RecordsTableProps) {
 	}
 
 	if (records.length === 0) {
-		return (
-			<p className="py-4 text-sm text-muted-foreground">
-				No backup records yet.
-			</p>
-		);
+		return <p className="py-4 text-sm text-muted-foreground">No backup records yet.</p>;
 	}
 
 	return (
@@ -99,22 +95,14 @@ export function RecordsTable({ records, isLoading }: RecordsTableProps) {
 					<TableBody>
 						{records.map((rec) => (
 							<TableRow key={rec.id}>
-								<TableCell className="font-medium">
-									{rec.volume_name}
-								</TableCell>
+								<TableCell className="font-medium">{rec.volume_name}</TableCell>
 								<TableCell>
 									<div className="flex items-center gap-1.5">
-										{rec.status === "running" && (
-											<Loader2 className="h-3 w-3 animate-spin" />
-										)}
-										<Badge variant={STATUS_VARIANT[rec.status] ?? "outline"}>
-											{rec.status}
-										</Badge>
+										{rec.status === "running" && <Loader2 className="h-3 w-3 animate-spin" />}
+										<Badge variant={STATUS_VARIANT[rec.status] ?? "outline"}>{rec.status}</Badge>
 									</div>
 								</TableCell>
-								<TableCell className="font-mono text-xs">
-									{formatBytes(rec.size)}
-								</TableCell>
+								<TableCell className="font-mono text-xs">{formatBytes(rec.size)}</TableCell>
 								<TableCell
 									className="max-w-[200px] truncate font-mono text-xs text-muted-foreground"
 									title={rec.s3_key}
@@ -163,17 +151,12 @@ export function RecordsTable({ records, isLoading }: RecordsTableProps) {
 							<div className="space-y-3">
 								<p>
 									This will restore the volume{" "}
-									<span className="font-mono font-semibold">
-										{restoreTarget?.volume_name}
-									</span>{" "}
-									from backup. The current volume data will be{" "}
-									<span className="font-semibold text-destructive">
-										overwritten
-									</span>.
+									<span className="font-mono font-semibold">{restoreTarget?.volume_name}</span> from
+									backup. The current volume data will be{" "}
+									<span className="font-semibold text-destructive">overwritten</span>.
 								</p>
 								<p className="text-xs">
-									S3 key:{" "}
-									<span className="font-mono">{restoreTarget?.s3_key}</span>
+									S3 key: <span className="font-mono">{restoreTarget?.s3_key}</span>
 								</p>
 								<div className="space-y-1.5">
 									<label className="text-xs font-medium">

@@ -9,9 +9,7 @@ const DAY = 86_400;
 export function relativeTime(dateStr: string | undefined): string {
 	if (!dateStr) return "never";
 
-	const diff = Math.floor(
-		(Date.now() - new Date(dateStr).getTime()) / 1000,
-	);
+	const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
 
 	if (diff < 0) return "just now";
 	if (diff < 30) return "just now";

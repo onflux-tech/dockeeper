@@ -23,7 +23,10 @@ export default function LoginPage() {
 	const [needsSetup, setNeedsSetup] = useState(false);
 
 	useEffect(() => {
-		authApi.status().then((s) => setNeedsSetup(s.needs_setup)).catch(() => {});
+		authApi
+			.status()
+			.then((s) => setNeedsSetup(s.needs_setup))
+			.catch(() => {});
 	}, []);
 
 	const {
@@ -115,7 +118,13 @@ export default function LoginPage() {
 						</div>
 
 						<Button type="submit" disabled={isSubmitting} className="mt-1 w-full">
-							{isSubmitting ? <Loader2 className="animate-spin" /> : needsSetup ? "Create account" : "Sign in"}
+							{isSubmitting ? (
+								<Loader2 className="animate-spin" />
+							) : needsSetup ? (
+								"Create account"
+							) : (
+								"Sign in"
+							)}
 						</Button>
 					</form>
 				</CardContent>

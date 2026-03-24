@@ -7,9 +7,7 @@ import type { Collections } from "@/types/pocketbase";
  * `RecordService<T>` when a known collection name is passed.
  */
 export type TypedPocketBase = PocketBase & {
-	collection<T extends keyof Collections>(
-		name: T,
-	): RecordService<Collections[T]>;
+	collection<T extends keyof Collections>(name: T): RecordService<Collections[T]>;
 };
 
 const pb = new PocketBase("/") as TypedPocketBase;
