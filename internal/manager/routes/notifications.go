@@ -6,12 +6,13 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/middleware"
+	"github.com/jkdesenvolvedor/dockeeper/internal/manager/services"
 	"github.com/jkdesenvolvedor/dockeeper/internal/manager/store"
 	"github.com/jkdesenvolvedor/dockeeper/internal/shared/constants"
 )
 
 // RegisterNotificationRoutes adds notification channel and log endpoints.
-func RegisterNotificationRoutes(se *core.ServeEvent, app core.App, alertStore *store.AlertStore) {
+func RegisterNotificationRoutes(se *core.ServeEvent, app core.App, alertStore *store.AlertStore, notifySvc *services.NotificationService) {
 	notif := se.Router.Group("/api/dk/notifications")
 
 	// ── Channels ─────────────────────────────────────
@@ -29,6 +30,10 @@ func RegisterNotificationRoutes(se *core.ServeEvent, app core.App, alertStore *s
 
 	notif.DELETE("/channels/{id}", func(e *core.RequestEvent) error {
 		return handleDeleteChannel(e, alertStore)
+	}).BindFunc(middleware.RequireSuperuser)
+
+	notif.POST("/channels/{id}/test", func(e *core.RequestEvent) error {
+		return handleTestChannel(e, app, notifySvc)
 	}).BindFunc(middleware.RequireSuperuser)
 
 	// ── Logs ─────────────────────────────────────────
@@ -111,6 +116,21 @@ func handleDeleteChannel(e *core.RequestEvent, alertStore *store.AlertStore) err
 	}
 
 	return e.JSON(http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+func handleTestChannel(e *core.RequestEvent, app core.App, notifySvc *services.NotificationService) error {
+	channelID := e.Request.PathValue("id")
+
+	rec, err := app.FindRecordById(constants.CollNotificationChannels, channelID)
+	if err != nil {
+		return e.JSON(http.StatusNotFound, map[string]string{"error": "channel not found"})
+	}
+
+	if err := notifySvc.TestChannel(e.Request.Context(), rec); err != nil {
+		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return e.JSON(http.StatusOK, map[string]string{"status": "sent"})
 }
 
 func handleListNotificationLogs(e *core.RequestEvent, app core.App) error {

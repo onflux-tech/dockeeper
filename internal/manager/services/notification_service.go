@@ -86,6 +86,27 @@ func (s *NotificationService) sendWithRetry(ctx context.Context, channelRec *cor
 	slog.Error("notification: all retries exhausted", "channel", channelID, "type", channelType, "rule", ruleID)
 }
 
+// TestChannel sends a test message to a single channel by record.
+func (s *NotificationService) TestChannel(ctx context.Context, channelRec *core.Record) error {
+	sender, err := s.buildChannel(channelRec)
+	if err != nil {
+		return fmt.Errorf("invalid channel config: %w", err)
+	}
+
+	testMsg := notify.AlertMessage{
+		RuleName:   "Test Alert",
+		Metric:     "cpu_percent",
+		Operator:   "gt",
+		Threshold:  80,
+		Value:      92.5,
+		TargetType: "server",
+		TargetName: "test-server",
+		State:      "firing",
+	}
+
+	return sender.Send(ctx, testMsg)
+}
+
 func (s *NotificationService) buildChannel(rec *core.Record) (notify.Channel, error) {
 	channelType := rec.GetString("type")
 

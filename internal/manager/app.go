@@ -93,7 +93,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		notifySvc := services.NewNotificationService(alertStore)
 		alertEngine := services.NewAlertEngine(app, alertStore, notifySvc)
 		routes.RegisterAlertRoutes(se, app, alertStore)
-		routes.RegisterNotificationRoutes(se, app, alertStore)
+		routes.RegisterNotificationRoutes(se, app, alertStore, notifySvc)
 		jobs.RegisterAlertJobs(app, alertEngine)
 
 		// Initialize internal CA and start gRPC server.
