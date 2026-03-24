@@ -51,6 +51,11 @@
 
 :root {
 	--radius: 0.625rem;
+	--scrollbar-size: 12px;
+	--scrollbar-track: color-mix(in oklch, var(--background) 78%, var(--foreground) 22%);
+	--scrollbar-thumb: color-mix(in oklch, var(--muted-foreground) 46%, transparent);
+	--scrollbar-thumb-hover: color-mix(in oklch, var(--foreground) 24%, var(--muted-foreground) 76%);
+	--scrollbar-thumb-active: color-mix(in oklch, var(--foreground) 34%, var(--muted-foreground) 66%);
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.145 0 0);
 	--card: oklch(1 0 0);
@@ -86,6 +91,10 @@
 }
 
 .dark {
+	--scrollbar-track: color-mix(in oklch, var(--background) 88%, white 12%);
+	--scrollbar-thumb: color-mix(in oklch, var(--muted-foreground) 58%, transparent);
+	--scrollbar-thumb-hover: color-mix(in oklch, var(--foreground) 38%, var(--muted-foreground) 62%);
+	--scrollbar-thumb-active: color-mix(in oklch, var(--foreground) 48%, var(--muted-foreground) 52%);
 	--background: oklch(0.145 0 0);
 	--foreground: oklch(0.985 0 0);
 	--card: oklch(0.145 0 0);
@@ -121,12 +130,53 @@
 }
 
 @layer base {
+	html {
+		scrollbar-gutter: stable;
+	}
+
 	* {
 		@apply border-border;
+		scrollbar-width: thin;
+		scrollbar-color: var(--scrollbar-thumb) transparent;
+	}
+
+	*::-webkit-scrollbar {
+		width: var(--scrollbar-size);
+		height: var(--scrollbar-size);
+	}
+
+	*::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	*::-webkit-scrollbar-thumb {
+		background: linear-gradient(180deg, var(--scrollbar-thumb), color-mix(in oklch, var(--scrollbar-thumb) 84%, transparent));
+		border: 3px solid transparent;
+		border-radius: 999px;
+		background-clip: padding-box;
+		min-height: 44px;
+	}
+
+	*::-webkit-scrollbar-thumb:hover {
+		background: linear-gradient(180deg, var(--scrollbar-thumb-hover), color-mix(in oklch, var(--scrollbar-thumb-hover) 84%, transparent));
+		background-clip: padding-box;
+	}
+
+	*::-webkit-scrollbar-thumb:active {
+		background: linear-gradient(180deg, var(--scrollbar-thumb-active), color-mix(in oklch, var(--scrollbar-thumb-active) 84%, transparent));
+		background-clip: padding-box;
+	}
+
+	*::-webkit-scrollbar-corner {
+		background: transparent;
 	}
 
 	body {
 		@apply bg-background text-foreground;
 		margin: 0;
+		min-height: 100vh;
+		background-image:
+			radial-gradient(circle at top, color-mix(in oklch, var(--primary) 8%, transparent), transparent 32%),
+			linear-gradient(180deg, color-mix(in oklch, var(--background) 96%, var(--foreground) 4%), var(--background));
 	}
 }
