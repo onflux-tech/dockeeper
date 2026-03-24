@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -24,9 +25,10 @@ var (
 )
 
 const (
-	agentCommandPort       = "50052"
-	commandTimeout         = 30 * time.Second
-	updateCommandTimeout   = 150 * time.Second // pull + recreate needs more time
+	agentCommandPort     = "50052"
+	commandTimeout       = 30 * time.Second
+	updateCommandTimeout = 150 * time.Second // pull + recreate needs more time
+	internalRestartDelay = 750 * time.Millisecond
 )
 
 // CommandDispatcher sends a command to an agent and returns the result.
@@ -135,20 +137,39 @@ func (s *ContainerService) ExecuteAction(
 	}
 
 	// 5. Dispatch to agent.
+	if cmdType == agentpb.CommandType_COMMAND_TYPE_RESTART && isDockeeperRuntimeContainer(container) {
+		s.scheduleInternalRestart(agentAddr, req, container, userID, ip)
+
+		details := map[string]any{
+			"command":        cmdType.String(),
+			"container_id":   dockerContainerID,
+			"container_name": container.GetString("name"),
+			"server_id":      serverID,
+			"params":         params,
+			"scheduled":      true,
+		}
+		s.logAudit("container.action", userID, "container", containerID, ip, details)
+
+		return &ActionResult{
+			Success: true,
+			Output:  fmt.Sprintf("container %s restart scheduled", dockerContainerID),
+		}, nil
+	}
+
 	resp, err := s.dispatcher.Dispatch(ctx, agentAddr, req)
 
 	// 6. Create audit log.
 	details := map[string]any{
-		"command":       cmdType.String(),
-		"container_id":  dockerContainerID,
+		"command":        cmdType.String(),
+		"container_id":   dockerContainerID,
 		"container_name": container.GetString("name"),
-		"server_id":    serverID,
-		"params":       params,
+		"server_id":      serverID,
+		"params":         params,
 	}
 
 	if err != nil {
 		details["error"] = err.Error()
-		s.audit.Log("container.action.failed", userID, "container", containerID, ip, details)
+		s.logAudit("container.action.failed", userID, "container", containerID, ip, details)
 		return nil, fmt.Errorf("dispatch command: %w", err)
 	}
 
@@ -157,13 +178,98 @@ func (s *ContainerService) ExecuteAction(
 		details["agent_error"] = resp.GetError()
 	}
 
-	s.audit.Log("container.action", userID, "container", containerID, ip, details)
+	s.logAudit("container.action", userID, "container", containerID, ip, details)
 
 	return &ActionResult{
 		Success: resp.GetSuccess(),
 		Output:  resp.GetOutput(),
 		Error:   resp.GetError(),
 	}, nil
+}
+
+func isDockeeperRuntimeContainer(container *core.Record) bool {
+	name := strings.ToLower(container.GetString("name"))
+	image := strings.ToLower(container.GetString("image"))
+
+	return name == "dockeeper-agent" ||
+		name == "dockeeper-manager" ||
+		strings.Contains(image, "dockeeper-agent") ||
+		strings.Contains(image, "dockeeper-manager")
+}
+
+func (s *ContainerService) scheduleInternalRestart(
+	agentAddr string,
+	req *agentpb.ExecuteCommandRequest,
+	container *core.Record,
+	userID, ip string,
+) {
+	containerID := container.Id
+	containerName := container.GetString("name")
+	dockerContainerID := container.GetString("container_id")
+	serverID := container.GetString("server")
+	paramsCopy := make(map[string]string, len(req.GetParams()))
+	for key, value := range req.GetParams() {
+		paramsCopy[key] = value
+	}
+
+	go func() {
+		time.Sleep(internalRestartDelay)
+
+		bgCtx, cancel := context.WithTimeout(context.Background(), timeoutForCommand(req.GetType()))
+		defer cancel()
+
+		bgReq := &agentpb.ExecuteCommandRequest{
+			ServerId:    req.GetServerId(),
+			ContainerId: req.GetContainerId(),
+			Type:        req.GetType(),
+			Params:      paramsCopy,
+		}
+
+		resp, err := s.dispatcher.Dispatch(bgCtx, agentAddr, bgReq)
+		if err != nil {
+			slog.Warn("scheduled internal restart failed",
+				"container_id", dockerContainerID,
+				"container_name", containerName,
+				"server_id", serverID,
+				"error", err,
+			)
+			s.logAudit("container.action.failed", userID, "container", containerID, ip, map[string]any{
+				"command":        bgReq.GetType().String(),
+				"container_id":   dockerContainerID,
+				"container_name": containerName,
+				"server_id":      serverID,
+				"params":         paramsCopy,
+				"scheduled":      true,
+				"error":          err.Error(),
+			})
+			return
+		}
+
+		if !resp.GetSuccess() {
+			slog.Warn("scheduled internal restart reported failure",
+				"container_id", dockerContainerID,
+				"container_name", containerName,
+				"server_id", serverID,
+				"error", resp.GetError(),
+			)
+			s.logAudit("container.action.failed", userID, "container", containerID, ip, map[string]any{
+				"command":        bgReq.GetType().String(),
+				"container_id":   dockerContainerID,
+				"container_name": containerName,
+				"server_id":      serverID,
+				"params":         paramsCopy,
+				"scheduled":      true,
+				"agent_error":    resp.GetError(),
+			})
+		}
+	}()
+}
+
+func (s *ContainerService) logAudit(action, userID, targetType, targetID, ip string, details map[string]any) {
+	if s.audit == nil {
+		return
+	}
+	s.audit.Log(action, userID, targetType, targetID, ip, details)
 }
 
 // InspectContainer returns a container record by ID.
