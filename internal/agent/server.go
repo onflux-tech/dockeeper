@@ -32,6 +32,12 @@ func NewAgentServer(exec executor.Executor, orch collector.OrchestratorClient, l
 	logs := grpchandlers.NewLogsHandler(orch, logger)
 	agentpb.RegisterAgentLogsServiceServer(gs, logs)
 
+	imgs := grpchandlers.NewImageHandler(exec, logger)
+	agentpb.RegisterAgentImageServiceServer(gs, imgs)
+
+	compose := grpchandlers.NewComposeHandler(logger)
+	agentpb.RegisterAgentComposeServiceServer(gs, compose)
+
 	execH, err := grpchandlers.NewExecHandler(logger)
 	if err != nil {
 		logger.Warn("exec handler unavailable, terminal disabled", "error", err)

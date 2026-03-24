@@ -1,12 +1,31 @@
 package executor
 
-import "context"
+import (
+	"context"
+	"io"
+)
 
 // Result holds the outcome of a container command execution.
 type Result struct {
 	Success bool
 	Output  string
 	Error   string
+}
+
+// ImageRemoveResult holds the outcome of removing a Docker image.
+type ImageRemoveResult struct {
+	Success  bool
+	Error    string
+	Deleted  []string
+	Untagged []string
+}
+
+// ImagePruneResult holds the outcome of pruning unused Docker images.
+type ImagePruneResult struct {
+	Success        bool
+	Error          string
+	Deleted        []string
+	SpaceReclaimed uint64
 }
 
 // Executor defines the contract for a container command executor.
@@ -22,4 +41,7 @@ type Executor interface {
 	PullImage(ctx context.Context, imageRef string) Result
 	UpdateResources(ctx context.Context, containerID string, update *ResourceUpdate) Result
 	RecreateWithEnv(ctx context.Context, containerID string, newEnv []string) Result
+	PullImageStream(ctx context.Context, imageRef string) (io.ReadCloser, error)
+	RemoveImage(ctx context.Context, imageID string, force bool, pruneChildren bool) ImageRemoveResult
+	PruneImages(ctx context.Context, all bool) ImagePruneResult
 }

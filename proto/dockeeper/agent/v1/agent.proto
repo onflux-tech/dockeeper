@@ -269,3 +269,70 @@ message StreamLogsResponse {
   string stream = 2; // stdout, stderr
   string message = 3;
 }
+
+// ── Images ───────────────────────────────────────────
+
+service AgentImageService {
+  rpc PullImage(ImagePullRequest) returns (stream ImagePullProgress);
+  rpc RemoveImage(ImageRemoveRequest) returns (ImageRemoveResponse);
+  rpc PruneImages(ImagePruneRequest) returns (ImagePruneResponse);
+}
+
+message ImagePullRequest {
+  string image_ref = 1;
+}
+
+message ImagePullProgress {
+  string id = 1;        // layer ID
+  string status = 2;    // Pulling, Downloading, Extracting, etc.
+  int64 current = 3;    // bytes downloaded/extracted so far
+  int64 total = 4;      // total bytes for this layer
+  bool done = 5;        // final message
+  string error = 6;     // non-empty on failure
+}
+
+message ImageRemoveRequest {
+  string image_id = 1;
+  bool force = 2;
+  bool prune_children = 3;
+}
+
+message ImageRemoveResponse {
+  bool success = 1;
+  string error = 2;
+  repeated string deleted = 3;
+  repeated string untagged = 4;
+}
+
+message ImagePruneRequest {
+  bool all = 1;
+}
+
+message ImagePruneResponse {
+  bool success = 1;
+  string error = 2;
+  repeated string deleted = 3;
+  uint64 space_reclaimed = 4;
+}
+
+// ── Compose ──────────────────────────────────────────
+
+service AgentComposeService {
+  rpc ComposeUp(ComposeRequest) returns (stream ComposeOutput);
+  rpc ComposeDown(ComposeRequest) returns (stream ComposeOutput);
+  rpc ComposePull(ComposeRequest) returns (stream ComposeOutput);
+}
+
+message ComposeRequest {
+  string project_name = 1;
+  string working_dir = 2;
+  repeated string files = 3;
+}
+
+message ComposeOutput {
+  string line = 1;
+  string stream = 2;   // "stdout" or "stderr"
+  bool done = 3;
+  int32 exit_code = 4;
+  string error = 5;
+}
