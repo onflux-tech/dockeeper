@@ -8,6 +8,7 @@ import {
 	Layers,
 	Network,
 	Rocket,
+	ScrollText,
 	Server,
 	Settings,
 	Archive,
@@ -54,7 +55,10 @@ export const navigation: NavGroup[] = [
 	},
 	{
 		label: "System",
-		items: [{ label: "Settings", href: "/settings", icon: Settings }],
+		items: [
+			{ label: "Settings", href: "/settings", icon: Settings },
+			{ label: "Audit Logs", href: "/audit-logs", icon: ScrollText },
+		],
 	},
 ];
 

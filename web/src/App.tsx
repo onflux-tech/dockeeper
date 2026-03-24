@@ -18,6 +18,7 @@ import AlertsPage from "@/pages/alerts";
 import BackupsPage from "@/pages/backups";
 import SettingsPage from "@/pages/settings";
 import TraefikPage from "@/pages/traefik";
+import AuditLogsPage from "@/pages/audit-logs";
 
 function App() {
 	return (
@@ -42,6 +43,7 @@ function App() {
 						<Route path="backups" element={<BackupsPage />} />
 						<Route path="traefik" element={<TraefikPage />} />
 						<Route path="settings" element={<SettingsPage />} />
+						<Route path="audit-logs" element={<AuditLogsPage />} />
 					</Route>
 				</Route>
 			</Routes>

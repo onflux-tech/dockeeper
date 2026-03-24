@@ -33,6 +33,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 	// Register metrics aggregation and cleanup jobs.
 	jobs.RegisterJobs(app)
 
+	// Register audit log cleanup cron (daily at 03:00, retention 90d).
+	hooks.RegisterAuditCleanup(app)
+
 	// Cleanup rate limiter entries every 5 minutes.
 	if err := app.Cron().Add("rl_cleanup", "*/5 * * * *", func() {
 		authLimiter.Cleanup()
@@ -98,6 +101,10 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 
 		// Traefik route read-only API.
 		routes.RegisterTraefikRoutes(se, app)
+
+		// Audit log query routes + PB hooks.
+		routes.RegisterAuditRoutes(se, app)
+		hooks.RegisterAuditHooks(app, auditStore)
 
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
