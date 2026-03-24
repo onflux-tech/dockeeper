@@ -44,4 +44,18 @@ type Executor interface {
 	PullImageStream(ctx context.Context, imageRef string) (io.ReadCloser, error)
 	RemoveImage(ctx context.Context, imageID string, force bool, pruneChildren bool) ImageRemoveResult
 	PruneImages(ctx context.Context, all bool) ImagePruneResult
+	CreateNetwork(ctx context.Context, opts NetworkCreateOpts) (string, error)
+	RemoveNetwork(ctx context.Context, networkID string) error
+	ConnectContainer(ctx context.Context, networkID, containerID string) error
+	DisconnectContainer(ctx context.Context, networkID, containerID string, force bool) error
+}
+
+// NetworkCreateOpts holds options for creating a Docker network.
+type NetworkCreateOpts struct {
+	Name     string
+	Driver   string
+	Subnet   string
+	Gateway  string
+	Internal bool
+	Labels   map[string]string
 }

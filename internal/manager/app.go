@@ -74,6 +74,10 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string) {
 		composeSvc := services.NewComposeService(app, auditStore)
 		routes.RegisterComposeRoutes(se, app, composeSvc)
 
+		// Network management routes.
+		networkSvc := services.NewNetworkService(app, auditStore)
+		routes.RegisterNetworkRoutes(se, networkSvc)
+
 		// Initialize internal CA and start gRPC server.
 		ca, err := services.NewCertAuthority(app.DataDir())
 		if err != nil {

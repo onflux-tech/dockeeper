@@ -336,3 +336,57 @@ message ComposeOutput {
   int32 exit_code = 4;
   string error = 5;
 }
+
+// ── Networks ─────────────────────────────────────────
+
+service AgentNetworkService {
+  rpc CreateNetwork(CreateNetworkRequest) returns (CreateNetworkResponse);
+  rpc RemoveNetwork(RemoveNetworkRequest) returns (RemoveNetworkResponse);
+  rpc ConnectContainer(NetworkConnectRequest) returns (NetworkConnectResponse);
+  rpc DisconnectContainer(NetworkDisconnectRequest) returns (NetworkDisconnectResponse);
+}
+
+message CreateNetworkRequest {
+  string name = 1;
+  string driver = 2;      // bridge, overlay, macvlan, etc.
+  string subnet = 3;      // e.g. "172.20.0.0/16"
+  string gateway = 4;     // e.g. "172.20.0.1"
+  bool internal = 5;
+  map<string, string> labels = 6;
+}
+
+message CreateNetworkResponse {
+  string network_id = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message RemoveNetworkRequest {
+  string network_id = 1;
+}
+
+message RemoveNetworkResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message NetworkConnectRequest {
+  string network_id = 1;
+  string container_id = 2;
+}
+
+message NetworkConnectResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message NetworkDisconnectRequest {
+  string network_id = 1;
+  string container_id = 2;
+  bool force = 3;
+}
+
+message NetworkDisconnectResponse {
+  bool success = 1;
+  string error = 2;
+}
