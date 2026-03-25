@@ -1,16 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import pb from "@/lib/pb";
 import { invalidateCollectionQueries } from "@/lib/query-invalidation";
 import type { CollectionName } from "@/types/pocketbase";
+
+const DEBOUNCE_MS = 500;
 
 /**
  * Subscribes to PocketBase realtime events (SSE) for a collection and
  * automatically invalidates the corresponding TanStack Query cache when
  * records are created, updated or deleted.
  *
- * Call this hook in any component that displays collection data to keep it
- * in sync without manual polling.
+ * Invalidation is debounced so that burst updates (e.g. agent reporting
+ * many records at once) are collapsed into a single refetch.
  *
  * @example
  * function ServerList() {
@@ -21,19 +23,24 @@ import type { CollectionName } from "@/types/pocketbase";
  */
 export function useRealtime(name: CollectionName) {
 	const queryClient = useQueryClient();
+	const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
 	useEffect(() => {
 		let unsubscribe: (() => Promise<void>) | undefined;
 
 		pb.collection(name)
 			.subscribe("*", () => {
-				invalidateCollectionQueries(queryClient, name);
+				clearTimeout(timerRef.current);
+				timerRef.current = setTimeout(() => {
+					invalidateCollectionQueries(queryClient, name);
+				}, DEBOUNCE_MS);
 			})
 			.then((unsub) => {
 				unsubscribe = unsub;
 			});
 
 		return () => {
+			clearTimeout(timerRef.current);
 			if (unsubscribe) {
 				void unsubscribe();
 			}
