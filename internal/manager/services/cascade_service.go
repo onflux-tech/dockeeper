@@ -255,7 +255,7 @@ func (s *CascadeService) ExecuteServerCascade(serverID, userID, ip string) (*Cas
 	}
 
 	// 3. Delete alert_rules (server-targeted).
-	serverAlertFilter := "target_type = 'server' AND target_id = {:tid}"
+	serverAlertFilter := "target_type = 'server' && target_id = {:tid}"
 	serverAlertParams := map[string]any{"tid": serverID}
 	serverAlerts, _ := s.app.FindRecordsByFilter(constants.CollAlertRules, serverAlertFilter, "", 0, 0, serverAlertParams)
 
@@ -267,7 +267,7 @@ func (s *CascadeService) ExecuteServerCascade(serverID, userID, ip string) (*Cas
 
 	// Delete container-targeted alert_rules.
 	for _, cID := range containerIDs {
-		containerAlertFilter := "target_type = 'container' AND target_id = {:tid}"
+		containerAlertFilter := "target_type = 'container' && target_id = {:tid}"
 		containerAlertParams := map[string]any{"tid": cID}
 		containerAlerts, err := s.app.FindRecordsByFilter(constants.CollAlertRules, containerAlertFilter, "", 0, 0, containerAlertParams)
 		if err == nil {
@@ -411,7 +411,7 @@ func (s *CascadeService) ExecuteContainerCascade(
 
 	// 2. If remove_alerts: delete alert_rules for this container and their notification_logs.
 	if opts.RemoveAlerts {
-		alertFilter := "target_type = 'container' AND target_id = {:cid}"
+		alertFilter := "target_type = 'container' && target_id = {:cid}"
 		alertParams := map[string]any{"cid": containerID}
 		alertRules, err := s.app.FindRecordsByFilter(constants.CollAlertRules, alertFilter, "", 0, 0, alertParams)
 		if err == nil {
@@ -453,7 +453,7 @@ func (s *CascadeService) ExecuteContainerCascade(
 			}
 
 			// Find volume PB record.
-			volFilter := "name = {:vname} AND server = {:sid}"
+			volFilter := "name = {:vname} && server = {:sid}"
 			volParams := map[string]any{"vname": volumeName, "sid": serverID}
 			volRecords, err := s.app.FindRecordsByFilter(constants.CollVolumes, volFilter, "", 1, 0, volParams)
 			if err != nil || len(volRecords) == 0 {
@@ -528,7 +528,7 @@ func (s *CascadeService) ExecuteContainerCascade(
 	// 5. If remove_notification_logs: delete notification_logs not yet covered by alert removal.
 	if opts.RemoveNotificationLogs && !opts.RemoveAlerts {
 		// If alerts were not removed, still clean up notification logs for this container's alerts.
-		alertFilter := "target_type = 'container' AND target_id = {:cid}"
+		alertFilter := "target_type = 'container' && target_id = {:cid}"
 		alertParams := map[string]any{"cid": containerID}
 		alertRules, err := s.app.FindRecordsByFilter(constants.CollAlertRules, alertFilter, "", 0, 0, alertParams)
 		if err == nil {
@@ -680,7 +680,7 @@ func (s *CascadeService) PreviewContainerRemove(containerID string) (*ContainerC
 	serverID := containerRecord.GetString("server")
 
 	// 2. Count alert_rules for this container
-	alertFilter := fmt.Sprintf("target_type = 'container' AND target_id = '%s'", escapeFilterValue(containerID))
+	alertFilter := fmt.Sprintf("target_type = 'container' && target_id = '%s'", escapeFilterValue(containerID))
 	alertRules, err := s.app.FindRecordsByFilter(constants.CollAlertRules, alertFilter, "", 999, 0)
 	if err != nil {
 		return nil, fmt.Errorf("count alert rules: %w", err)
@@ -709,7 +709,7 @@ func (s *CascadeService) PreviewContainerRemove(containerID string) (*ContainerC
 		}
 
 		// Find volume record
-		volFilter := fmt.Sprintf("name = '%s' AND server = '%s'", escapeFilterValue(volumeName), escapeFilterValue(serverID))
+		volFilter := fmt.Sprintf("name = '%s' && server = '%s'", escapeFilterValue(volumeName), escapeFilterValue(serverID))
 		volRecords, err := s.app.FindRecordsByFilter(constants.CollVolumes, volFilter, "", 1, 0)
 		if err != nil || len(volRecords) == 0 {
 			continue
@@ -931,7 +931,7 @@ func (s *CascadeService) PreviewServerDelete(serverID string) (*ServerCascadePre
 	}
 
 	// 7. Count alert_rules (both server and container targets)
-	alertFilter := fmt.Sprintf("target_type = 'server' AND target_id = '%s'", escapeFilterValue(serverID))
+	alertFilter := fmt.Sprintf("target_type = 'server' && target_id = '%s'", escapeFilterValue(serverID))
 	serverAlerts, err := s.app.FindRecordsByFilter(constants.CollAlertRules, alertFilter, "", 999, 0)
 	serverAlertsCount := int64(0)
 	if err == nil {
@@ -945,7 +945,7 @@ func (s *CascadeService) PreviewServerDelete(serverID string) (*ServerCascadePre
 	}
 	containerAlertsCount := int64(0)
 	if len(containerIDs) > 0 {
-		containerAlertFilter := fmt.Sprintf("target_type = 'container' AND target_id IN ('%s')", strings.Join(containerIDs, "','"))
+		containerAlertFilter := fmt.Sprintf("target_type = 'container' && target_id IN ('%s')", strings.Join(containerIDs, "','"))
 		containerAlerts, err := s.app.FindRecordsByFilter(constants.CollAlertRules, containerAlertFilter, "", 999, 0)
 		if err == nil {
 			containerAlertsCount = int64(len(containerAlerts))
@@ -985,7 +985,7 @@ func (s *CascadeService) PreviewServerDelete(serverID string) (*ServerCascadePre
 	}
 	// Also add container alert IDs
 	if containerAlertsCount > 0 && len(containerIDs) > 0 {
-		containerAlertFilter := fmt.Sprintf("target_type = 'container' AND target_id IN ('%s')", strings.Join(containerIDs, "','"))
+		containerAlertFilter := fmt.Sprintf("target_type = 'container' && target_id IN ('%s')", strings.Join(containerIDs, "','"))
 		containerAlerts, err := s.app.FindRecordsByFilter(constants.CollAlertRules, containerAlertFilter, "", 999, 0)
 		if err == nil {
 			for _, alert := range containerAlerts {
