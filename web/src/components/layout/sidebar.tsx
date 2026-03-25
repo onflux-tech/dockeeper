@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { navigation } from "@/lib/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSidebar } from "./sidebar-context";
 
@@ -25,7 +26,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 						{group.items.map((item) => {
 							const isActive =
 								item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-							return (
+							const link = (
 								<Link
 									key={item.href}
 									to={item.href}
@@ -42,6 +43,17 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 									{!collapsed && <span>{item.label}</span>}
 								</Link>
 							);
+
+							if (collapsed) {
+								return (
+									<Tooltip key={item.href}>
+										<TooltipTrigger asChild>{link}</TooltipTrigger>
+										<TooltipContent side="right">{item.label}</TooltipContent>
+									</Tooltip>
+								);
+							}
+
+							return link;
 						})}
 					</nav>
 				</div>
