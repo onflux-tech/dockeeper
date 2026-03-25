@@ -93,6 +93,10 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		volumeSvc := services.NewVolumeService(app, auditStore)
 		routes.RegisterVolumeRoutes(se, volumeSvc)
 
+		// Cascade preview routes.
+		cascadeSvc := services.NewCascadeService(app, auditStore, volumeSvc)
+		routes.RegisterCascadeRoutes(se, cascadeSvc)
+
 		// Backup system routes + scheduler.
 		backupStore := store.NewBackupStore(app)
 		backupSvc := services.NewBackupService(app, backupStore, auditStore)

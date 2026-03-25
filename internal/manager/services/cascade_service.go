@@ -571,6 +571,84 @@ func (s *CascadeService) ExecuteContainerCascade(
 	return result, nil
 }
 
+// ExecuteVolumeCascade handles optional backup record preservation when a volume is removed.
+// Called BEFORE the volume PB record is deleted so that backup_records can be detached.
+func (s *CascadeService) ExecuteVolumeCascade(volumeID string, opts VolumeCascadeOptions, userID, ip string) (*CascadeResult, error) {
+	// 1. Fetch volume record for metadata.
+	volumeRecord, err := s.app.FindRecordById(constants.CollVolumes, volumeID)
+	if err != nil {
+		return nil, fmt.Errorf("find volume: %w", err)
+	}
+
+	volumeName := volumeRecord.GetString("name")
+	serverID := volumeRecord.GetString("server")
+
+	result := &CascadeResult{
+		ServerID:           serverID,
+		EntityType:         "volume",
+		EntityID:           volumeID,
+		EntityName:         volumeName,
+		DeletedResources:   make(map[string]int64),
+		ProtectedResources: make(map[string]int64),
+		Options: map[string]bool{
+			"keep_backup_records": opts.KeepBackupRecords,
+		},
+	}
+
+	// 2. Find backup_policies for this volume.
+	polFilter := "volume = {:vid}"
+	polParams := map[string]any{"vid": volumeID}
+	policies, err := s.app.FindRecordsByFilter(constants.CollBackupPolicies, polFilter, "", 0, 0, polParams)
+	if err != nil {
+		policies = nil
+	}
+
+	// 3. Handle backup_records for each policy.
+	for _, policy := range policies {
+		recFilter := "policy = {:pid}"
+		recParams := map[string]any{"pid": policy.Id}
+		records, err := s.app.FindRecordsByFilter(constants.CollBackupRecords, recFilter, "", 0, 0, recParams)
+		if err != nil {
+			continue
+		}
+
+		if opts.KeepBackupRecords {
+			// Detach records from policy so PB cascade won't delete them.
+			for _, rec := range records {
+				rec.Set("policy", "")
+				if saveErr := s.app.Save(rec); saveErr != nil {
+					slog.Warn("cascade detach backup_record failed", "record_id", rec.Id, "error", saveErr)
+				} else {
+					result.ProtectedResources["backup_records"]++
+				}
+			}
+		} else {
+			// Delete backup_records normally.
+			for _, rec := range records {
+				if delErr := s.app.Delete(rec); delErr != nil {
+					slog.Warn("cascade delete backup_record failed", "record_id", rec.Id, "error", delErr)
+				} else {
+					result.DeletedResources["backup_records"]++
+				}
+			}
+		}
+	}
+
+	// 4. Delete backup_policies.
+	result.DeletedResources["backup_policies"] = s.deleteByFilter(constants.CollBackupPolicies, polFilter, polParams)
+
+	// 5. Create audit log entry.
+	s.audit.Log("volume.cascade_delete", userID, "volume", volumeID, ip, map[string]any{
+		"volume_name":         volumeName,
+		"server_id":           serverID,
+		"options":             result.Options,
+		"deleted_resources":   result.DeletedResources,
+		"protected_resources": result.ProtectedResources,
+	})
+
+	return result, nil
+}
+
 // deleteByFilter finds and deletes all records matching a filter.
 // Returns the count of successfully deleted records. Logs warnings on failure.
 func (s *CascadeService) deleteByFilter(collection, filter string, params map[string]any) int64 {
