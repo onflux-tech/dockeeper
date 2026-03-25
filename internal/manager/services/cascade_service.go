@@ -216,7 +216,183 @@ func (s *CascadeService) IsNetworkExclusive(networkName string, serverID string,
 	return false, otherContainers, nil
 }
 
-// ── Preview Methods ────────────────────────────────
+// ── Cascade Execution ────────────────────────────────
+
+// ExecuteServerCascade deletes ALL database records related to a server.
+// This is a DB-only operation — NO gRPC communication with any agent.
+// Order: alert_rules → notification_logs → backup_records → backup_policies →
+// terminal_sessions → metrics → containers → volumes → images → networks →
+// compose_stacks → traefik_routes → server.
+func (s *CascadeService) ExecuteServerCascade(serverID, userID, ip string) (*CascadeResult, error) {
+	// 1. Validate server exists.
+	serverRecord, err := s.app.FindRecordById(constants.CollServers, serverID)
+	if err != nil {
+		return nil, fmt.Errorf("find server: %w", err)
+	}
+
+	serverName := serverRecord.GetString("hostname")
+
+	result := &CascadeResult{
+		ServerID:           serverID,
+		EntityType:         "server",
+		EntityID:           serverID,
+		EntityName:         serverName,
+		DeletedResources:   make(map[string]int64),
+		ProtectedResources: make(map[string]int64),
+	}
+
+	serverFilter := "server = {:sid}"
+	serverParams := map[string]any{"sid": serverID}
+
+	// 2. Collect container IDs for alert_rules lookup.
+	containers, _ := s.app.FindRecordsByFilter(constants.CollContainers, serverFilter, "", 0, 0, serverParams)
+	var containerIDs []string
+	for _, c := range containers {
+		containerIDs = append(containerIDs, c.Id)
+	}
+
+	// 3. Delete alert_rules (server-targeted).
+	serverAlertFilter := "target_type = 'server' AND target_id = {:tid}"
+	serverAlertParams := map[string]any{"tid": serverID}
+	serverAlerts, _ := s.app.FindRecordsByFilter(constants.CollAlertRules, serverAlertFilter, "", 0, 0, serverAlertParams)
+
+	// Collect all alert IDs for notification_logs cleanup.
+	var allAlertIDs []string
+	for _, a := range serverAlerts {
+		allAlertIDs = append(allAlertIDs, a.Id)
+	}
+
+	// Delete container-targeted alert_rules.
+	for _, cID := range containerIDs {
+		containerAlertFilter := "target_type = 'container' AND target_id = {:tid}"
+		containerAlertParams := map[string]any{"tid": cID}
+		containerAlerts, err := s.app.FindRecordsByFilter(constants.CollAlertRules, containerAlertFilter, "", 0, 0, containerAlertParams)
+		if err == nil {
+			for _, a := range containerAlerts {
+				allAlertIDs = append(allAlertIDs, a.Id)
+			}
+		}
+	}
+
+	// Delete notification_logs for all collected alerts.
+	for _, alertID := range allAlertIDs {
+		notifFilter := "alert = {:aid}"
+		notifParams := map[string]any{"aid": alertID}
+		result.DeletedResources["notification_logs"] += s.deleteByFilter(constants.CollNotificationLogs, notifFilter, notifParams)
+	}
+
+	// Delete all collected alert_rules.
+	for _, alertID := range allAlertIDs {
+		alertRecord, err := s.app.FindRecordById(constants.CollAlertRules, alertID)
+		if err != nil {
+			continue
+		}
+		if err := s.app.Delete(alertRecord); err != nil {
+			slog.Warn("cascade delete alert_rule failed", "id", alertID, "error", err)
+		} else {
+			result.DeletedResources["alert_rules"]++
+		}
+	}
+
+	// 4. Collect volume IDs for backup cleanup.
+	volumes, _ := s.app.FindRecordsByFilter(constants.CollVolumes, serverFilter, "", 0, 0, serverParams)
+	var volumeIDs []string
+	for _, v := range volumes {
+		volumeIDs = append(volumeIDs, v.Id)
+	}
+
+	// 5. Delete backup_records and backup_policies for each volume.
+	for _, volID := range volumeIDs {
+		polFilter := "volume = {:vid}"
+		polParams := map[string]any{"vid": volID}
+		policies, err := s.app.FindRecordsByFilter(constants.CollBackupPolicies, polFilter, "", 0, 0, polParams)
+		if err != nil {
+			continue
+		}
+		for _, policy := range policies {
+			recFilter := "policy = {:pid}"
+			recParams := map[string]any{"pid": policy.Id}
+			result.DeletedResources["backup_records"] += s.deleteByFilter(constants.CollBackupRecords, recFilter, recParams)
+		}
+		result.DeletedResources["backup_policies"] += s.deleteByFilter(constants.CollBackupPolicies, polFilter, polParams)
+	}
+
+	// 6. Delete terminal_sessions for all containers.
+	for _, cID := range containerIDs {
+		termFilter := "container = {:cid}"
+		termParams := map[string]any{"cid": cID}
+		result.DeletedResources["terminal_sessions"] += s.deleteByFilter(constants.CollTerminalSessions, termFilter, termParams)
+	}
+
+	// 7. Delete all metrics (container + server).
+	metricsCollections := []struct {
+		name string
+		key  string
+	}{
+		{constants.CollContainerMetricsRaw, "container_metrics_raw"},
+		{constants.CollContainerMetricsHourly, "container_metrics_hourly"},
+		{constants.CollContainerMetricsDaily, "container_metrics_daily"},
+		{constants.CollServerMetricsRaw, "server_metrics_raw"},
+		{constants.CollServerMetricsHourly, "server_metrics_hourly"},
+		{constants.CollServerMetricsDaily, "server_metrics_daily"},
+	}
+
+	totalMetrics := int64(0)
+	for _, mc := range metricsCollections {
+		count := s.deleteByFilter(mc.name, serverFilter, serverParams)
+		totalMetrics += count
+	}
+	result.DeletedResources["metrics_records"] = totalMetrics
+
+	// 8. Delete resource records (containers, volumes, images, networks, compose_stacks, traefik_routes).
+	resourceCollections := []struct {
+		name string
+		key  string
+	}{
+		{constants.CollContainers, "containers"},
+		{constants.CollVolumes, "volumes"},
+		{constants.CollImages, "images"},
+		{constants.CollNetworks, "networks"},
+		{constants.CollComposeStacks, "compose_stacks"},
+		{constants.CollTraefikRoutes, "traefik_routes"},
+	}
+
+	for _, rc := range resourceCollections {
+		result.DeletedResources[rc.key] = s.deleteByFilter(rc.name, serverFilter, serverParams)
+	}
+
+	// 9. Delete the server record itself (last).
+	if err := s.app.Delete(serverRecord); err != nil {
+		return result, fmt.Errorf("delete server record: %w", err)
+	}
+
+	// 10. Create audit log entry.
+	s.audit.Log("server.cascade_delete", userID, "server", serverID, ip, map[string]any{
+		"server_name":        serverName,
+		"deleted_resources":  result.DeletedResources,
+	})
+
+	return result, nil
+}
+
+// deleteByFilter finds and deletes all records matching a filter.
+// Returns the count of successfully deleted records. Logs warnings on failure.
+func (s *CascadeService) deleteByFilter(collection, filter string, params map[string]any) int64 {
+	records, err := s.app.FindRecordsByFilter(collection, filter, "", 0, 0, params)
+	if err != nil {
+		return 0
+	}
+
+	deleted := int64(0)
+	for _, r := range records {
+		if err := s.app.Delete(r); err != nil {
+			slog.Warn("cascade delete failed", "collection", collection, "record", r.Id, "error", err)
+			continue
+		}
+		deleted++
+	}
+	return deleted
+}
 
 // PreviewContainerRemove returns what would be affected by removing a container.
 func (s *CascadeService) PreviewContainerRemove(containerID string) (*ContainerCascadePreview, error) {
@@ -504,7 +680,7 @@ func (s *CascadeService) PreviewServerDelete(serverID string) (*ServerCascadePre
 	totalAlertsCount := serverAlertsCount + containerAlertsCount
 
 	// 8. Count backup_policies
-	polFilter := fmt.Sprintf("volume IN ('%s')", strings.Join(getVolumeIDs(volumes), "','"))
+	polFilter := fmt.Sprintf("volume IN ('%s')", strings.Join(getRecordIDs(volumes), "','"))
 	policies, err := s.app.FindRecordsByFilter(constants.CollBackupPolicies, polFilter, "", 999, 0)
 	policiesCount := int64(0)
 	if err == nil && len(volumes) > 0 {
@@ -645,11 +821,11 @@ func (s *CascadeService) PreviewServerDelete(serverID string) (*ServerCascadePre
 
 // ── Helper Functions ────────────────────────────────
 
-// getVolumeIDs extracts IDs from volume records
-func getVolumeIDs(volumes []*core.Record) []string {
-	var ids []string
-	for _, v := range volumes {
-		ids = append(ids, v.Id)
+// getRecordIDs extracts IDs from a slice of records.
+func getRecordIDs(records []*core.Record) []string {
+	ids := make([]string, 0, len(records))
+	for _, r := range records {
+		ids = append(ids, r.Id)
 	}
 	return ids
 }
