@@ -33,10 +33,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	CascadeDeleteDialog,
+	type ContainerCascadeOptions,
+} from "@/components/cascade-delete-dialog";
 import { useRecord } from "@/hooks/use-record";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useContainerMetrics } from "@/hooks/use-container-metrics";
 import { useContainerActions } from "@/hooks/use-container-actions";
+import { useRemoveContainerWithCascade } from "@/hooks/use-container-actions";
 import { ContainerInfo } from "@/components/container/container-info";
 import { ContainerMetrics } from "@/components/container/container-metrics";
 import { LogViewer } from "@/components/container/log-viewer";
@@ -61,6 +66,7 @@ export default function ContainerDetailPage() {
 	useRealtime("container_metrics_raw");
 
 	const actions = useContainerActions();
+	const removeCascade = useRemoveContainerWithCascade();
 	const [removeOpen, setRemoveOpen] = useState(false);
 	const [updateOpen, setUpdateOpen] = useState(false);
 
@@ -191,33 +197,22 @@ export default function ContainerDetailPage() {
 			</Tabs>
 
 			{/* Remove confirmation */}
-			<AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Remove container?</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will permanently remove the container &quot;{container?.name}&quot;. This action
-							cannot be undone.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								if (id) {
-									actions.remove.mutate(id, {
-										onSuccess: () => navigate("/containers"),
-									});
-								}
-								setRemoveOpen(false);
-							}}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-						>
-							Remove
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{id && (
+				<CascadeDeleteDialog
+					open={removeOpen}
+					onOpenChange={setRemoveOpen}
+					entityType="container"
+					entityId={id}
+					entityName={container?.name ?? "Container"}
+					onConfirm={(cascadeOptions: ContainerCascadeOptions) => {
+						removeCascade.mutate(
+							{ containerId: id, cascadeOptions },
+							{ onSuccess: () => navigate("/containers") },
+						);
+						setRemoveOpen(false);
+					}}
+				/>
+			)}
 
 			{/* Update confirmation */}
 			<AlertDialog open={updateOpen} onOpenChange={setUpdateOpen}>

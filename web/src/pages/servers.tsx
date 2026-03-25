@@ -1,16 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink } from "lucide-react";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +21,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { CascadeDeleteDialog } from "@/components/cascade-delete-dialog";
 import { useCollection } from "@/hooks/use-collection";
 import { useDeleteServer } from "@/hooks/use-servers";
 import { useRealtime } from "@/hooks/use-realtime";
@@ -216,39 +207,21 @@ export default function ServersPage() {
 				label="servers"
 			/>
 
-			<AlertDialog
-				open={deleteTarget !== null}
-				onOpenChange={(open) => {
-					if (!open) setDeleteTarget(null);
-				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Delete server?</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will permanently remove the server &quot;
-							{deleteTarget?.name ?? deleteTarget?.hostname}&quot; and all associated data
-							(containers, metrics, images, volumes, networks).
-							{deleteTarget?.status === "online" &&
-								" The agent will be uninstalled from the remote machine."}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								if (deleteTarget) {
-									deleteServer.mutate(deleteTarget.id);
-								}
-								setDeleteTarget(null);
-							}}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-						>
-							Delete
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{deleteTarget && (
+				<CascadeDeleteDialog
+					open={deleteTarget !== null}
+					onOpenChange={(open) => {
+						if (!open) setDeleteTarget(null);
+					}}
+					entityType="server"
+					entityId={deleteTarget.id}
+					entityName={deleteTarget.name ?? deleteTarget.hostname}
+					onConfirm={() => {
+						deleteServer.mutate(deleteTarget.id);
+						setDeleteTarget(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

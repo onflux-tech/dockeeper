@@ -20,22 +20,16 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	CascadeDeleteDialog,
+	type VolumeCascadeOptions,
+} from "@/components/cascade-delete-dialog";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useRemoveVolume, useInspectVolume } from "@/hooks/use-volumes";
@@ -259,49 +253,25 @@ export default function VolumesPage() {
 			</Dialog>
 
 			{/* Remove Confirmation */}
-			<AlertDialog
-				open={!!removeTarget}
-				onOpenChange={(open) => {
-					if (!open) setRemoveTarget(null);
-				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Remove Volume</AlertDialogTitle>
-						<AlertDialogDescription>
-							{removeTarget?.in_use ? (
-								<>
-									<span className="font-semibold text-destructive">Warning:</span> Volume{" "}
-									<span className="font-mono font-semibold">{removeTarget?.name}</span> is currently
-									in use by one or more containers. Removing it may cause data loss.
-								</>
-							) : (
-								<>
-									Are you sure you want to remove the volume{" "}
-									<span className="font-mono font-semibold">{removeTarget?.name}</span>? This action
-									cannot be undone and all data will be lost.
-								</>
-							)}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								if (removeTarget) {
-									removeMut.mutate({
-										id: removeTarget.id,
-										force: removeTarget.in_use,
-									});
-									setRemoveTarget(null);
-								}
-							}}
-						>
-							{removeTarget?.in_use ? "Force Remove" : "Remove"}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{removeTarget && (
+				<CascadeDeleteDialog
+					open={!!removeTarget}
+					onOpenChange={(open) => {
+						if (!open) setRemoveTarget(null);
+					}}
+					entityType="volume"
+					entityId={removeTarget.id}
+					entityName={removeTarget.name}
+					onConfirm={(cascadeOptions: VolumeCascadeOptions) => {
+						removeMut.mutate({
+							id: removeTarget.id,
+							force: removeTarget.in_use,
+							cascade_options: cascadeOptions,
+						});
+						setRemoveTarget(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

@@ -50,7 +50,16 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useContainerActions, executeBulkAction } from "@/hooks/use-container-actions";
+import {
+	CascadeDeleteDialog,
+	type ContainerCascadeOptions,
+} from "@/components/cascade-delete-dialog";
+import {
+	useContainerActions,
+	useRemoveContainerWithCascade,
+	executeBulkAction,
+	executeBulkRemoveWithCascade,
+} from "@/hooks/use-container-actions";
 import { relativeTime } from "@/lib/format";
 import type { ContainerRecord } from "@/types/pocketbase";
 
@@ -100,13 +109,14 @@ export function ContainerTable({
 	const [sortKey, setSortKey] = useState<SortKey>("name");
 	const [sortDir, setSortDir] = useState<SortDir>("asc");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
-	const [removeTarget, setRemoveTarget] = useState<string[] | null>(null);
+	const [removeTarget, setRemoveTarget] = useState<{ ids: string[]; name: string } | null>(null);
 	const [updateTarget, setUpdateTarget] = useState<string | null>(null);
 	const [bulkLoading, setBulkLoading] = useState(false);
 	const searchValue = search ?? localSearch;
 	const statusValue = statusFilter ?? localStatusFilter;
 
 	const actions = useContainerActions();
+	const removeCascade = useRemoveContainerWithCascade();
 
 	// ── Filter + sort ────────────────────────────────────────────────────
 	const processed = useMemo(() => {
@@ -178,7 +188,7 @@ export function ContainerTable({
 	async function handleBulk(action: "start" | "stop" | "restart" | "remove") {
 		const ids = [...selected];
 		if (action === "remove") {
-			setRemoveTarget(ids);
+			setRemoveTarget({ ids, name: `${ids.length} containers` });
 			return;
 		}
 		setBulkLoading(true);
@@ -192,13 +202,19 @@ export function ContainerTable({
 		}
 	}
 
-	async function confirmRemove() {
+	async function confirmRemove(cascadeOptions: ContainerCascadeOptions) {
 		if (!removeTarget) return;
-		if (removeTarget.length === 1) {
-			actions.remove.mutate(removeTarget[0]);
+		if (removeTarget.ids.length === 1) {
+			removeCascade.mutate({
+				containerId: removeTarget.ids[0],
+				cascadeOptions,
+			});
 		} else {
 			setBulkLoading(true);
-			const { succeeded, failed } = await executeBulkAction(removeTarget, "remove");
+			const { succeeded, failed } = await executeBulkRemoveWithCascade(
+				removeTarget.ids,
+				cascadeOptions,
+			);
 			setBulkLoading(false);
 			if (failed === 0) {
 				toast.success(`Removed ${succeeded} containers`);
@@ -405,7 +421,7 @@ export function ContainerTable({
 										<RowActions
 											container={c}
 											actions={actions}
-											onRemove={() => setRemoveTarget([c.id])}
+											onRemove={() => setRemoveTarget({ ids: [c.id], name: c.name })}
 											onUpdate={() => setUpdateTarget(c.id)}
 										/>
 									</TableCell>
@@ -417,32 +433,18 @@ export function ContainerTable({
 			</div>
 
 			{/* Remove confirmation dialog */}
-			<AlertDialog
-				open={removeTarget !== null}
-				onOpenChange={(open) => {
-					if (!open) setRemoveTarget(null);
-				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Remove container(s)?</AlertDialogTitle>
-						<AlertDialogDescription>
-							{removeTarget?.length === 1
-								? "This will permanently remove the container. This action cannot be undone."
-								: `This will remove ${removeTarget?.length} containers. This action cannot be undone.`}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={confirmRemove}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-						>
-							Remove
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{removeTarget && (
+				<CascadeDeleteDialog
+					open={removeTarget !== null}
+					onOpenChange={(open) => {
+						if (!open) setRemoveTarget(null);
+					}}
+					entityType="container"
+					entityId={removeTarget.ids[0]}
+					entityName={removeTarget.name}
+					onConfirm={confirmRemove}
+				/>
+			)}
 
 			{/* Update confirmation dialog */}
 			<AlertDialog

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getAccessToken } from "@/lib/api";
+import type { VolumeCascadeOptions } from "@/components/cascade-delete-dialog";
 
 interface VolumeResponse {
 	name?: string;
@@ -58,8 +59,12 @@ export function useCreateVolume() {
 export function useRemoveVolume() {
 	const queryClient = useQueryClient();
 
-	return useMutation<VolumeResponse, Error, { id: string; force?: boolean }>({
-		mutationFn: async ({ id, force }) => {
+	return useMutation<
+		VolumeResponse,
+		Error,
+		{ id: string; force?: boolean; cascade_options?: VolumeCascadeOptions }
+	>({
+		mutationFn: async ({ id, force, cascade_options }) => {
 			const token = getAccessToken();
 			const res = await fetch(`/api/dk/volumes/${id}`, {
 				method: "DELETE",
@@ -67,7 +72,10 @@ export function useRemoveVolume() {
 					"Content-Type": "application/json",
 					...(token ? { Authorization: token } : {}),
 				},
-				body: JSON.stringify({ force: force ?? false }),
+				body: JSON.stringify({
+					force: force ?? false,
+					...(cascade_options ? { cascade_options } : {}),
+				}),
 			});
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({ error: res.statusText }));
