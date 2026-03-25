@@ -1,15 +1,5 @@
-import React from "react";
-import { useLocation } from "react-router";
-import { LogOut, Menu, Search, User } from "lucide-react";
+import { LogOut, Menu, PanelLeft, PanelLeftClose, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -19,29 +9,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/auth-store";
-import { allNavItems } from "@/lib/navigation";
 import { useSidebar } from "./sidebar-context";
 import { useCommandMenu } from "./use-command-menu";
 
-function buildBreadcrumbs(pathname: string) {
-	if (pathname === "/") return [{ label: "Dashboard", href: "/" }];
-
-	const segments = pathname.split("/").filter(Boolean);
-	return segments.map((seg, i) => {
-		const href = "/" + segments.slice(0, i + 1).join("/");
-		const navItem = allNavItems.find((n) => n.href === href);
-		const label = navItem?.label ?? seg.charAt(0).toUpperCase() + seg.slice(1);
-		return { label, href };
-	});
-}
-
 export function Header() {
-	const { pathname } = useLocation();
 	const { admin, logout } = useAuthStore();
-	const { setMobileOpen } = useSidebar();
+	const { collapsed, setCollapsed, setMobileOpen } = useSidebar();
 	const { open: openCommand } = useCommandMenu();
 
-	const crumbs = buildBreadcrumbs(pathname);
 	const initials = admin?.email ? admin.email.substring(0, 2).toUpperCase() : "DK";
 
 	return (
@@ -56,46 +31,34 @@ export function Header() {
 				<Menu className="h-5 w-5" />
 			</Button>
 
-			{/* Breadcrumb */}
-			<Breadcrumb className="hidden md:flex">
-				<BreadcrumbList>
-					{crumbs.map((crumb, i) => {
-						const isLast = i === crumbs.length - 1;
-						return (
-							<React.Fragment key={crumb.href}>
-								{i > 0 && <BreadcrumbSeparator />}
-								<BreadcrumbItem>
-									{isLast ? (
-										<BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-									) : (
-										<BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
-									)}
-								</BreadcrumbItem>
-							</React.Fragment>
-						);
-					})}
-				</BreadcrumbList>
-			</Breadcrumb>
-
-			{/* Spacer */}
-			<div className="flex-1" />
-
-			{/* Search / cmd+k */}
+			{/* Desktop sidebar toggle */}
 			<Button
-				variant="outline"
-				size="sm"
-				onClick={openCommand}
-				className="hidden gap-2 text-muted-foreground sm:flex"
+				variant="ghost"
+				size="icon-sm"
+				onClick={() => setCollapsed(!collapsed)}
+				className="hidden text-muted-foreground hover:text-foreground lg:flex"
 			>
-				<Search className="h-4 w-4" />
-				<span className="text-xs">Search...</span>
-				<kbd className="pointer-events-none ml-2 rounded border border-border bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-					⌘K
-				</kbd>
+				{collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
 			</Button>
-			<Button variant="ghost" size="icon-sm" onClick={openCommand} className="sm:hidden">
-				<Search className="h-4 w-4" />
-			</Button>
+
+			{/* Centered search / cmd+k */}
+			<div className="flex flex-1 justify-center pr-16">
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={openCommand}
+					className="hidden w-64 gap-2 text-muted-foreground sm:flex"
+				>
+					<Search className="h-4 w-4" />
+					<span className="text-xs">Search...</span>
+					<kbd className="pointer-events-none ml-auto rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium leading-normal text-muted-foreground">
+						⌘K
+					</kbd>
+				</Button>
+				<Button variant="ghost" size="icon-sm" onClick={openCommand} className="sm:hidden">
+					<Search className="h-4 w-4" />
+				</Button>
+			</div>
 
 			{/* User menu */}
 			<DropdownMenu>

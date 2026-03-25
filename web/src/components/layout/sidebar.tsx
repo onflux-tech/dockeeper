@@ -1,10 +1,9 @@
 import { Link, useLocation } from "react-router";
-import { Container, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Container } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navigation } from "@/lib/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSidebar } from "./sidebar-context";
 
@@ -33,10 +32,10 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 									onClick={onNavigate}
 									className={cn(
 										"flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-										collapsed && "justify-center px-2",
+										collapsed && "justify-center p-2",
 										isActive
-											? "bg-sidebar-accent text-sidebar-accent-foreground"
-											: "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+											? "bg-primary/10 text-primary"
+											: "text-sidebar-foreground/70 hover:bg-primary/15 hover:text-primary",
 									)}
 								>
 									<item.icon className="h-4 w-4 shrink-0" />
@@ -52,22 +51,19 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function SidebarHeader() {
-	const { collapsed, setCollapsed } = useSidebar();
+	const { collapsed } = useSidebar();
 
 	return (
-		<div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-			<Container className="h-5 w-5 shrink-0 text-sidebar-primary" />
+		<div
+			className={cn(
+				"flex items-center border-b border-sidebar-border",
+				collapsed ? "justify-center h-14" : "h-14 gap-2 px-4",
+			)}
+		>
+			<Container className="h-5 w-5 shrink-0 text-primary" />
 			{!collapsed && (
 				<span className="text-lg font-semibold text-sidebar-foreground">Dockeeper</span>
 			)}
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				onClick={() => setCollapsed(!collapsed)}
-				className="ml-auto hidden text-sidebar-foreground/50 hover:text-sidebar-foreground lg:flex"
-			>
-				{collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-			</Button>
 		</div>
 	);
 }
