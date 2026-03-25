@@ -2,6 +2,7 @@ package routes
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -12,13 +13,13 @@ import (
 )
 
 // RegisterContainerRoutes registers all /api/dk/containers/* routes.
-func RegisterContainerRoutes(se *core.ServeEvent, svc *services.ContainerService) {
+func RegisterContainerRoutes(se *core.ServeEvent, svc *services.ContainerService, cascadeSvc *services.CascadeService) {
 	containers := se.Router.Group("/api/dk/containers")
 
 	containers.POST("/{id}/start", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_START)).BindFunc(middleware.RequireSuperuser)
 	containers.POST("/{id}/stop", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_STOP)).BindFunc(middleware.RequireSuperuser)
 	containers.POST("/{id}/restart", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_RESTART)).BindFunc(middleware.RequireSuperuser)
-	containers.POST("/{id}/remove", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_REMOVE)).BindFunc(middleware.RequireSuperuser)
+	containers.POST("/{id}/remove", handleRemove(svc, cascadeSvc)).BindFunc(middleware.RequireSuperuser)
 	containers.POST("/{id}/pause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_PAUSE)).BindFunc(middleware.RequireSuperuser)
 	containers.POST("/{id}/unpause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UNPAUSE)).BindFunc(middleware.RequireSuperuser)
 	containers.POST("/{id}/update", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE)).BindFunc(middleware.RequireSuperuser)
@@ -95,5 +96,82 @@ func mapServiceError(e *core.RequestEvent, err error) error {
 		return e.JSON(http.StatusBadGateway, map[string]string{
 			"error": "failed to execute command: " + err.Error(),
 		})
+	}
+}
+
+func handleRemove(svc *services.ContainerService, cascadeSvc *services.CascadeService) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+		if id == "" {
+			return e.JSON(http.StatusBadRequest, map[string]string{
+				"error": "container ID is required",
+			})
+		}
+
+		var body struct {
+			Params         map[string]string                `json:"params"`
+			CascadeOptions *services.ContainerCascadeOptions `json:"cascade_options"`
+		}
+		_ = e.BindBody(&body)
+		if body.Params == nil {
+			body.Params = make(map[string]string)
+		}
+
+		// Default cascade options: remove_alerts=true, others=false.
+		opts := services.ContainerCascadeOptions{
+			RemoveAlerts: true,
+		}
+		if body.CascadeOptions != nil {
+			opts = *body.CascadeOptions
+		}
+
+		// Read container record to get serverID before Docker removes it.
+		containerRecord, err := svc.InspectContainer(id)
+		if err != nil {
+			return mapServiceError(e, err)
+		}
+		serverID := containerRecord.GetString("server")
+
+		// Run cascade BEFORE Docker remove (PB record still exists).
+		cascadeResult, cascadeErr := cascadeSvc.ExecuteContainerCascade(
+			e.Request.Context(),
+			id,
+			serverID,
+			opts,
+			e.Auth.Id,
+			e.RealIP(),
+		)
+		if cascadeErr != nil {
+			slog.Warn("container cascade failed (best-effort)", "container_id", id, "error", cascadeErr)
+		}
+
+		// Execute Docker container remove via agent gRPC.
+		result, err := svc.ExecuteAction(
+			e.Request.Context(),
+			id,
+			agentpb.CommandType_COMMAND_TYPE_REMOVE,
+			body.Params,
+			e.Auth.Id,
+			e.RealIP(),
+		)
+		if err != nil {
+			return mapServiceError(e, err)
+		}
+
+		resp := map[string]any{
+			"success": result.Success,
+			"output":  result.Output,
+		}
+		if result.Error != "" {
+			resp["error"] = result.Error
+		}
+		if cascadeResult != nil {
+			resp["cascade"] = map[string]any{
+				"deleted_resources":  cascadeResult.DeletedResources,
+				"protected_resources": cascadeResult.ProtectedResources,
+			}
+		}
+
+		return e.JSON(http.StatusOK, resp)
 	}
 }

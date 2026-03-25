@@ -56,10 +56,20 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		auditStore := store.NewAuditStore(app)
 		dispatcher := services.NewGRPCCommandDispatcher()
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
-		routes.RegisterContainerRoutes(se, containerSvc)
+
+		// Volume management routes.
+		volumeSvc := services.NewVolumeService(app, auditStore)
+		routes.RegisterVolumeRoutes(se, volumeSvc)
+
+		// Cascade service (used by server, container, and cascade-preview routes).
+		cascadeSvc := services.NewCascadeService(app, auditStore, volumeSvc)
+		routes.RegisterCascadeRoutes(se, cascadeSvc)
+
+		// Register container routes (needs cascadeSvc for remove handler).
+		routes.RegisterContainerRoutes(se, containerSvc, cascadeSvc)
 
 		// Server provisioning and management routes.
-		routes.RegisterServerRoutes(se, app, auditStore, version)
+		routes.RegisterServerRoutes(se, app, auditStore, cascadeSvc, version)
 
 		// Container resource limits and env var routes.
 		routes.RegisterContainerResourceRoutes(se, containerSvc)
@@ -88,14 +98,6 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// Network management routes.
 		networkSvc := services.NewNetworkService(app, auditStore)
 		routes.RegisterNetworkRoutes(se, networkSvc)
-
-		// Volume management routes.
-		volumeSvc := services.NewVolumeService(app, auditStore)
-		routes.RegisterVolumeRoutes(se, volumeSvc)
-
-		// Cascade preview routes.
-		cascadeSvc := services.NewCascadeService(app, auditStore, volumeSvc)
-		routes.RegisterCascadeRoutes(se, cascadeSvc)
 
 		// Backup system routes + scheduler.
 		backupStore := store.NewBackupStore(app)
