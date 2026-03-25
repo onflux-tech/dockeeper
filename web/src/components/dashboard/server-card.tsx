@@ -50,14 +50,14 @@ export function ServerCard({ server, cpuData, memData }: ServerCardProps) {
 								<Cpu className="h-3 w-3" />
 								<span>CPU</span>
 							</div>
-							<SparklineChart data={cpuData} color="var(--color-primary)" height={28} />
+							<SparklineChart data={cpuData} color="var(--color-primary)" height={36} />
 						</div>
 						<div className="flex flex-1 flex-col gap-1">
 							<div className="flex items-center gap-1 text-xs text-muted-foreground">
 								<MemoryStick className="h-3 w-3" />
 								<span>RAM</span>
 							</div>
-							<SparklineChart data={memData} color="var(--color-chart-2)" height={28} />
+							<SparklineChart data={memData} color="var(--color-chart-2)" height={36} />
 						</div>
 					</div>
 

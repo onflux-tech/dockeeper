@@ -11,6 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
+	dockerclient "github.com/docker/docker/client"
 	"google.golang.org/protobuf/proto"
 
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -94,6 +97,8 @@ func (t *TraefikCollector) collect(ctx context.Context) {
 		return
 	}
 
+	routes = filterRoutes(routes)
+
 	req := &agentpb.ReportTraefikRoutesRequest{
 		ServerId: t.serverID,
 		Routes:   routes,
@@ -135,6 +140,8 @@ func (t *TraefikCollector) detectTraefik(ctx context.Context) {
 }
 
 // resolveAPIURL attempts to determine the Traefik API URL from container ports.
+// It checks host-mapped ports first, then falls back to the container IP (useful
+// in Docker Swarm where port 8080 is often not published to the host).
 func (t *TraefikCollector) resolveAPIURL(c *agentpb.ContainerInfo) string {
 	// Try to parse ports from JSON to find 8080 mapping.
 	if portsJSON := c.GetPortsJson(); portsJSON != "" {
@@ -149,8 +156,41 @@ func (t *TraefikCollector) resolveAPIURL(c *agentpb.ContainerInfo) string {
 			}
 		}
 	}
+
+	// Try to get container IP from Docker inspect (works in Swarm overlay networks).
+	if ip := t.resolveContainerIP(c.GetContainerId()); ip != "" {
+		return fmt.Sprintf("http://%s:8080", ip)
+	}
+
 	// Default: Traefik API typically on 8080.
 	return "http://127.0.0.1:8080"
+}
+
+// resolveContainerIP inspects the container to find an IP address in any network.
+func (t *TraefikCollector) resolveContainerIP(containerID string) string {
+	if containerID == "" {
+		return ""
+	}
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
+	if err != nil {
+		return ""
+	}
+	defer cli.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	inspect, err := cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return ""
+	}
+
+	for _, net := range inspect.NetworkSettings.Networks {
+		if net.IPAddress != "" {
+			return net.IPAddress
+		}
+	}
+	return ""
 }
 
 // fetchRoutes tries the Traefik API first, then falls back to Docker labels.
@@ -211,61 +251,22 @@ func (t *TraefikCollector) fetchFromAPI(ctx context.Context) ([]*agentpb.Traefik
 }
 
 // fetchFromLabels reads Traefik routing info from Docker container labels.
+// In Swarm mode, container labels may be empty so we also check Swarm service labels.
 func (t *TraefikCollector) fetchFromLabels(ctx context.Context) ([]*agentpb.TraefikRouteInfo, error) {
-	containers, err := t.orch.ListContainers(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	routeMap := make(map[string]*agentpb.TraefikRouteInfo)
 
-	for _, c := range containers {
-		labelsJSON := c.GetLabelsJson()
-		if labelsJSON == "" {
-			continue
+	// First, try container labels (works for standalone Docker).
+	containers, err := t.orch.ListContainers(ctx)
+	if err == nil {
+		for _, c := range containers {
+			t.parseLabelsInto(c.GetLabelsJson(), routeMap)
 		}
+	}
 
-		var labels map[string]string
-		if err := json.Unmarshal([]byte(labelsJSON), &labels); err != nil {
-			continue
-		}
-
-		// Parse labels like: traefik.http.routers.<name>.rule = Host(`...`)
-		for key, val := range labels {
-			if !strings.HasPrefix(key, "traefik.http.routers.") {
-				continue
-			}
-
-			parts := strings.SplitN(key, ".", 5)
-			if len(parts) < 5 {
-				continue
-			}
-			routerName := parts[3]
-			field := parts[4]
-
-			route, ok := routeMap[routerName]
-			if !ok {
-				route = &agentpb.TraefikRouteInfo{
-					Name:     routerName,
-					Provider: "docker",
-					Status:   "enabled",
-				}
-				routeMap[routerName] = route
-			}
-
-			switch field {
-			case "rule":
-				route.Rule = val
-			case "service":
-				route.Service = val
-			case "entrypoints":
-				route.Entrypoints = strings.Split(val, ",")
-			case "tls":
-				route.Tls = val == "true" || val == ""
-			case "middlewares":
-				route.Middlewares = strings.Split(val, ",")
-			}
-		}
+	// In Swarm mode, labels live on the service spec, not the container.
+	// If we found nothing from containers, try Swarm services.
+	if len(routeMap) == 0 {
+		t.parseSwarmServiceLabels(ctx, routeMap)
 	}
 
 	routes := make([]*agentpb.TraefikRouteInfo, 0, len(routeMap))
@@ -276,6 +277,96 @@ func (t *TraefikCollector) fetchFromLabels(ctx context.Context) ([]*agentpb.Trae
 	}
 
 	return routes, nil
+}
+
+// parseLabelsInto extracts Traefik router labels from a JSON labels string.
+func (t *TraefikCollector) parseLabelsInto(labelsJSON string, routeMap map[string]*agentpb.TraefikRouteInfo) {
+	if labelsJSON == "" {
+		return
+	}
+
+	var labels map[string]string
+	if err := json.Unmarshal([]byte(labelsJSON), &labels); err != nil {
+		return
+	}
+
+	for key, val := range labels {
+		if !strings.HasPrefix(key, "traefik.http.routers.") {
+			continue
+		}
+
+		parts := strings.SplitN(key, ".", 5)
+		if len(parts) < 5 {
+			continue
+		}
+		routerName := parts[3]
+		field := parts[4]
+
+		route, ok := routeMap[routerName]
+		if !ok {
+			route = &agentpb.TraefikRouteInfo{
+				Name:     routerName,
+				Provider: "docker",
+				Status:   "enabled",
+			}
+			routeMap[routerName] = route
+		}
+
+		switch field {
+		case "rule":
+			route.Rule = val
+		case "service":
+			route.Service = val
+		case "entrypoints":
+			route.Entrypoints = strings.Split(val, ",")
+		case "tls":
+			route.Tls = val == "true" || val == ""
+		case "tls.certresolver":
+			route.Tls = true
+		case "middlewares":
+			route.Middlewares = strings.Split(val, ",")
+		}
+	}
+}
+
+// parseSwarmServiceLabels reads Traefik labels from Docker Swarm services.
+func (t *TraefikCollector) parseSwarmServiceLabels(ctx context.Context, routeMap map[string]*agentpb.TraefikRouteInfo) {
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
+	if err != nil {
+		return
+	}
+	defer cli.Close()
+
+	services, err := cli.ServiceList(ctx, types.ServiceListOptions{
+		Filters: filters.NewArgs(filters.Arg("label", "traefik.enable=true")),
+	})
+	if err != nil {
+		t.logger.Debug("traefik: failed to list Swarm services", "error", err)
+		return
+	}
+
+	for _, svc := range services {
+		labelsJSON, _ := json.Marshal(svc.Spec.Labels)
+		t.parseLabelsInto(string(labelsJSON), routeMap)
+	}
+}
+
+// filterRoutes removes internal/catch-all routes that are not useful to display.
+func filterRoutes(routes []*agentpb.TraefikRouteInfo) []*agentpb.TraefikRouteInfo {
+	filtered := make([]*agentpb.TraefikRouteInfo, 0, len(routes))
+	for _, r := range routes {
+		rule := strings.ToLower(r.Rule)
+		// Skip catch-all hostregexp rules (e.g. HostRegexp(`{host:.+}`))
+		if strings.Contains(rule, "hostregexp") && strings.Contains(rule, ".+") {
+			continue
+		}
+		// Skip Traefik internal routers (e.g. api@internal, ping@internal)
+		if strings.HasSuffix(r.Name, "@internal") {
+			continue
+		}
+		filtered = append(filtered, r)
+	}
+	return filtered
 }
 
 // changed returns true if the data has changed since last report.

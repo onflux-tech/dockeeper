@@ -20,9 +20,21 @@ import {
 } from "@/components/ui/table";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useCollection } from "@/hooks/use-collection";
+import { useTraefikRoutes } from "@/hooks/use-traefik";
 import { useRealtime } from "@/hooks/use-realtime";
-import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
-import type { ServerRecord, TraefikRouteRecord } from "@/types/pocketbase";
+import type { ServerRecord } from "@/types/pocketbase";
+
+function extractHost(rule: string | undefined): string {
+	if (!rule) return "—";
+	const match = rule.match(/Host\(`([^`]+)`\)/i);
+	return match?.[1] ?? rule;
+}
+
+function extractPath(rule: string | undefined): string | null {
+	if (!rule) return null;
+	const match = rule.match(/PathPrefix\(`([^`]+)`\)/i);
+	return match?.[1] ?? null;
+}
 
 export default function TraefikPage() {
 	const [page, setPage] = useState(1);
@@ -32,19 +44,17 @@ export default function TraefikPage() {
 	const serverId = serverFilter !== "all" ? serverFilter : undefined;
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
-	const { data: routesResult, isLoading } = useCollection("traefik_routes", {
+	const { data: routesResult, isLoading } = useTraefikRoutes({
 		page,
 		perPage: 25,
 		sort: "name",
-		filter: andFilters([
-			serverId ? eqFilter("server", serverId) : "",
-			containsAnyFilter(["name", "rule", "service"], search),
-		]),
+		serverId,
+		search: search || undefined,
 	});
 	useRealtime("traefik_routes");
 
 	const servers = (serversResult?.items ?? []) as ServerRecord[];
-	const routes = (routesResult?.items ?? []) as TraefikRouteRecord[];
+	const routes = routesResult?.items ?? [];
 
 	const serverName = (sid: string) => {
 		const s = servers.find((sv) => sv.id === sid);
@@ -116,7 +126,7 @@ export default function TraefikPage() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Rule</TableHead>
+								<TableHead>Host</TableHead>
 								<TableHead>Service</TableHead>
 								<TableHead>Entrypoints</TableHead>
 								<TableHead>TLS</TableHead>
@@ -130,8 +140,11 @@ export default function TraefikPage() {
 							{routes.map((route) => (
 								<TableRow key={route.id}>
 									<TableCell className="font-medium">{route.name}</TableCell>
-									<TableCell className="max-w-xs truncate font-mono text-xs">
-										{route.rule}
+									<TableCell className="font-mono text-xs">
+										<span>{extractHost(route.rule)}</span>
+										{extractPath(route.rule) && (
+											<span className="text-muted-foreground">{extractPath(route.rule)}</span>
+										)}
 									</TableCell>
 									<TableCell className="text-xs">{route.service}</TableCell>
 									<TableCell>
