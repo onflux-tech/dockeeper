@@ -21,7 +21,9 @@ export function containsAnyFilter(fields: string[], value?: string | null): stri
 }
 
 export function andFilters(filters: Array<string | undefined | null | false>): string {
-	const valid = filters.filter((filter): filter is string => typeof filter === "string" && filter.length > 0);
+	const valid = filters.filter(
+		(filter): filter is string => typeof filter === "string" && filter.length > 0,
+	);
 	if (valid.length === 0) return "";
 	if (valid.length === 1) return valid[0];
 	return valid.map((filter) => `(${filter})`).join(" && ");

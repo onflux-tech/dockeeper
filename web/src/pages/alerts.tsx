@@ -34,10 +34,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useDeleteRule, useToggleRule } from "@/hooks/use-alerts";
-import {
-	useDeleteChannel,
-	useTestChannel,
-} from "@/hooks/use-notifications";
+import { useDeleteChannel, useTestChannel } from "@/hooks/use-notifications";
 import { RuleDialog } from "@/components/alerts/rule-dialog";
 import { ChannelDialog } from "@/components/notifications/channel-dialog";
 import { containsAnyFilter } from "@/lib/pocketbase-filters";
@@ -118,12 +115,18 @@ export default function AlertsPage() {
 
 	const servers = (serversResult?.items ?? []) as ServerRecord[];
 	const containers = (containersResult?.items ?? []) as ContainerRecord[];
-	const rules = useMemo(() => (rulesResult?.items ?? []) as AlertRuleRecord[], [rulesResult?.items]);
+	const rules = useMemo(
+		() => (rulesResult?.items ?? []) as AlertRuleRecord[],
+		[rulesResult?.items],
+	);
 	const channels = useMemo(
 		() => (channelsResult?.items ?? []) as NotificationChannelRecord[],
 		[channelsResult?.items],
 	);
-	const logs = useMemo(() => (logsResult?.items ?? []) as NotificationLogRecord[], [logsResult?.items]);
+	const logs = useMemo(
+		() => (logsResult?.items ?? []) as NotificationLogRecord[],
+		[logsResult?.items],
+	);
 
 	const firingCount = useMemo(() => rules.filter((r) => r.state === "firing").length, [rules]);
 

@@ -127,17 +127,15 @@ function CascadeDialogContent(props: CascadeDeleteDialogProps) {
 						<p>
 							This will permanently remove{" "}
 							<span className="font-mono font-semibold">{entityName}</span>.
-							{entityType === "server" && " All database records for this server will be permanently deleted."}
+							{entityType === "server" &&
+								" All database records for this server will be permanently deleted."}
 						</p>
 
 						{/* Impact preview */}
 						{isLoading ? (
 							<PreviewSkeleton />
 						) : preview ? (
-							<ImpactPreview
-								entityType={entityType}
-								preview={preview}
-							/>
+							<ImpactPreview entityType={entityType} preview={preview} />
 						) : null}
 
 						{/* Cascade options */}
@@ -238,14 +236,13 @@ function ImpactPreview({
 			["Metrics records", p.impact.metrics_records],
 		];
 		for (const [label, count] of entries) {
-			if (count.deletable > 0 || count.protected > 0)
-				impactRows.push({ label, count });
+			if (count.deletable > 0 || count.protected > 0) impactRows.push({ label, count });
 		}
 	}
 
 	// Volume in_use_by
 	const volumeInUseBy =
-		entityType === "volume" ? (preview as VolumeCascadePreview).in_use_by ?? [] : [];
+		entityType === "volume" ? ((preview as VolumeCascadePreview).in_use_by ?? []) : [];
 
 	if (impactRows.length === 0 && volumeInUseBy.length === 0) return null;
 
@@ -278,8 +275,7 @@ function ImpactPreview({
 				{/* Volume in_use_by containers */}
 				{volumeInUseBy.length > 0 && (
 					<div className="mt-2 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-1.5 text-xs">
-						<span className="font-medium">In use by:</span>{" "}
-						{volumeInUseBy.join(", ")}
+						<span className="font-medium">In use by:</span> {volumeInUseBy.join(", ")}
 					</div>
 				)}
 			</div>
@@ -312,9 +308,7 @@ function VolumeItems({ preview }: { preview: ContainerCascadePreview }) {
 							In use
 						</Badge>
 					)}
-					{item.reason && (
-						<span className="text-muted-foreground">{item.reason}</span>
-					)}
+					{item.reason && <span className="text-muted-foreground">{item.reason}</span>}
 				</div>
 			))}
 		</div>
@@ -433,16 +427,10 @@ function CascadeCheckbox({
 }) {
 	return (
 		<div className="flex items-center gap-2">
-			<Checkbox
-				id={id}
-				checked={checked}
-				onCheckedChange={(v) => onCheckedChange(v === true)}
-			/>
+			<Checkbox id={id} checked={checked} onCheckedChange={(v) => onCheckedChange(v === true)} />
 			<label htmlFor={id} className="text-xs cursor-pointer select-none">
 				{label}
-				{count > 0 && (
-					<span className="ml-1 text-muted-foreground">({count})</span>
-				)}
+				{count > 0 && <span className="ml-1 text-muted-foreground">({count})</span>}
 			</label>
 		</div>
 	);

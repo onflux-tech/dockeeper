@@ -114,9 +114,7 @@ export default function ImagesPage() {
 				<div className="flex items-center gap-2">
 					<Layers className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Images</h1>
-					{!isLoading && (
-						<span className="text-sm text-muted-foreground">({totalImages})</span>
-					)}
+					{!isLoading && <span className="text-sm text-muted-foreground">({totalImages})</span>}
 				</div>
 				<div className="flex items-center gap-2">
 					<Button

@@ -38,16 +38,17 @@ import {
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
-import {
-	useDeletePolicy,
-	useTriggerBackup,
-	useUpdatePolicy,
-} from "@/hooks/use-backups";
+import { useDeletePolicy, useTriggerBackup, useUpdatePolicy } from "@/hooks/use-backups";
 import { PolicyDialog } from "@/components/backups/policy-dialog";
 import { describeCron } from "@/lib/format";
 import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 import { RecordsTable } from "@/components/backups/records-table";
-import type { ServerRecord, VolumeRecord, BackupPolicyRecord, BackupRecordRecord } from "@/types/pocketbase";
+import type {
+	ServerRecord,
+	VolumeRecord,
+	BackupPolicyRecord,
+	BackupRecordRecord,
+} from "@/types/pocketbase";
 
 export default function BackupsPage() {
 	const [policiesPage, setPoliciesPage] = useState(1);
@@ -318,13 +319,13 @@ export default function BackupsPage() {
 					</div>
 				)}
 
-					<PaginationControls
-						page={policiesPage}
-						totalPages={policiesResult?.totalPages ?? 0}
-						totalItems={policiesResult?.totalItems ?? 0}
-						onPageChange={setPoliciesPage}
-						label="policies"
-					/>
+				<PaginationControls
+					page={policiesPage}
+					totalPages={policiesResult?.totalPages ?? 0}
+					totalItems={policiesResult?.totalItems ?? 0}
+					onPageChange={setPoliciesPage}
+					label="policies"
+				/>
 			</div>
 
 			{/* Backup Records */}

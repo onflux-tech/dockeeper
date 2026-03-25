@@ -282,9 +282,7 @@ export function ContainerTable({
 				<Select
 					value={statusValue}
 					onValueChange={(value) =>
-						onStatusFilterChange
-							? onStatusFilterChange(value)
-							: setLocalStatusFilter(value)
+						onStatusFilterChange ? onStatusFilterChange(value) : setLocalStatusFilter(value)
 					}
 				>
 					<SelectTrigger className="w-36">

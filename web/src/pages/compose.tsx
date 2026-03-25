@@ -80,9 +80,7 @@ export default function ComposePage() {
 					<Rocket className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Compose Stacks</h1>
 					{!isLoading && (
-						<span className="text-sm text-muted-foreground">
-							({stacksResult?.totalItems ?? 0})
-						</span>
+						<span className="text-sm text-muted-foreground">({stacksResult?.totalItems ?? 0})</span>
 					)}
 				</div>
 				<Button size="sm" onClick={() => setDeployOpen(true)}>
