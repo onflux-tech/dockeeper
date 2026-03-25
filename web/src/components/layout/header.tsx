@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router";
 import { LogOut, Menu, PanelLeft, PanelLeftClose, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ export function Header() {
 	const { admin, logout } = useAuthStore();
 	const { collapsed, setCollapsed, setMobileOpen } = useSidebar();
 	const { open: openCommand } = useCommandMenu();
+	const navigate = useNavigate();
 
 	const initials = admin?.email ? admin.email.substring(0, 2).toUpperCase() : "DK";
 
@@ -69,13 +71,13 @@ export function Header() {
 						</Avatar>
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-48">
+				<DropdownMenuContent align="end" className="w-64">
 					<div className="px-2 py-1.5">
-						<p className="text-sm font-medium">{admin?.email}</p>
+						<p className="truncate text-sm font-medium">{admin?.email}</p>
 						<p className="text-xs text-muted-foreground">Administrator</p>
 					</div>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem>
+					<DropdownMenuItem onClick={() => navigate("/settings?tab=profile")}>
 						<User className="mr-2 h-4 w-4" />
 						Profile
 					</DropdownMenuItem>

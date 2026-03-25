@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import {
 	Settings,
 	Server,
@@ -27,6 +28,9 @@ import {
 } from "@/hooks/use-settings";
 
 export default function SettingsPage() {
+	const [searchParams, setSearchParams] = useSearchParams();
+	const activeTab = searchParams.get("tab") || "system";
+
 	return (
 		<div className="flex flex-col gap-6">
 			{/* Header */}
@@ -35,7 +39,11 @@ export default function SettingsPage() {
 				<h1 className="text-2xl font-semibold">Settings</h1>
 			</div>
 
-			<Tabs defaultValue="system" className="space-y-4">
+			<Tabs
+				value={activeTab}
+				onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}
+				className="space-y-4"
+			>
 				<TabsList>
 					<TabsTrigger value="system" className="gap-1.5">
 						<Server className="h-4 w-4" />
