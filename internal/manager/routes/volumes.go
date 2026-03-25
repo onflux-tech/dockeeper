@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -10,7 +11,7 @@ import (
 )
 
 // RegisterVolumeRoutes adds volume management endpoints.
-func RegisterVolumeRoutes(se *core.ServeEvent, svc *services.VolumeService) {
+func RegisterVolumeRoutes(se *core.ServeEvent, svc *services.VolumeService, cascadeSvc *services.CascadeService) {
 	volumes := se.Router.Group("/api/dk/volumes")
 
 	volumes.POST("", func(e *core.RequestEvent) error {
@@ -18,7 +19,7 @@ func RegisterVolumeRoutes(se *core.ServeEvent, svc *services.VolumeService) {
 	}).BindFunc(middleware.RequireSuperuser)
 
 	volumes.DELETE("/{id}", func(e *core.RequestEvent) error {
-		return handleRemoveVolume(e, svc)
+		return handleRemoveVolume(e, svc, cascadeSvc)
 	}).BindFunc(middleware.RequireSuperuser)
 
 	volumes.GET("/{id}/inspect", func(e *core.RequestEvent) error {
@@ -57,18 +58,28 @@ func handleCreateVolume(e *core.RequestEvent, svc *services.VolumeService) error
 	return e.JSON(http.StatusCreated, resp)
 }
 
-func handleRemoveVolume(e *core.RequestEvent, svc *services.VolumeService) error {
+func handleRemoveVolume(e *core.RequestEvent, svc *services.VolumeService, cascadeSvc *services.CascadeService) error {
 	volumeID := e.Request.PathValue("id")
 
 	var body struct {
-		Force bool `json:"force"`
+		Force          bool                          `json:"force"`
+		CascadeOptions *services.VolumeCascadeOptions `json:"cascade_options"`
 	}
-	// Body is optional for DELETE; ignore bind errors.
 	_ = e.BindBody(&body)
 
 	userID := ""
 	if e.Auth != nil {
 		userID = e.Auth.Id
+	}
+
+	// Run cascade BEFORE volume removal (PB record still exists).
+	var cascadeResult *services.CascadeResult
+	if body.CascadeOptions != nil {
+		var cascadeErr error
+		cascadeResult, cascadeErr = cascadeSvc.ExecuteVolumeCascade(volumeID, *body.CascadeOptions, userID, e.RealIP())
+		if cascadeErr != nil {
+			slog.Warn("volume cascade failed (best-effort)", "volume_id", volumeID, "error", cascadeErr)
+		}
 	}
 
 	resp, err := svc.RemoveVolume(e.Request.Context(), volumeID, body.Force, userID, e.RealIP())
@@ -80,7 +91,17 @@ func handleRemoveVolume(e *core.RequestEvent, svc *services.VolumeService) error
 		return e.JSON(http.StatusBadGateway, map[string]string{"error": resp.GetError()})
 	}
 
-	return e.JSON(http.StatusOK, resp)
+	result := map[string]any{
+		"success": resp.GetSuccess(),
+	}
+	if cascadeResult != nil {
+		result["cascade"] = map[string]any{
+			"deleted_resources":   cascadeResult.DeletedResources,
+			"protected_resources": cascadeResult.ProtectedResources,
+		}
+	}
+
+	return e.JSON(http.StatusOK, result)
 }
 
 func handleInspectVolume(e *core.RequestEvent, svc *services.VolumeService) error {

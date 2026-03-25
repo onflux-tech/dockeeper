@@ -57,12 +57,10 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		dispatcher := services.NewGRPCCommandDispatcher()
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
 
-		// Volume management routes.
+		// Volume + Cascade services (cascade depends on volumeSvc).
 		volumeSvc := services.NewVolumeService(app, auditStore)
-		routes.RegisterVolumeRoutes(se, volumeSvc)
-
-		// Cascade service (used by server, container, and cascade-preview routes).
 		cascadeSvc := services.NewCascadeService(app, auditStore, volumeSvc)
+		routes.RegisterVolumeRoutes(se, volumeSvc, cascadeSvc)
 		routes.RegisterCascadeRoutes(se, cascadeSvc)
 
 		// Register container routes (needs cascadeSvc for remove handler).
