@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -357,7 +358,7 @@ func (s *BackupService) deleteS3Object(ctx context.Context, s3Cfg *s3Settings, b
 }
 
 func dialBackupService(agentIP string) (*grpc.ClientConn, agentpb.AgentBackupServiceClient, error) {
-	addr := agentIP + ":" + agentCommandPort
+	addr := net.JoinHostPort(agentIP, agentCommandPort)
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

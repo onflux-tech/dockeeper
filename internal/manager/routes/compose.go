@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -207,7 +208,7 @@ func handleComposeSSE(e *core.RequestEvent, svc *services.ComposeService, operat
 	}
 
 	// Dial agent gRPC.
-	addr := info.AgentAddr + ":" + agentComposePort
+	addr := net.JoinHostPort(info.AgentAddr, agentComposePort)
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

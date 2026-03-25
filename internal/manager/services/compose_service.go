@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -153,7 +154,7 @@ func (s *ComposeService) resolveServer(serverID string) (string, error) {
 
 // runComposeDown executes compose down on the agent synchronously.
 func (s *ComposeService) runComposeDown(ctx context.Context, info *StackInfo) error {
-	addr := info.AgentAddr + ":" + agentCommandPort
+	addr := net.JoinHostPort(info.AgentAddr, agentCommandPort)
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

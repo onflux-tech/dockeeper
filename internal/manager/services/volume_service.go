@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 
 	"github.com/pocketbase/pocketbase/core"
 	"google.golang.org/grpc"
@@ -185,7 +186,7 @@ func (s *VolumeService) resolveServer(serverID string) (string, error) {
 }
 
 func dialVolumeService(agentIP string) (*grpc.ClientConn, agentpb.AgentVolumeServiceClient, error) {
-	addr := agentIP + ":" + agentCommandPort
+	addr := net.JoinHostPort(agentIP, agentCommandPort)
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

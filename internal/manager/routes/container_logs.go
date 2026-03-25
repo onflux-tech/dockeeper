@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -56,7 +57,7 @@ func handleLogStream(e *core.RequestEvent, app core.App) error {
 		return e.JSON(http.StatusServiceUnavailable, map[string]string{"error": "server is offline"})
 	}
 
-	agentAddr := server.GetString("ip_address") + ":" + agentLogsPort
+	agentAddr := net.JoinHostPort(server.GetString("ip_address"), agentLogsPort)
 	dockerContainerID := container.GetString("container_id")
 
 	// Dial agent gRPC.

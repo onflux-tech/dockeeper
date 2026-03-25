@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 
 	"github.com/pocketbase/pocketbase/core"
 	"google.golang.org/grpc"
@@ -151,7 +152,7 @@ func (s *ImageService) PruneImages(ctx context.Context, serverID string, all boo
 }
 
 func dialImageService(agentIP string) (*grpc.ClientConn, agentpb.AgentImageServiceClient, error) {
-	addr := agentIP + ":" + agentCommandPort
+	addr := net.JoinHostPort(agentIP, agentCommandPort)
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"strings"
 	"time"
 
@@ -54,7 +55,7 @@ func NewGRPCCommandDispatcher() *GRPCCommandDispatcher {
 
 // Dispatch dials the agent's command gRPC server and executes the command.
 func (d *GRPCCommandDispatcher) Dispatch(ctx context.Context, agentAddr string, req *agentpb.ExecuteCommandRequest) (*agentpb.ExecuteCommandResponse, error) {
-	addr := agentAddr + ":" + agentCommandPort
+	addr := net.JoinHostPort(agentAddr, agentCommandPort)
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

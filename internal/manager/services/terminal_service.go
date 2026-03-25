@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -56,7 +57,7 @@ func (s *TerminalService) OpenSession(containerID, userID, command, ip string) (
 		return nil, ErrServerOffline
 	}
 
-	agentAddr := server.GetString("ip_address") + ":" + agentExecPort
+	agentAddr := net.JoinHostPort(server.GetString("ip_address"), agentExecPort)
 	dockerContainerID := container.GetString("container_id")
 
 	// 4. Create terminal session record.

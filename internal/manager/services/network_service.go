@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 
 	"github.com/pocketbase/pocketbase/core"
 	"google.golang.org/grpc"
@@ -259,7 +260,7 @@ func (s *NetworkService) ResolveServer(serverID string) (string, error) {
 }
 
 func dialNetworkService(agentIP string) (*grpc.ClientConn, agentpb.AgentNetworkServiceClient, error) {
-	addr := agentIP + ":" + agentCommandPort
+	addr := net.JoinHostPort(agentIP, agentCommandPort)
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

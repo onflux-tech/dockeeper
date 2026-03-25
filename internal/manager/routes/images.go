@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -111,7 +112,7 @@ func handlePullImageSSE(e *core.RequestEvent, svc *services.ImageService) error 
 	}
 
 	// Dial agent gRPC.
-	addr := agentIP + ":" + agentImagePort
+	addr := net.JoinHostPort(agentIP, agentImagePort)
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
