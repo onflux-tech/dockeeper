@@ -172,9 +172,13 @@ func (d *DockerClient) ListImages(ctx context.Context) ([]*agentpb.ImageInfo, er
 		if len(imgID) > 12 {
 			imgID = imgID[:12]
 		}
+		tags := img.RepoTags
+		if len(tags) == 0 {
+			tags = repoNamesFromDigests(img.RepoDigests)
+		}
 		result = append(result, &agentpb.ImageInfo{
 			ImageId:   imgID,
-			Tags:      img.RepoTags,
+			Tags:      tags,
 			Size:      uint64(img.Size),
 			CreatedAt: timestamppb.New(time.Unix(img.Created, 0)),
 			InUse:     usedImages[img.ID],
@@ -193,6 +197,22 @@ func (d *DockerClient) usedImageIDs(ctx context.Context) map[string]bool {
 		used[c.ImageID] = true
 	}
 	return used
+}
+
+// repoNamesFromDigests extracts repository names from RepoDigests entries
+// (e.g. "n8nio/n8n@sha256:abc..." → "n8nio/n8n:<none>"). This is used as a
+// fallback when RepoTags is empty (image lost its tag to a newer pull).
+func repoNamesFromDigests(digests []string) []string {
+	if len(digests) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(digests))
+	for _, d := range digests {
+		if repo, _, ok := strings.Cut(d, "@"); ok && repo != "" && repo != "<none>" {
+			names = append(names, repo+":<none>")
+		}
+	}
+	return names
 }
 
 func (d *DockerClient) ListNetworks(ctx context.Context) ([]*agentpb.NetworkInfo, error) {

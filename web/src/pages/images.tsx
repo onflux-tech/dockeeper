@@ -46,16 +46,31 @@ function formatSize(bytes: number): string {
 
 function formatTags(tags: string[] | string | null): string {
 	if (!tags) return "<none>";
+	let arr: string[];
 	if (typeof tags === "string") {
 		try {
 			const parsed = JSON.parse(tags);
-			if (Array.isArray(parsed)) return parsed.join(", ") || "<none>";
+			if (Array.isArray(parsed)) {
+				arr = parsed;
+			} else {
+				return tags || "<none>";
+			}
 		} catch {
 			return tags || "<none>";
 		}
+	} else if (Array.isArray(tags)) {
+		arr = tags;
+	} else {
+		return "<none>";
 	}
-	if (Array.isArray(tags)) return tags.join(", ") || "<none>";
-	return "<none>";
+	if (arr.length === 0) return "<none>";
+	return arr
+		.map((t) => {
+			// "repo:<none>" → show just the repo name (untagged)
+			if (t.endsWith(":<none>")) return t.slice(0, -7);
+			return t;
+		})
+		.join(", ");
 }
 
 export default function ImagesPage() {
