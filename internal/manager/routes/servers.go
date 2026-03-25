@@ -428,6 +428,18 @@ DATA_DIR="/var/lib/dockeeper-agent"
 
 echo "==> Installing Dockeeper Agent..."
 
+# Clean up any previous installation to avoid "Text file busy" errors
+if systemctl is-active --quiet dockeeper-agent 2>/dev/null; then
+  echo "==> Stopping existing Dockeeper Agent..."
+  systemctl stop dockeeper-agent || true
+fi
+if systemctl is-enabled --quiet dockeeper-agent 2>/dev/null; then
+  systemctl disable dockeeper-agent || true
+fi
+rm -f /etc/systemd/system/dockeeper-agent.service
+rm -f "${INSTALL_DIR}/dockeeper-agent"
+systemctl daemon-reload 2>/dev/null || true
+
 # Detect architecture
 ARCH=$(uname -m)
 case "${ARCH}" in
