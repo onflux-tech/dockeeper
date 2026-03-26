@@ -31,11 +31,12 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useCollection } from "@/hooks/use-collection";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useImageRemove, useImagePrune } from "@/hooks/use-images";
 import { PullDialog } from "@/components/images/pull-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
+import { PerPageSelector } from "@/components/ui/per-page-selector";
 
 function formatSize(bytes: number): string {
 	if (bytes === 0) return "0 B";
@@ -74,25 +75,20 @@ function formatTags(tags: string[] | string | null): string {
 }
 
 export default function ImagesPage() {
-	const [serverFilter, setServerFilter] = useState<string>("all");
-	const [search, setSearch] = useState("");
+	const { filters, setSearch, setPage, setPerPage, setCustom, pbOptions } = useListFilters({
+		defaultSort: "-created",
+		searchFields: ["tags", "image_id"],
+		customFilters: { server: "server" },
+	});
 	const [pullOpen, setPullOpen] = useState(false);
 	const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
-	const [page, setPage] = useState(1);
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
-	const { data: imagesResult, isLoading } = useCollection("images", {
-		page,
-		perPage: 25,
-		sort: "-created",
-		filter: andFilters([
-			serverFilter !== "all" ? eqFilter("server", serverFilter) : "",
-			containsAnyFilter(["tags", "image_id"], search),
-		]),
-	});
+	const { data: imagesResult, isLoading } = useCollection("images", pbOptions);
 
 	useRealtime("images");
 
+	const serverFilter = filters.custom.server ?? "all";
 	const servers = serversResult?.items ?? [];
 	const images = useMemo(() => imagesResult?.items ?? [], [imagesResult?.items]);
 	const totalImages = imagesResult?.totalItems ?? 0;
@@ -138,8 +134,7 @@ export default function ImagesPage() {
 				<Select
 					value={serverFilter}
 					onValueChange={(value) => {
-						setServerFilter(value);
-						setPage(1);
+						setCustom("server", value);
 					}}
 				>
 					<SelectTrigger className="w-48">
@@ -156,10 +151,9 @@ export default function ImagesPage() {
 				</Select>
 				<Input
 					placeholder="Search images..."
-					value={search}
+					value={filters.search}
 					onChange={(e) => {
 						setSearch(e.target.value);
-						setPage(1);
 					}}
 					className="max-w-xs"
 				/>
@@ -230,13 +224,16 @@ export default function ImagesPage() {
 				</div>
 			)}
 
-			<PaginationControls
-				page={page}
-				totalPages={imagesResult?.totalPages ?? 0}
-				totalItems={totalImages}
-				onPageChange={setPage}
-				label="images"
-			/>
+			<div className="flex items-center justify-between">
+				<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+				<PaginationControls
+					page={filters.page}
+					totalPages={imagesResult?.totalPages ?? 0}
+					totalItems={totalImages}
+					onPageChange={setPage}
+					label="images"
+				/>
+			</div>
 
 			{/* Pull Dialog */}
 			{serverFilter !== "all" && (

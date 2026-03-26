@@ -1,35 +1,50 @@
-import { useState } from "react";
 import { Box, Plus } from "lucide-react";
 import { Link } from "react-router";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { useCollection } from "@/hooks/use-collection";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
-import { ContainerTable } from "@/components/server/container-table";
+import { ContainerTable, type SortKey, type SortDir } from "@/components/server/container-table";
 import { Button } from "@/components/ui/button";
-import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
+
+const SORT_MAP: Record<SortKey, string> = {
+	name: "name",
+	status: "status",
+	image: "image",
+	created: "container_created_at",
+};
 
 export default function ContainersPage() {
-	const [page, setPage] = useState(1);
-	const [search, setSearch] = useState("");
-	const [statusFilter, setStatusFilter] = useState("all");
-	const { data: containersResult, isLoading } = useCollection("containers", {
-		page,
-		perPage: 25,
-		sort: "-created",
-		...(search || statusFilter !== "all"
-			? {
-					filter: andFilters([
-						containsAnyFilter(["name", "image"], search),
-						statusFilter !== "all" ? eqFilter("status", statusFilter) : "",
-					]),
-				}
-			: {}),
-	});
+	const { filters, setSearch, setPage, setPerPage, setSort, setCustom, pbOptions } =
+		useListFilters({
+			defaultSort: "-created",
+			searchFields: ["name", "image"],
+			customFilters: { status: "status" },
+		});
+
+	const { data: containersResult, isLoading } = useCollection("containers", pbOptions);
 
 	useRealtime("containers");
 
 	const containers = containersResult?.items ?? [];
 	const totalContainers = containersResult?.totalItems ?? 0;
+
+	// Derive sort key/dir from URL sort param
+	const rawSort = filters.sort;
+	const isDesc = rawSort.startsWith("-");
+	const sortField = isDesc ? rawSort.slice(1) : rawSort;
+	const sortKey = (Object.entries(SORT_MAP).find(([, v]) => v === sortField)?.[0] ?? "created") as SortKey;
+	const sortDir: SortDir = isDesc ? "desc" : "asc";
+
+	const handleSortChange = (key: SortKey) => {
+		const pbField = SORT_MAP[key];
+		if (sortKey === key) {
+			setSort(sortDir === "asc" ? `-${pbField}` : pbField);
+		} else {
+			setSort(pbField);
+		}
+	};
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -53,25 +68,25 @@ export default function ContainersPage() {
 				containers={containers}
 				isLoading={isLoading}
 				showServer
-				search={search}
-				onSearchChange={(value) => {
-					setSearch(value);
-					setPage(1);
-				}}
-				statusFilter={statusFilter}
-				onStatusFilterChange={(value) => {
-					setStatusFilter(value);
-					setPage(1);
-				}}
+				search={filters.search}
+				onSearchChange={setSearch}
+				statusFilter={filters.custom.status ?? "all"}
+				onStatusFilterChange={(value) => setCustom("status", value)}
+				sortKey={sortKey}
+				sortDir={sortDir}
+				onSortChange={handleSortChange}
 			/>
 
-			<PaginationControls
-				page={page}
-				totalPages={containersResult?.totalPages ?? 0}
-				totalItems={totalContainers}
-				onPageChange={setPage}
-				label="containers"
-			/>
+			<div className="flex items-center justify-between">
+				<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+				<PaginationControls
+					page={filters.page}
+					totalPages={containersResult?.totalPages ?? 0}
+					totalItems={totalContainers}
+					onPageChange={setPage}
+					label="containers"
+				/>
+			</div>
 		</div>
 	);
 }

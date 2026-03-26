@@ -4,6 +4,7 @@ import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import { StatsOverview } from "@/components/dashboard/stats-overview";
 import { ServerCard, ServerCardSkeleton } from "@/components/dashboard/server-card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import type { SparklinePoint } from "@/components/dashboard/sparkline-chart";
 import type { ServerMetricsRawRecord } from "@/types/pocketbase";
 
@@ -30,8 +31,13 @@ export default function DashboardPage() {
 		const d = new Date(Date.now() - 5 * 60 * 1000);
 		return d.toISOString().replace("T", " ");
 	});
+	const [page, setPage] = useState(1);
 
-	const { data: serversResult, isLoading: loadingServers } = useCollection("servers");
+	const { data: serversResult, isLoading: loadingServers } = useCollection("servers", {
+		page,
+		perPage: 10,
+		sort: "name",
+	});
 	const { data: containersResult, isLoading: loadingContainers } = useCollection("containers");
 	const { data: metricsResult } = useCollection("server_metrics_raw", {
 		filter: `timestamp >= "${fiveMinAgo}"`,
@@ -84,6 +90,13 @@ export default function DashboardPage() {
 						))}
 					</div>
 				)}
+				<PaginationControls
+					page={page}
+					totalPages={serversResult?.totalPages ?? 0}
+					totalItems={serversResult?.totalItems ?? 0}
+					onPageChange={setPage}
+					label="servers"
+				/>
 			</div>
 		</div>
 	);

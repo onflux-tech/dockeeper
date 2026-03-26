@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
 import {
 	ArrowUpDown,
@@ -73,10 +73,13 @@ interface ContainerTableProps {
 	onSearchChange?: (value: string) => void;
 	statusFilter?: string;
 	onStatusFilterChange?: (value: string) => void;
+	sortKey?: SortKey;
+	sortDir?: SortDir;
+	onSortChange?: (key: SortKey) => void;
 }
 
-type SortKey = "name" | "status" | "image" | "created";
-type SortDir = "asc" | "desc";
+export type SortKey = "name" | "status" | "image" | "created";
+export type SortDir = "asc" | "desc";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -103,57 +106,28 @@ export function ContainerTable({
 	onSearchChange,
 	statusFilter,
 	onStatusFilterChange,
+	sortKey: externalSortKey,
+	sortDir: externalSortDir,
+	onSortChange,
 }: ContainerTableProps) {
 	const [localSearch, setLocalSearch] = useState("");
 	const [localStatusFilter, setLocalStatusFilter] = useState("all");
-	const [sortKey, setSortKey] = useState<SortKey>("name");
-	const [sortDir, setSortDir] = useState<SortDir>("asc");
+	const [localSortKey, setLocalSortKey] = useState<SortKey>("name");
+	const [localSortDir, setLocalSortDir] = useState<SortDir>("asc");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [removeTarget, setRemoveTarget] = useState<{ ids: string[]; name: string } | null>(null);
 	const [updateTarget, setUpdateTarget] = useState<string | null>(null);
 	const [bulkLoading, setBulkLoading] = useState(false);
 	const searchValue = search ?? localSearch;
 	const statusValue = statusFilter ?? localStatusFilter;
+	const sortKey = externalSortKey ?? localSortKey;
+	const sortDir = externalSortDir ?? localSortDir;
 
 	const actions = useContainerActions();
 	const removeCascade = useRemoveContainerWithCascade();
 
-	// ── Filter + sort ────────────────────────────────────────────────────
-	const processed = useMemo(() => {
-		let result = containers;
-
-		if (statusValue !== "all") {
-			result = result.filter((c) => c.status === statusValue);
-		}
-
-		if (searchValue) {
-			const q = searchValue.toLowerCase();
-			result = result.filter(
-				(c) => c.name.toLowerCase().includes(q) || c.image.toLowerCase().includes(q),
-			);
-		}
-
-		result = [...result].sort((a, b) => {
-			let cmp = 0;
-			switch (sortKey) {
-				case "name":
-					cmp = a.name.localeCompare(b.name);
-					break;
-				case "status":
-					cmp = a.status.localeCompare(b.status);
-					break;
-				case "image":
-					cmp = a.image.localeCompare(b.image);
-					break;
-				case "created":
-					cmp = (a.container_created_at ?? "").localeCompare(b.container_created_at ?? "");
-					break;
-			}
-			return sortDir === "asc" ? cmp : -cmp;
-		});
-
-		return result;
-	}, [containers, statusValue, searchValue, sortKey, sortDir]);
+	// ── Data is pre-sorted and pre-filtered by parent ───────────────────
+	const processed = containers;
 
 	// ── Selection helpers ────────────────────────────────────────────────
 	const allSelected = processed.length > 0 && processed.every((c) => selected.has(c.id));
@@ -176,11 +150,15 @@ export function ContainerTable({
 	}
 
 	function toggleSort(key: SortKey) {
-		if (sortKey === key) {
-			setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+		if (onSortChange) {
+			onSortChange(key);
 		} else {
-			setSortKey(key);
-			setSortDir("asc");
+			if (localSortKey === key) {
+				setLocalSortDir((d) => (d === "asc" ? "desc" : "asc"));
+			} else {
+				setLocalSortKey(key);
+				setLocalSortDir("asc");
+			}
 		}
 	}
 

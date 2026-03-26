@@ -21,12 +21,13 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { CascadeDeleteDialog } from "@/components/cascade-delete-dialog";
 import { useCollection } from "@/hooks/use-collection";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { useDeleteServer } from "@/hooks/use-servers";
 import { useRealtime } from "@/hooks/use-realtime";
 import { relativeTime } from "@/lib/format";
-import { containsAnyFilter } from "@/lib/pocketbase-filters";
 import type { ServerRecord } from "@/types/pocketbase";
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
@@ -43,18 +44,11 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 }
 
 export default function ServersPage() {
-	const [page, setPage] = useState(1);
-	const [search, setSearch] = useState("");
-	const { data: serversResult, isLoading } = useCollection("servers", {
-		page,
-		perPage: 25,
-		sort: "name",
-		...(search
-			? {
-					filter: containsAnyFilter(["name", "hostname", "ip_address"], search),
-				}
-			: {}),
+	const { filters, setSearch, setPage, setPerPage, pbOptions } = useListFilters({
+		defaultSort: "name",
+		searchFields: ["name", "hostname", "ip_address"],
 	});
+	const { data: serversResult, isLoading } = useCollection("servers", pbOptions);
 	const deleteServer = useDeleteServer();
 	const navigate = useNavigate();
 	useRealtime("servers");
@@ -86,10 +80,9 @@ export default function ServersPage() {
 				<Input
 					placeholder="Search servers…"
 					className="pl-8"
-					value={search}
+					value={filters.search}
 					onChange={(e) => {
 						setSearch(e.target.value);
-						setPage(1);
 					}}
 				/>
 			</div>
@@ -122,7 +115,7 @@ export default function ServersPage() {
 						) : servers.length === 0 ? (
 							<TableRow>
 								<TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-									{search
+									{filters.search
 										? "No servers match your search."
 										: 'No servers yet. Click "Add Server" to get started.'}
 								</TableCell>
@@ -199,13 +192,16 @@ export default function ServersPage() {
 				</Table>
 			</div>
 
-			<PaginationControls
-				page={page}
-				totalPages={serversResult?.totalPages ?? 0}
-				totalItems={totalServers}
-				onPageChange={setPage}
-				label="servers"
-			/>
+			<div className="flex items-center justify-between">
+				<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+				<PaginationControls
+					page={filters.page}
+					totalPages={serversResult?.totalPages ?? 0}
+					totalItems={totalServers}
+					onPageChange={setPage}
+					label="servers"
+				/>
+			</div>
 
 			{deleteTarget && (
 				<CascadeDeleteDialog

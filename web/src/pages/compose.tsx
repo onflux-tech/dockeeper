@@ -20,11 +20,12 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { useCollection } from "@/hooks/use-collection";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
 import { DeployDialog } from "@/components/compose/deploy-dialog";
 import { StackDetail } from "@/components/compose/stack-detail";
-import { andFilters, containsFilter, eqFilter } from "@/lib/pocketbase-filters";
 import type { ComposeStackRecord, ServerRecord } from "@/types/pocketbase";
 
 const statusVariant: Record<string, "default" | "secondary" | "destructive"> = {
@@ -34,22 +35,18 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive"> = {
 };
 
 export default function ComposePage() {
-	const [page, setPage] = useState(1);
-	const [serverFilter, setServerFilter] = useState<string>("all");
-	const [search, setSearch] = useState("");
+	const { filters, setSearch, setPage, setPerPage, setCustom, pbOptions } = useListFilters({
+		defaultSort: "-created",
+		searchFields: ["name"],
+		customFilters: { server: "server" },
+	});
 	const [deployOpen, setDeployOpen] = useState(false);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 
+	const serverFilter = filters.custom.server ?? "all";
+
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
-	const { data: stacksResult, isLoading } = useCollection("compose_stacks", {
-		page,
-		perPage: 25,
-		sort: "-created",
-		filter: andFilters([
-			serverFilter !== "all" ? eqFilter("server", serverFilter) : "",
-			containsFilter("name", search),
-		]),
-	});
+	const { data: stacksResult, isLoading } = useCollection("compose_stacks", pbOptions);
 
 	useRealtime("compose_stacks");
 
@@ -94,8 +91,7 @@ export default function ComposePage() {
 				<Select
 					value={serverFilter}
 					onValueChange={(value) => {
-						setServerFilter(value);
-						setPage(1);
+						setCustom("server", value !== "all" ? value : "");
 					}}
 				>
 					<SelectTrigger className="w-48">
@@ -112,11 +108,8 @@ export default function ComposePage() {
 				</Select>
 				<Input
 					placeholder="Search stacks..."
-					value={search}
-					onChange={(e) => {
-						setSearch(e.target.value);
-						setPage(1);
-					}}
+					value={filters.search}
+					onChange={(e) => setSearch(e.target.value)}
 					className="max-w-xs"
 				/>
 			</div>
@@ -172,12 +165,13 @@ export default function ComposePage() {
 			)}
 
 			<PaginationControls
-				page={page}
+				page={filters.page}
 				totalPages={stacksResult?.totalPages ?? 0}
 				totalItems={stacksResult?.totalItems ?? 0}
 				onPageChange={setPage}
 				label="stacks"
 			/>
+			<PerPageSelector value={filters.perPage} onChange={setPerPage} />
 
 			{/* Stack Detail */}
 			{selectedStack && <StackDetail stack={selectedStack} onDeleted={() => setSelectedId(null)} />}

@@ -114,6 +114,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// Traefik route read-only API.
 		routes.RegisterTraefikRoutes(se, app)
 
+		// Global search endpoint.
+		routes.RegisterSearchRoutes(se, app)
+
 		// Audit log query routes + PB hooks.
 		routes.RegisterAuditRoutes(se, app)
 		hooks.RegisterAuditHooks(app, auditStore)

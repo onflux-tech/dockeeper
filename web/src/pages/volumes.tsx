@@ -28,11 +28,12 @@ import {
 } from "@/components/ui/dialog";
 import { CascadeDeleteDialog, type VolumeCascadeOptions } from "@/components/cascade-delete-dialog";
 import { useCollection } from "@/hooks/use-collection";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useRemoveVolume, useInspectVolume } from "@/hooks/use-volumes";
 import { CreateVolumeDialog } from "@/components/volumes/create-volume-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
+import { PerPageSelector } from "@/components/ui/per-page-selector";
 import type { VolumeRecord, ServerRecord } from "@/types/pocketbase";
 
 function formatSize(bytes: number): string {
@@ -48,26 +49,21 @@ function formatSize(bytes: number): string {
 }
 
 export default function VolumesPage() {
-	const [serverFilter, setServerFilter] = useState<string>("all");
-	const [search, setSearch] = useState("");
+	const { filters, setSearch, setPage, setPerPage, setCustom, pbOptions } = useListFilters({
+		defaultSort: "name",
+		searchFields: ["name", "driver"],
+		customFilters: { server: "server" },
+	});
 	const [createOpen, setCreateOpen] = useState(false);
 	const [removeTarget, setRemoveTarget] = useState<VolumeRecord | null>(null);
 	const [inspectData, setInspectData] = useState<Record<string, unknown> | null>(null);
-	const [page, setPage] = useState(1);
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
-	const { data: volumesResult, isLoading } = useCollection("volumes", {
-		page,
-		perPage: 25,
-		sort: "name",
-		filter: andFilters([
-			serverFilter !== "all" ? eqFilter("server", serverFilter) : "",
-			containsAnyFilter(["name", "driver"], search),
-		]),
-	});
+	const { data: volumesResult, isLoading } = useCollection("volumes", pbOptions);
 
 	useRealtime("volumes");
 
+	const serverFilter = filters.custom.server ?? "all";
 	const servers = (serversResult?.items ?? []) as ServerRecord[];
 	const volumes = useMemo(
 		() => (volumesResult?.items ?? []) as VolumeRecord[],
@@ -109,8 +105,7 @@ export default function VolumesPage() {
 				<Select
 					value={serverFilter}
 					onValueChange={(value) => {
-						setServerFilter(value);
-						setPage(1);
+						setCustom("server", value !== "all" ? value : "");
 					}}
 				>
 					<SelectTrigger className="w-48">
@@ -127,11 +122,8 @@ export default function VolumesPage() {
 				</Select>
 				<Input
 					placeholder="Search volumes..."
-					value={search}
-					onChange={(e) => {
-						setSearch(e.target.value);
-						setPage(1);
-					}}
+					value={filters.search}
+					onChange={(e) => setSearch(e.target.value)}
 					className="max-w-xs"
 				/>
 			</div>
@@ -211,12 +203,13 @@ export default function VolumesPage() {
 			)}
 
 			<PaginationControls
-				page={page}
+				page={filters.page}
 				totalPages={volumesResult?.totalPages ?? 0}
 				totalItems={totalVolumes}
 				onPageChange={setPage}
 				label="volumes"
 			/>
+			<PerPageSelector value={filters.perPage} onChange={setPerPage} />
 
 			{/* Create Dialog */}
 			{serverFilter !== "all" && (

@@ -36,36 +36,33 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCollection } from "@/hooks/use-collection";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useRemoveNetwork } from "@/hooks/use-networks";
 import { CreateNetworkDialog } from "@/components/networks/create-network-dialog";
 import { ConnectDialog } from "@/components/networks/connect-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { isProtectedDockerNetwork } from "@/lib/docker-networks";
-import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 import type { NetworkRecord, ServerRecord, ContainerRecord } from "@/types/pocketbase";
 
 export default function NetworksPage() {
-	const [serverFilter, setServerFilter] = useState<string>("all");
-	const [search, setSearch] = useState("");
+	const { filters, setSearch, setPage, setPerPage, setCustom, pbOptions } = useListFilters({
+		defaultSort: "name",
+		searchFields: ["name", "network_id", "driver"],
+		customFilters: { server: "server" },
+	});
 	const [createOpen, setCreateOpen] = useState(false);
 	const [removeTarget, setRemoveTarget] = useState<NetworkRecord | null>(null);
 	const [connectTarget, setConnectTarget] = useState<{
 		network: NetworkRecord;
 		mode: "connect" | "disconnect";
 	} | null>(null);
-	const [page, setPage] = useState(1);
+
+	const serverFilter = filters.custom.server ?? "all";
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
-	const { data: networksResult, isLoading } = useCollection("networks", {
-		page,
-		perPage: 25,
-		sort: "name",
-		filter: andFilters([
-			serverFilter !== "all" ? eqFilter("server", serverFilter) : "",
-			containsAnyFilter(["name", "network_id", "driver"], search),
-		]),
-	});
+	const { data: networksResult, isLoading } = useCollection("networks", pbOptions);
 	const { data: containersResult } = useCollection("containers", {
 		perPage: 500,
 		...(serverFilter !== "all" ? { filter: `server = '${serverFilter}'` } : {}),
@@ -114,8 +111,7 @@ export default function NetworksPage() {
 				<Select
 					value={serverFilter}
 					onValueChange={(value) => {
-						setServerFilter(value);
-						setPage(1);
+						setCustom("server", value !== "all" ? value : "");
 					}}
 				>
 					<SelectTrigger className="w-48">
@@ -132,11 +128,8 @@ export default function NetworksPage() {
 				</Select>
 				<Input
 					placeholder="Search networks..."
-					value={search}
-					onChange={(e) => {
-						setSearch(e.target.value);
-						setPage(1);
-					}}
+					value={filters.search}
+					onChange={(e) => setSearch(e.target.value)}
 					className="max-w-xs"
 				/>
 			</div>
@@ -243,12 +236,13 @@ export default function NetworksPage() {
 			)}
 
 			<PaginationControls
-				page={page}
+				page={filters.page}
 				totalPages={networksResult?.totalPages ?? 0}
 				totalItems={totalNetworks}
 				onPageChange={setPage}
 				label="networks"
 			/>
+			<PerPageSelector value={filters.perPage} onChange={setPerPage} />
 
 			{/* Create Dialog */}
 			{serverFilter !== "all" && (
