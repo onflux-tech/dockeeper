@@ -32,12 +32,12 @@ func NewTelegramChannel(config map[string]any) (*TelegramChannel, error) {
 func (c *TelegramChannel) Type() string { return "telegram" }
 
 func (c *TelegramChannel) Send(ctx context.Context, msg AlertMessage) error {
-	text := formatMessage(msg)
+	text := AlertMessage2HTML(msg)
 
 	payload := map[string]any{
 		"chat_id":    c.ChatID,
 		"text":       text,
-		"parse_mode": "Markdown",
+		"parse_mode": "HTML",
 	}
 
 	body, err := json.Marshal(payload)
