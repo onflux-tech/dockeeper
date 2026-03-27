@@ -65,13 +65,6 @@ export default function ContainersPage() {
 				</Button>
 			</div>
 
-			<div className="flex items-center gap-3">
-				<ServerFilterSelect
-					value={filters.custom.server ?? "all"}
-					onValueChange={(v) => setCustom("server", v)}
-				/>
-			</div>
-
 			<ContainerTable
 				containers={containers}
 				isLoading={isLoading}
@@ -83,6 +76,12 @@ export default function ContainersPage() {
 				sortKey={sortKey}
 				sortDir={sortDir}
 				onSortChange={handleSortChange}
+				toolbarSlot={
+					<ServerFilterSelect
+						value={filters.custom.server ?? "all"}
+						onValueChange={(v) => setCustom("server", v)}
+					/>
+				}
 			/>
 
 			<div className="flex items-center justify-between">

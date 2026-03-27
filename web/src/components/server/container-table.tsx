@@ -76,6 +76,7 @@ interface ContainerTableProps {
 	sortKey?: SortKey;
 	sortDir?: SortDir;
 	onSortChange?: (key: SortKey) => void;
+	toolbarSlot?: React.ReactNode;
 }
 
 export type SortKey = "name" | "status" | "image" | "created";
@@ -109,6 +110,7 @@ export function ContainerTable({
 	sortKey: externalSortKey,
 	sortDir: externalSortDir,
 	onSortChange,
+	toolbarSlot,
 }: ContainerTableProps) {
 	const [localSearch, setLocalSearch] = useState("");
 	const [localStatusFilter, setLocalStatusFilter] = useState("all");
@@ -274,6 +276,7 @@ export function ContainerTable({
 						))}
 					</SelectContent>
 				</Select>
+				{toolbarSlot}
 			</div>
 
 			{/* Bulk actions bar */}

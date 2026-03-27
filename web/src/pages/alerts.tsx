@@ -175,7 +175,7 @@ export default function AlertsPage() {
 	return (
 		<div className="flex flex-col gap-6">
 			{/* Header */}
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-3">
 				<Bell className="h-5 w-5 text-muted-foreground" />
 				<h1 className="text-2xl font-semibold">Alerts</h1>
 				{firingCount > 0 && (
@@ -183,9 +183,10 @@ export default function AlertsPage() {
 						{firingCount} firing
 					</Badge>
 				)}
+				<div className="ml-auto">
+					<ServerFilterSelect value={serverFilter} onValueChange={setServerFilter} />
+				</div>
 			</div>
-
-			<ServerFilterSelect value={serverFilter} onValueChange={setServerFilter} />
 
 			<Tabs defaultValue="rules">
 				<TabsList>
