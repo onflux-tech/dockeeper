@@ -66,7 +66,7 @@ func init() {
 		}
 
 		// ── 4. Seed preset groups ──────────────────────────
-		groupsCol, err := app.FindCachedCollectionByNameOrId("groups")
+		groupsCol, err := app.FindCollectionByNameOrId("groups")
 		if err != nil {
 			return err
 		}
@@ -142,7 +142,7 @@ func init() {
 			return nil // no superusers to seed
 		}
 
-		membersCol, err := app.FindCachedCollectionByNameOrId("group_members")
+		membersCol, err := app.FindCollectionByNameOrId("group_members")
 		if err != nil {
 			return err
 		}
@@ -160,7 +160,7 @@ func init() {
 	}, func(app core.App) error {
 		// Down migration: drop collections in reverse order.
 		for _, name := range []string{"api_keys", "group_members", "groups"} {
-			col, err := app.FindCachedCollectionByNameOrId(name)
+			col, err := app.FindCollectionByNameOrId(name)
 			if err != nil {
 				continue
 			}

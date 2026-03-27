@@ -8,7 +8,7 @@ import (
 func init() {
 	m.Register(func(app core.App) error {
 		// ── 1. Add new fields to "containers" ───────────────
-		containers, err := app.FindCachedCollectionByNameOrId("containers")
+		containers, err := app.FindCollectionByNameOrId("containers")
 		if err != nil {
 			return err
 		}
@@ -23,7 +23,7 @@ func init() {
 		}
 
 		// ── 2. Add new fields to "update_policies" ──────────
-		updatePolicies, err := app.FindCachedCollectionByNameOrId("update_policies")
+		updatePolicies, err := app.FindCollectionByNameOrId("update_policies")
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ func init() {
 		}
 
 		// ── 3. Create "registry_credentials" ────────────────
-		servers, err := app.FindCachedCollectionByNameOrId("servers")
+		servers, err := app.FindCollectionByNameOrId("servers")
 		if err != nil {
 			return err
 		}
