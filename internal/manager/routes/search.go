@@ -14,10 +14,10 @@ import (
 )
 
 // RegisterSearchRoutes adds the global search endpoint.
-func RegisterSearchRoutes(se *core.ServeEvent, app core.App) {
+func RegisterSearchRoutes(se *core.ServeEvent, app core.App, rbac *middleware.RBAC) {
 	se.Router.GET("/api/dk/search", func(e *core.RequestEvent) error {
 		return handleGlobalSearch(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────

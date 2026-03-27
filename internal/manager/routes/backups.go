@@ -12,43 +12,43 @@ import (
 )
 
 // RegisterBackupRoutes adds backup management endpoints.
-func RegisterBackupRoutes(se *core.ServeEvent, app core.App, backupSvc *services.BackupService, backupStore *store.BackupStore) {
+func RegisterBackupRoutes(se *core.ServeEvent, app core.App, backupSvc *services.BackupService, backupStore *store.BackupStore, rbac *middleware.RBAC) {
 	backups := se.Router.Group("/api/dk/backups")
 
 	// ── Policies ─────────────────────────────────────
 	backups.GET("/policies", func(e *core.RequestEvent) error {
 		return handleListPolicies(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapBackupsView))
 
 	backups.POST("/policies", func(e *core.RequestEvent) error {
 		return handleCreatePolicy(e, backupStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapBackupsManage))
 
 	backups.PUT("/policies/{id}", func(e *core.RequestEvent) error {
 		return handleUpdatePolicy(e, backupStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapBackupsManage))
 
 	backups.DELETE("/policies/{id}", func(e *core.RequestEvent) error {
 		return handleDeletePolicy(e, backupStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapBackupsManage))
 
 	backups.POST("/policies/{id}/trigger", func(e *core.RequestEvent) error {
 		return handleTriggerBackup(e, backupSvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapBackupsManage))
 
 	// ── Records ──────────────────────────────────────
 	backups.GET("/records", func(e *core.RequestEvent) error {
 		return handleListRecords(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapBackupsView))
 
 	backups.POST("/records/{id}/restore", func(e *core.RequestEvent) error {
 		return handleTriggerRestore(e, backupSvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapBackupsManage))
 
 	// ── Maintenance ──────────────────────────────────
 	backups.POST("/cleanup", func(e *core.RequestEvent) error {
 		return handleRetentionCleanup(e, backupSvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapBackupsManage))
 }
 
 func handleListPolicies(e *core.RequestEvent, app core.App) error {

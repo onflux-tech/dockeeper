@@ -16,47 +16,48 @@ import (
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/shared/security"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 const agentComposePort = "50052"
 
 // RegisterComposeRoutes adds compose stack management endpoints.
-func RegisterComposeRoutes(se *core.ServeEvent, app core.App, svc *services.ComposeService) {
+func RegisterComposeRoutes(se *core.ServeEvent, app core.App, svc *services.ComposeService, rbac *middleware.RBAC) {
 	compose := se.Router.Group("/api/dk/compose")
 
 	compose.GET("", func(e *core.RequestEvent) error {
 		return handleListStacks(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeView))
 
 	compose.GET("/{id}", func(e *core.RequestEvent) error {
 		return handleGetStack(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeView))
 
 	compose.POST("", func(e *core.RequestEvent) error {
 		return handleCreateStack(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
 	compose.PUT("/{id}", func(e *core.RequestEvent) error {
 		return handleUpdateStack(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
 	compose.DELETE("/{id}", func(e *core.RequestEvent) error {
 		return handleDeleteStack(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
 	// SSE streaming endpoints for compose operations.
 	compose.GET("/{id}/up", func(e *core.RequestEvent) error {
 		return handleComposeSSE(e, svc, "up")
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
 	compose.GET("/{id}/down", func(e *core.RequestEvent) error {
 		return handleComposeSSE(e, svc, "down")
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
 	compose.GET("/{id}/pull", func(e *core.RequestEvent) error {
 		return handleComposeSSE(e, svc, "pull")
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 }
 
 func handleListStacks(e *core.RequestEvent, app core.App) error {
@@ -64,7 +65,7 @@ func handleListStacks(e *core.RequestEvent, app core.App) error {
 
 	filter := ""
 	if serverID != "" {
-		filter = fmt.Sprintf("server = '%s'", serverID)
+		filter = fmt.Sprintf("server = '%s'", security.SanitizeFilterParam(serverID))
 	}
 
 	records, err := app.FindRecordsByFilter(
@@ -136,6 +137,10 @@ func handleCreateStack(e *core.RequestEvent, svc *services.ComposeService) error
 
 	if body.ServerID == "" || body.Name == "" || body.YAMLContent == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "server_id, name, and yaml_content are required"})
+	}
+
+	if err := security.ValidateContainerName(body.Name); err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
 	record, err := svc.CreateStack(body.ServerID, body.Name, body.YAMLContent)

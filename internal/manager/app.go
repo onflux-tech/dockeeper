@@ -28,6 +28,14 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 	// Auth rate limiter: 5 requests per minute.
 	authLimiter := middleware.NewRateLimiter(5, time.Minute)
 
+	// Category rate limiter for RBAC-protected routes.
+	categoryLimiter := middleware.NewCategoryRateLimiter(map[string]middleware.RateCategoryConfig{
+		"auth":        {Max: 5, Window: time.Minute},
+		"read":        {Max: 120, Window: time.Minute},
+		"write":       {Max: 30, Window: time.Minute},
+		"destructive": {Max: 10, Window: time.Minute},
+	})
+
 	// Register hooks.
 	hooks.RegisterAdminSetupHook(app)
 
@@ -43,14 +51,24 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 	// Cleanup rate limiter entries every 5 minutes.
 	if err := app.Cron().Add("rl_cleanup", "*/5 * * * *", func() {
 		authLimiter.Cleanup()
+		categoryLimiter.Cleanup()
 	}); err != nil {
 		slog.Error("failed to register rate limiter cleanup cron", "error", err)
 	}
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// RBAC stores and middleware.
+		rbacStore := store.NewRBACStore(app)
+		apiKeyStore := store.NewAPIKeyStore(app)
+		rbac := middleware.NewRBAC(rbacStore, apiKeyStore)
+
 		registerHealthRoutes(se, version, commit)
 		routes.RegisterAgentPublicRoutes(se, app)
 		routes.RegisterAuthRoutes(se, authLimiter)
+
+		// User, group, and API key management routes.
+		routes.RegisterUserRoutes(se, app, rbacStore, rbac)
+		routes.RegisterAPIKeyRoutes(se, app, apiKeyStore, rbac)
 
 		// Container action routes.
 		auditStore := store.NewAuditStore(app)
@@ -60,65 +78,65 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// Volume + Cascade services (cascade depends on volumeSvc).
 		volumeSvc := services.NewVolumeService(app, auditStore)
 		cascadeSvc := services.NewCascadeService(app, auditStore, volumeSvc)
-		routes.RegisterVolumeRoutes(se, volumeSvc, cascadeSvc)
-		routes.RegisterCascadeRoutes(se, cascadeSvc)
+		routes.RegisterVolumeRoutes(se, volumeSvc, cascadeSvc, rbac)
+		routes.RegisterCascadeRoutes(se, cascadeSvc, rbac)
 
 		// Register container routes (needs cascadeSvc for remove handler).
-		routes.RegisterContainerRoutes(se, containerSvc, cascadeSvc)
+		routes.RegisterContainerRoutes(se, containerSvc, cascadeSvc, rbac)
 
 		// Server provisioning and management routes.
-		routes.RegisterServerRoutes(se, app, auditStore, cascadeSvc, version)
+		routes.RegisterServerRoutes(se, app, auditStore, cascadeSvc, version, rbac)
 
 		// Container resource limits and env var routes.
-		routes.RegisterContainerResourceRoutes(se, containerSvc)
-		routes.RegisterContainerEnvRoutes(se, containerSvc)
+		routes.RegisterContainerResourceRoutes(se, containerSvc, rbac)
+		routes.RegisterContainerEnvRoutes(se, containerSvc, rbac)
 
 		// Container creation route.
 		containerCreateSvc := services.NewContainerCreateService(app, dispatcher, auditStore)
-		routes.RegisterContainerCreateRoutes(se, containerCreateSvc)
+		routes.RegisterContainerCreateRoutes(se, containerCreateSvc, rbac)
 
 		// Container logs SSE streaming route.
-		routes.RegisterContainerLogRoutes(se, app)
+		routes.RegisterContainerLogRoutes(se, app, rbac)
 
 		// Terminal WebSocket proxy route.
 		termStore := store.NewTerminalStore(app)
 		termSvc := services.NewTerminalService(app, termStore, auditStore)
-		routes.RegisterTerminalRoutes(se, app, termSvc)
+		routes.RegisterTerminalRoutes(se, app, termSvc, rbac)
 
 		// Image management routes.
 		imageSvc := services.NewImageService(app, auditStore)
-		routes.RegisterImageRoutes(se, app, imageSvc)
+		routes.RegisterImageRoutes(se, app, imageSvc, rbac)
 
 		// Compose stack management routes.
 		composeSvc := services.NewComposeService(app, auditStore)
-		routes.RegisterComposeRoutes(se, app, composeSvc)
+		routes.RegisterComposeRoutes(se, app, composeSvc, rbac)
 
 		// Network management routes.
 		networkSvc := services.NewNetworkService(app, auditStore)
-		routes.RegisterNetworkRoutes(se, networkSvc)
+		routes.RegisterNetworkRoutes(se, networkSvc, rbac)
 
 		// Backup system routes + scheduler.
 		backupStore := store.NewBackupStore(app)
 		backupSvc := services.NewBackupService(app, backupStore, auditStore)
-		routes.RegisterBackupRoutes(se, app, backupSvc, backupStore)
+		routes.RegisterBackupRoutes(se, app, backupSvc, backupStore, rbac)
 		jobs.RegisterBackupJobs(app, backupSvc, backupStore)
 
 		// Alert engine + notification routes.
 		alertStore := store.NewAlertStore(app)
 		notifySvc := services.NewNotificationService(alertStore)
 		alertEngine := services.NewAlertEngine(app, alertStore, notifySvc)
-		routes.RegisterAlertRoutes(se, app, alertStore)
-		routes.RegisterNotificationRoutes(se, app, alertStore, notifySvc)
+		routes.RegisterAlertRoutes(se, app, alertStore, rbac)
+		routes.RegisterNotificationRoutes(se, app, alertStore, notifySvc, rbac)
 		jobs.RegisterAlertJobs(app, alertEngine)
 
 		// Traefik route read-only API.
-		routes.RegisterTraefikRoutes(se, app)
+		routes.RegisterTraefikRoutes(se, app, rbac)
 
 		// Global search endpoint.
-		routes.RegisterSearchRoutes(se, app)
+		routes.RegisterSearchRoutes(se, app, rbac)
 
 		// Audit log query routes + PB hooks.
-		routes.RegisterAuditRoutes(se, app)
+		routes.RegisterAuditRoutes(se, app, rbac)
 		hooks.RegisterAuditHooks(app, auditStore)
 
 		// Serve embedded frontend (SPA fallback).

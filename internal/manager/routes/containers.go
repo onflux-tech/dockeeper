@@ -9,21 +9,22 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // RegisterContainerRoutes registers all /api/dk/containers/* routes.
-func RegisterContainerRoutes(se *core.ServeEvent, svc *services.ContainerService, cascadeSvc *services.CascadeService) {
+func RegisterContainerRoutes(se *core.ServeEvent, svc *services.ContainerService, cascadeSvc *services.CascadeService, rbac *middleware.RBAC) {
 	containers := se.Router.Group("/api/dk/containers")
 
-	containers.POST("/{id}/start", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_START)).BindFunc(middleware.RequireSuperuser)
-	containers.POST("/{id}/stop", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_STOP)).BindFunc(middleware.RequireSuperuser)
-	containers.POST("/{id}/restart", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_RESTART)).BindFunc(middleware.RequireSuperuser)
-	containers.POST("/{id}/remove", handleRemove(svc, cascadeSvc)).BindFunc(middleware.RequireSuperuser)
-	containers.POST("/{id}/pause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_PAUSE)).BindFunc(middleware.RequireSuperuser)
-	containers.POST("/{id}/unpause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UNPAUSE)).BindFunc(middleware.RequireSuperuser)
-	containers.POST("/{id}/update", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE)).BindFunc(middleware.RequireSuperuser)
-	containers.GET("/{id}/inspect", handleInspect(svc)).BindFunc(middleware.RequireSuperuser)
+	containers.POST("/{id}/start", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_START)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
+	containers.POST("/{id}/stop", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_STOP)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
+	containers.POST("/{id}/restart", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_RESTART)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
+	containers.POST("/{id}/remove", handleRemove(svc, cascadeSvc)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
+	containers.POST("/{id}/pause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_PAUSE)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
+	containers.POST("/{id}/unpause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UNPAUSE)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
+	containers.POST("/{id}/update", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
+	containers.GET("/{id}/inspect", handleInspect(svc)).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 }
 
 func handleAction(svc *services.ContainerService, cmdType agentpb.CommandType) func(e *core.RequestEvent) error {

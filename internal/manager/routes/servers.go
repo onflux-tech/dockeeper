@@ -29,37 +29,37 @@ func RegisterAgentPublicRoutes(se *core.ServeEvent, app core.App) {
 }
 
 // RegisterServerRoutes adds server provisioning and management endpoints.
-func RegisterServerRoutes(se *core.ServeEvent, app core.App, auditStore *store.AuditStore, cascadeSvc *services.CascadeService, version string) {
+func RegisterServerRoutes(se *core.ServeEvent, app core.App, auditStore *store.AuditStore, cascadeSvc *services.CascadeService, version string, rbac *middleware.RBAC) {
 	servers := se.Router.Group("/api/dk/servers")
 
 	servers.GET("", func(e *core.RequestEvent) error {
 		return handleListServers(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersView))
 
 	servers.POST("/provision", func(e *core.RequestEvent) error {
 		return handleProvisionServer(e, app, auditStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersManage))
 
 	servers.GET("/{id}/install-script", func(e *core.RequestEvent) error {
 		return handleInstallScript(e, app, version)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersManage))
 
 	servers.PATCH("/{id}", func(e *core.RequestEvent) error {
 		return handleUpdateServer(e, app, auditStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersManage))
 
 	servers.DELETE("/{id}", func(e *core.RequestEvent) error {
 		return handleDeleteServer(e, cascadeSvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersManage))
 
 	// Global enrollment token management.
 	se.Router.GET("/api/dk/enrollment-token", func(e *core.RequestEvent) error {
 		return handleGetEnrollmentToken(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersManage))
 
 	se.Router.POST("/api/dk/enrollment-token/regenerate", func(e *core.RequestEvent) error {
 		return handleRegenerateEnrollmentToken(e, app, auditStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersManage))
 }
 
 func handleListServers(e *core.RequestEvent, app core.App) error {

@@ -11,28 +11,28 @@ import (
 )
 
 // RegisterAlertRoutes adds alert rule management endpoints.
-func RegisterAlertRoutes(se *core.ServeEvent, app core.App, alertStore *store.AlertStore) {
+func RegisterAlertRoutes(se *core.ServeEvent, app core.App, alertStore *store.AlertStore, rbac *middleware.RBAC) {
 	alerts := se.Router.Group("/api/dk/alerts")
 
 	alerts.GET("", func(e *core.RequestEvent) error {
 		return handleListAlertRules(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapAlertsView))
 
 	alerts.POST("", func(e *core.RequestEvent) error {
 		return handleCreateAlertRule(e, alertStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapAlertsManage))
 
 	alerts.PUT("/{id}", func(e *core.RequestEvent) error {
 		return handleUpdateAlertRule(e, alertStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapAlertsManage))
 
 	alerts.DELETE("/{id}", func(e *core.RequestEvent) error {
 		return handleDeleteAlertRule(e, alertStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapAlertsManage))
 
 	alerts.POST("/{id}/toggle", func(e *core.RequestEvent) error {
 		return handleToggleAlertRule(e, app, alertStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapAlertsManage))
 }
 
 func handleListAlertRules(e *core.RequestEvent, app core.App) error {

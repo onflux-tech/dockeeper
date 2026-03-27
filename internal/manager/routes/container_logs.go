@@ -21,10 +21,10 @@ import (
 const agentLogsPort = "50052"
 
 // RegisterContainerLogRoutes adds SSE streaming log endpoints.
-func RegisterContainerLogRoutes(se *core.ServeEvent, app core.App) {
+func RegisterContainerLogRoutes(se *core.ServeEvent, app core.App, rbac *middleware.RBAC) {
 	se.Router.GET("/api/dk/containers/{id}/logs/stream", func(e *core.RequestEvent) error {
 		return handleLogStream(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 }
 
 type logEvent struct {

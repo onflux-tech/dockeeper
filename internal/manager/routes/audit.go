@@ -11,12 +11,12 @@ import (
 )
 
 // RegisterAuditRoutes adds audit log query endpoints.
-func RegisterAuditRoutes(se *core.ServeEvent, app core.App) {
+func RegisterAuditRoutes(se *core.ServeEvent, app core.App, rbac *middleware.RBAC) {
 	audit := se.Router.Group("/api/dk/audit-logs")
 
 	audit.GET("", func(e *core.RequestEvent) error {
 		return handleListAuditLogs(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapAuditView))
 }
 
 func handleListAuditLogs(e *core.RequestEvent, app core.App) error {

@@ -8,23 +8,25 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/shared/security"
 )
 
 // RegisterVolumeRoutes adds volume management endpoints.
-func RegisterVolumeRoutes(se *core.ServeEvent, svc *services.VolumeService, cascadeSvc *services.CascadeService) {
+func RegisterVolumeRoutes(se *core.ServeEvent, svc *services.VolumeService, cascadeSvc *services.CascadeService, rbac *middleware.RBAC) {
 	volumes := se.Router.Group("/api/dk/volumes")
 
 	volumes.POST("", func(e *core.RequestEvent) error {
 		return handleCreateVolume(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapVolumesManage))
 
 	volumes.DELETE("/{id}", func(e *core.RequestEvent) error {
 		return handleRemoveVolume(e, svc, cascadeSvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapVolumesManage))
 
 	volumes.GET("/{id}/inspect", func(e *core.RequestEvent) error {
 		return handleInspectVolume(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 }
 
 func handleCreateVolume(e *core.RequestEvent, svc *services.VolumeService) error {
@@ -35,6 +37,10 @@ func handleCreateVolume(e *core.RequestEvent, svc *services.VolumeService) error
 	}
 	if err := e.BindBody(&body); err != nil || body.ServerID == "" || body.Name == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "server_id and name are required"})
+	}
+
+	if err := security.ValidateVolumeName(body.Name); err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
 	if body.Driver == "" {

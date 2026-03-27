@@ -8,21 +8,22 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
 // RegisterCascadeRoutes adds cascade preview endpoints.
-func RegisterCascadeRoutes(se *core.ServeEvent, cascadeSvc *services.CascadeService) {
+func RegisterCascadeRoutes(se *core.ServeEvent, cascadeSvc *services.CascadeService, rbac *middleware.RBAC) {
 	se.Router.GET("/api/dk/containers/{id}/cascade-preview", func(e *core.RequestEvent) error {
 		return handleContainerCascadePreview(e, cascadeSvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 
 	se.Router.GET("/api/dk/volumes/{id}/cascade-preview", func(e *core.RequestEvent) error {
 		return handleVolumeCascadePreview(e, cascadeSvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 
 	se.Router.GET("/api/dk/servers/{id}/cascade-preview", func(e *core.RequestEvent) error {
 		return handleServerCascadePreview(e, cascadeSvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersView))
 }
 
 func handleContainerCascadePreview(e *core.RequestEvent, svc *services.CascadeService) error {

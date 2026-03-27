@@ -12,6 +12,7 @@ import {
 	Server,
 	Settings,
 	Archive,
+	Users,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -57,6 +58,7 @@ export const navigation: NavGroup[] = [
 		label: "System",
 		items: [
 			{ label: "Settings", href: "/settings", icon: Settings },
+			{ label: "Users", href: "/users", icon: Users },
 			{ label: "Audit Logs", href: "/audit-logs", icon: ScrollText },
 		],
 	},

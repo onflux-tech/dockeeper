@@ -16,30 +16,31 @@ import (
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/shared/security"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 const agentImagePort = "50052"
 
 // RegisterImageRoutes adds image management endpoints.
-func RegisterImageRoutes(se *core.ServeEvent, app core.App, svc *services.ImageService) {
+func RegisterImageRoutes(se *core.ServeEvent, app core.App, svc *services.ImageService, rbac *middleware.RBAC) {
 	images := se.Router.Group("/api/dk/images")
 
 	images.GET("", func(e *core.RequestEvent) error {
 		return handleListImages(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapImagesView))
 
 	images.GET("/pull", func(e *core.RequestEvent) error {
 		return handlePullImageSSE(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapImagesManage))
 
 	images.DELETE("/{id}", func(e *core.RequestEvent) error {
 		return handleRemoveImage(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapImagesManage))
 
 	images.POST("/prune", func(e *core.RequestEvent) error {
 		return handlePruneImages(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapImagesManage))
 }
 
 // handleListImages returns images from PocketBase, optionally filtered by server.
@@ -48,7 +49,7 @@ func handleListImages(e *core.RequestEvent, app core.App) error {
 
 	filter := ""
 	if serverID != "" {
-		filter = fmt.Sprintf("server = '%s'", serverID)
+		filter = fmt.Sprintf("server = '%s'", security.SanitizeFilterParam(serverID))
 	}
 
 	records, err := app.FindRecordsByFilter(
@@ -104,6 +105,10 @@ func handlePullImageSSE(e *core.RequestEvent, svc *services.ImageService) error 
 
 	if serverID == "" || imageRef == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "server_id and image query params are required"})
+	}
+
+	if err := security.ValidateDockerImageRef(imageRef); err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
 	agentIP, err := svc.ResolveServer(serverID)

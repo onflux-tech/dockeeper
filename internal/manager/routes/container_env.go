@@ -8,13 +8,14 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // RegisterContainerEnvRoutes adds GET/PUT routes for container environment variables.
-func RegisterContainerEnvRoutes(se *core.ServeEvent, svc *services.ContainerService) {
-	se.Router.GET("/api/dk/containers/{id}/env", handleGetEnv(svc)).BindFunc(middleware.RequireSuperuser)
-	se.Router.PUT("/api/dk/containers/{id}/env", handleUpdateEnv(svc)).BindFunc(middleware.RequireSuperuser)
+func RegisterContainerEnvRoutes(se *core.ServeEvent, svc *services.ContainerService, rbac *middleware.RBAC) {
+	se.Router.GET("/api/dk/containers/{id}/env", handleGetEnv(svc)).BindFunc(rbac.RequireCapability(constants.CapContainersView))
+	se.Router.PUT("/api/dk/containers/{id}/env", handleUpdateEnv(svc)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
 }
 
 func handleGetEnv(svc *services.ContainerService) func(e *core.RequestEvent) error {

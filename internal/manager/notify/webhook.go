@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/onflux-tech/dockeeper/internal/shared/security"
 )
 
 // WebhookChannel sends notifications via generic HTTP POST.
@@ -19,6 +21,11 @@ func NewWebhookChannel(config map[string]any) (*WebhookChannel, error) {
 	url, _ := config["url"].(string)
 	if url == "" {
 		return nil, fmt.Errorf("webhook: url is required")
+	}
+
+	// SSRF validation: block private IPs, link-local, loopback.
+	if err := security.ValidateWebhookURL(url); err != nil {
+		return nil, fmt.Errorf("webhook: %w", err)
 	}
 
 	headers := make(map[string]string)

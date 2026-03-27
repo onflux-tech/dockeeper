@@ -8,13 +8,14 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // RegisterContainerResourceRoutes adds GET/PUT routes for container resource limits.
-func RegisterContainerResourceRoutes(se *core.ServeEvent, svc *services.ContainerService) {
-	se.Router.GET("/api/dk/containers/{id}/resources", handleGetResources(svc)).BindFunc(middleware.RequireSuperuser)
-	se.Router.PUT("/api/dk/containers/{id}/resources", handleUpdateResources(svc)).BindFunc(middleware.RequireSuperuser)
+func RegisterContainerResourceRoutes(se *core.ServeEvent, svc *services.ContainerService, rbac *middleware.RBAC) {
+	se.Router.GET("/api/dk/containers/{id}/resources", handleGetResources(svc)).BindFunc(rbac.RequireCapability(constants.CapContainersView))
+	se.Router.PUT("/api/dk/containers/{id}/resources", handleUpdateResources(svc)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
 }
 
 // ResourceLimitsResponse is the JSON response for GET /resources.

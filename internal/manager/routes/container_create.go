@@ -8,12 +8,14 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	"github.com/onflux-tech/dockeeper/internal/shared/models"
+	"github.com/onflux-tech/dockeeper/internal/shared/security"
 )
 
 // RegisterContainerCreateRoutes registers POST /api/dk/containers/create.
-func RegisterContainerCreateRoutes(se *core.ServeEvent, svc *services.ContainerCreateService) {
-	se.Router.POST("/api/dk/containers/create", handleContainerCreate(svc)).BindFunc(middleware.RequireSuperuser)
+func RegisterContainerCreateRoutes(se *core.ServeEvent, svc *services.ContainerCreateService, rbac *middleware.RBAC) {
+	se.Router.POST("/api/dk/containers/create", handleContainerCreate(svc)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
 }
 
 func handleContainerCreate(svc *services.ContainerCreateService) func(e *core.RequestEvent) error {
@@ -23,6 +25,11 @@ func handleContainerCreate(svc *services.ContainerCreateService) func(e *core.Re
 			return e.JSON(http.StatusBadRequest, map[string]string{
 				"error": "invalid request body",
 			})
+		}
+
+		// Validate image reference format.
+		if err := security.ValidateDockerImageRef(spec.Image); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
 
 		result, err := svc.CreateContainer(

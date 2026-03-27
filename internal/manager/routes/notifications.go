@@ -12,34 +12,34 @@ import (
 )
 
 // RegisterNotificationRoutes adds notification channel and log endpoints.
-func RegisterNotificationRoutes(se *core.ServeEvent, app core.App, alertStore *store.AlertStore, notifySvc *services.NotificationService) {
+func RegisterNotificationRoutes(se *core.ServeEvent, app core.App, alertStore *store.AlertStore, notifySvc *services.NotificationService, rbac *middleware.RBAC) {
 	notif := se.Router.Group("/api/dk/notifications")
 
 	// ── Channels ─────────────────────────────────────
 	notif.GET("/channels", func(e *core.RequestEvent) error {
 		return handleListChannels(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNotificationsView))
 
 	notif.POST("/channels", func(e *core.RequestEvent) error {
 		return handleCreateChannel(e, alertStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNotificationsManage))
 
 	notif.PUT("/channels/{id}", func(e *core.RequestEvent) error {
 		return handleUpdateChannel(e, alertStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNotificationsManage))
 
 	notif.DELETE("/channels/{id}", func(e *core.RequestEvent) error {
 		return handleDeleteChannel(e, alertStore)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNotificationsManage))
 
 	notif.POST("/channels/{id}/test", func(e *core.RequestEvent) error {
 		return handleTestChannel(e, app, notifySvc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNotificationsManage))
 
 	// ── Logs ─────────────────────────────────────────
 	notif.GET("/logs", func(e *core.RequestEvent) error {
 		return handleListNotificationLogs(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNotificationsView))
 }
 
 func handleListChannels(e *core.RequestEvent, app core.App) error {

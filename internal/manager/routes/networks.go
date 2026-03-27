@@ -7,27 +7,29 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
+	"github.com/onflux-tech/dockeeper/internal/shared/security"
 )
 
 // RegisterNetworkRoutes adds network management endpoints.
-func RegisterNetworkRoutes(se *core.ServeEvent, svc *services.NetworkService) {
+func RegisterNetworkRoutes(se *core.ServeEvent, svc *services.NetworkService, rbac *middleware.RBAC) {
 	networks := se.Router.Group("/api/dk/networks")
 
 	networks.POST("", func(e *core.RequestEvent) error {
 		return handleCreateNetwork(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNetworksManage))
 
 	networks.DELETE("/{id}", func(e *core.RequestEvent) error {
 		return handleRemoveNetwork(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNetworksManage))
 
 	networks.POST("/{id}/connect", func(e *core.RequestEvent) error {
 		return handleConnectContainer(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNetworksManage))
 
 	networks.POST("/{id}/disconnect", func(e *core.RequestEvent) error {
 		return handleDisconnectContainer(e, svc)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapNetworksManage))
 }
 
 func handleCreateNetwork(e *core.RequestEvent, svc *services.NetworkService) error {
@@ -41,6 +43,10 @@ func handleCreateNetwork(e *core.RequestEvent, svc *services.NetworkService) err
 	}
 	if err := e.BindBody(&body); err != nil || body.ServerID == "" || body.Name == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "server_id and name are required"})
+	}
+
+	if err := security.ValidateNetworkName(body.Name); err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
 	if body.Driver == "" {

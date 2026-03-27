@@ -24,4 +24,9 @@ const (
 	CollTerminalSessions     = "terminal_sessions"
 	CollSettings             = "settings"
 	CollTraefikRoutes        = "traefik_routes"
+
+	// V2 Collections (Sprint 13+)
+	CollGroups       = "groups"
+	CollGroupMembers = "group_members"
+	CollAPIKeys      = "api_keys"
 )

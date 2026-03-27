@@ -23,6 +23,7 @@ const SettingsPage = lazy(() => import("@/pages/settings"));
 const TraefikPage = lazy(() => import("@/pages/traefik"));
 const ServerCreatePage = lazy(() => import("@/pages/server-create"));
 const AuditLogsPage = lazy(() => import("@/pages/audit-logs"));
+const UsersPage = lazy(() => import("@/pages/users"));
 
 function RouteFallback() {
 	return (
@@ -58,6 +59,7 @@ function App() {
 							<Route path="traefik" element={<TraefikPage />} />
 							<Route path="settings" element={<SettingsPage />} />
 							<Route path="audit-logs" element={<AuditLogsPage />} />
+							<Route path="users" element={<UsersPage />} />
 						</Route>
 					</Route>
 				</Routes>

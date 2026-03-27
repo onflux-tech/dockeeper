@@ -9,19 +9,20 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/coder/websocket"
 	"github.com/pocketbase/pocketbase/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"github.com/coder/websocket"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // RegisterTerminalRoutes adds the WebSocket terminal proxy endpoint.
-func RegisterTerminalRoutes(se *core.ServeEvent, app core.App, termSvc *services.TerminalService) {
+func RegisterTerminalRoutes(se *core.ServeEvent, app core.App, termSvc *services.TerminalService, rbac *middleware.RBAC) {
 	se.Router.GET("/api/dk/containers/{id}/terminal", func(e *core.RequestEvent) error {
-		return handleTerminal(e, app, termSvc)
+		return handleTerminal(e, app, termSvc, rbac)
 	})
 }
 
@@ -32,7 +33,7 @@ type wsControl struct {
 	Cols uint32 `json:"cols,omitempty"`
 }
 
-func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.TerminalService) error {
+func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.TerminalService, rbac *middleware.RBAC) error {
 	containerID := e.Request.PathValue("id")
 	if containerID == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "container ID is required"})
@@ -45,8 +46,13 @@ func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.Termin
 	}
 
 	authRecord, err := app.FindAuthRecordByToken(token, core.TokenTypeAuth)
-	if err != nil || !authRecord.IsSuperuser() {
-		return e.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid or insufficient token"})
+	if err != nil {
+		return e.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token"})
+	}
+
+	// RBAC: superuser bypasses, others need containers.manage capability.
+	if !authRecord.IsSuperuser() && !rbac.HasCapability(authRecord.Id, "containers.manage") {
+		return e.JSON(http.StatusForbidden, map[string]string{"error": "insufficient permissions: containers.manage required"})
 	}
 
 	userID := authRecord.Id

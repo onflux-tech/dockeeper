@@ -12,12 +12,12 @@ import (
 )
 
 // RegisterTraefikRoutes adds Traefik route query endpoints.
-func RegisterTraefikRoutes(se *core.ServeEvent, app core.App) {
+func RegisterTraefikRoutes(se *core.ServeEvent, app core.App, rbac *middleware.RBAC) {
 	traefik := se.Router.Group("/api/dk/traefik")
 
 	traefik.GET("/routes", func(e *core.RequestEvent) error {
 		return handleListTraefikRoutes(e, app)
-	}).BindFunc(middleware.RequireSuperuser)
+	}).BindFunc(rbac.RequireCapability(constants.CapTraefikView))
 }
 
 func handleListTraefikRoutes(e *core.RequestEvent, app core.App) error {
