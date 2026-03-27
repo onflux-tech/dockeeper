@@ -185,22 +185,43 @@ export interface BackupRecordRecord extends BaseRecord {
 
 export interface AlertRuleRecord extends BaseRecord {
 	name: string;
+	rule_type: "metric" | "event";
 	metric: string;
 	operator: "gt" | "lt" | "gte" | "lte" | "eq";
 	threshold: number;
 	duration: number;
 	target_type: "server" | "container";
 	target_id: string;
+	event_type: string;
+	scope: string;
+	active_delay: number;
+	clear_delay: number;
+	notification_cooldown: number;
+	suppress_during_updates: boolean;
+	template: string;
 	channels: string[];
 	enabled: boolean;
 	state: "ok" | "firing" | "resolved";
 	last_triggered: string;
+	annotations: unknown;
 }
 
 export interface NotificationChannelRecord extends BaseRecord {
 	name: string;
-	type: "whatsapp" | "telegram" | "webhook";
+	type: "whatsapp" | "telegram" | "webhook" | "discord" | "slack" | "smtp" | "ntfy";
 	config: unknown;
+	enabled: boolean;
+}
+
+export interface BlackoutWindowRecord extends BaseRecord {
+	server: string;
+	name: string;
+	start_time: string;
+	end_time: string;
+	recurring: boolean;
+	weekdays: number[];
+	time_start: string;
+	time_end: string;
 	enabled: boolean;
 }
 
@@ -275,6 +296,7 @@ export interface Collections {
 	terminal_sessions: TerminalSessionRecord;
 	settings: SettingRecord;
 	traefik_routes: TraefikRouteRecord;
+	blackout_windows: BlackoutWindowRecord;
 }
 
 /** All valid collection names. */

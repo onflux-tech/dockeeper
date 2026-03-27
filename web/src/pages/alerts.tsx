@@ -256,14 +256,31 @@ export default function AlertsPage() {
 										<TableRow key={rule.id}>
 											<TableCell className="font-medium">{rule.name}</TableCell>
 											<TableCell className="font-mono text-xs">
-												{rule.metric} {OPERATOR_SYMBOLS[rule.operator] ?? rule.operator}{" "}
-												{rule.threshold}
+												{rule.rule_type === "event" ? (
+													<>
+														<Badge variant="outline" className="mr-1">
+															event
+														</Badge>
+														{rule.event_type}
+													</>
+												) : (
+													<>
+														{rule.metric} {OPERATOR_SYMBOLS[rule.operator] ?? rule.operator}{" "}
+														{rule.threshold}
+													</>
+												)}
 											</TableCell>
 											<TableCell className="text-xs">
-												<Badge variant="outline" className="mr-1">
-													{rule.target_type}
-												</Badge>
-												{resolveTargetName(rule.target_type, rule.target_id)}
+												{rule.rule_type === "event" ? (
+													<span className="text-muted-foreground">{rule.scope || "all"}</span>
+												) : (
+													<>
+														<Badge variant="outline" className="mr-1">
+															{rule.target_type}
+														</Badge>
+														{resolveTargetName(rule.target_type, rule.target_id)}
+													</>
+												)}
 											</TableCell>
 											<TableCell>
 												<Badge variant={STATE_VARIANT[rule.state] ?? "outline"}>{rule.state}</Badge>

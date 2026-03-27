@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -10,30 +11,40 @@ import (
 
 const deleteBatchSize = 1000
 
-// Retention periods.
+// Default retention periods (used as fallback if settings are not configured).
 const (
-	rawRetention    = 48 * time.Hour
-	hourlyRetention = 30 * 24 * time.Hour  // 30 days
-	dailyRetention  = 365 * 24 * time.Hour // 365 days
+	defaultRawHours      = 168 // 7 days
+	defaultHourlyDays    = 30
+	defaultDailyDays     = 365
+	defaultEventsDays    = 30
+	defaultAuditLogsDays = 90
+	defaultNotifLogsDays = 30
 )
 
-// CleanupOldMetrics removes expired metrics data according to retention policies:
-// - raw: > 48 hours
-// - hourly: > 30 days
-// - daily: > 365 days
+// CleanupOldMetrics removes expired data according to configurable retention policies.
 func CleanupOldMetrics(app core.App) {
-	slog.Info("job: metrics cleanup started")
+	slog.Info("job: data cleanup started")
+
+	rawHours := getRetentionSetting(app, "retention_raw_hours", defaultRawHours)
+	hourlyDays := getRetentionSetting(app, "retention_hourly_days", defaultHourlyDays)
+	dailyDays := getRetentionSetting(app, "retention_daily_days", defaultDailyDays)
+	eventsDays := getRetentionSetting(app, "retention_events_days", defaultEventsDays)
+	auditDays := getRetentionSetting(app, "retention_audit_logs_days", defaultAuditLogsDays)
+	notifDays := getRetentionSetting(app, "retention_notification_logs_days", defaultNotifLogsDays)
 
 	tables := []struct {
 		name      string
 		retention time.Duration
 	}{
-		{"server_metrics_raw", rawRetention},
-		{"container_metrics_raw", rawRetention},
-		{"server_metrics_hourly", hourlyRetention},
-		{"container_metrics_hourly", hourlyRetention},
-		{"server_metrics_daily", dailyRetention},
-		{"container_metrics_daily", dailyRetention},
+		{"server_metrics_raw", time.Duration(rawHours) * time.Hour},
+		{"container_metrics_raw", time.Duration(rawHours) * time.Hour},
+		{"server_metrics_hourly", time.Duration(hourlyDays) * 24 * time.Hour},
+		{"container_metrics_hourly", time.Duration(hourlyDays) * 24 * time.Hour},
+		{"server_metrics_daily", time.Duration(dailyDays) * 24 * time.Hour},
+		{"container_metrics_daily", time.Duration(dailyDays) * 24 * time.Hour},
+		{"events", time.Duration(eventsDays) * 24 * time.Hour},
+		{"audit_logs", time.Duration(auditDays) * 24 * time.Hour},
+		{"notification_logs", time.Duration(notifDays) * 24 * time.Hour},
 	}
 
 	for _, t := range tables {
@@ -44,7 +55,27 @@ func CleanupOldMetrics(app core.App) {
 		}
 	}
 
-	slog.Info("job: metrics cleanup finished")
+	slog.Info("job: data cleanup finished")
+}
+
+// getRetentionSetting reads a retention setting from the settings collection.
+func getRetentionSetting(app core.App, key string, defaultVal int) int {
+	rec, err := app.FindFirstRecordByFilter("settings", "key = {:key}", dbx.Params{"key": key})
+	if err != nil || rec == nil {
+		return defaultVal
+	}
+
+	val := rec.GetString("value")
+	if val == "" {
+		return defaultVal
+	}
+
+	n, err := strconv.Atoi(val)
+	if err != nil || n <= 0 {
+		return defaultVal
+	}
+
+	return n
 }
 
 // deleteInBatches deletes records older than cutoff in batches. Returns total

@@ -46,6 +46,25 @@ export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialog
 	// Webhook config
 	const [whUrl, setWhUrl] = useState(editConfig.url ?? "");
 
+	// Discord config
+	const [dcWebhookUrl, setDcWebhookUrl] = useState(editConfig.webhook_url ?? "");
+
+	// Slack config
+	const [slWebhookUrl, setSlWebhookUrl] = useState(editConfig.webhook_url ?? "");
+
+	// SMTP config
+	const [smtpHost, setSmtpHost] = useState(editConfig.host ?? "");
+	const [smtpPort, setSmtpPort] = useState(editConfig.port ?? "587");
+	const [smtpUser, setSmtpUser] = useState(editConfig.username ?? "");
+	const [smtpPass, setSmtpPass] = useState(editConfig.password ?? "");
+	const [smtpFrom, setSmtpFrom] = useState(editConfig.from ?? "");
+	const [smtpTo, setSmtpTo] = useState(editConfig.to ?? "");
+
+	// ntfy config
+	const [ntfyServer, setNtfyServer] = useState(editConfig.server ?? "https://ntfy.sh");
+	const [ntfyTopic, setNtfyTopic] = useState(editConfig.topic ?? "");
+	const [ntfyToken, setNtfyToken] = useState(editConfig.token ?? "");
+
 	const createMut = useCreateChannel();
 	const updateMut = useUpdateChannel();
 	const isPending = createMut.isPending || updateMut.isPending;
@@ -65,6 +84,25 @@ export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialog
 				};
 			case "webhook":
 				return { url: whUrl.trim() };
+			case "discord":
+				return { webhook_url: dcWebhookUrl.trim() };
+			case "slack":
+				return { webhook_url: slWebhookUrl.trim() };
+			case "smtp":
+				return {
+					host: smtpHost.trim(),
+					port: smtpPort.trim(),
+					username: smtpUser.trim(),
+					password: smtpPass.trim(),
+					from: smtpFrom.trim(),
+					to: smtpTo.trim(),
+				};
+			case "ntfy":
+				return {
+					server: ntfyServer.trim(),
+					topic: ntfyTopic.trim(),
+					token: ntfyToken.trim(),
+				};
 			default:
 				return {};
 		}
@@ -79,6 +117,14 @@ export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialog
 				return !!tgBotToken.trim() && !!tgChatId.trim();
 			case "webhook":
 				return !!whUrl.trim();
+			case "discord":
+				return !!dcWebhookUrl.trim();
+			case "slack":
+				return !!slWebhookUrl.trim();
+			case "smtp":
+				return !!smtpHost.trim() && !!smtpFrom.trim() && !!smtpTo.trim();
+			case "ntfy":
+				return !!ntfyTopic.trim();
 			default:
 				return false;
 		}
@@ -110,7 +156,7 @@ export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialog
 
 	return (
 		<Dialog open={open} onOpenChange={handleClose}>
-			<DialogContent>
+			<DialogContent className="max-w-lg">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<Radio className="h-5 w-5" />
@@ -143,6 +189,10 @@ export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialog
 									<SelectItem value="whatsapp">WhatsApp</SelectItem>
 									<SelectItem value="telegram">Telegram</SelectItem>
 									<SelectItem value="webhook">Webhook</SelectItem>
+									<SelectItem value="discord">Discord</SelectItem>
+									<SelectItem value="slack">Slack</SelectItem>
+									<SelectItem value="smtp">Email (SMTP)</SelectItem>
+									<SelectItem value="ntfy">ntfy</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -210,6 +260,122 @@ export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialog
 								value={whUrl}
 								onChange={(e) => setWhUrl(e.target.value)}
 							/>
+						</div>
+					)}
+
+					{type === "discord" && (
+						<div className="space-y-1.5">
+							<label className="text-xs font-medium">Discord Webhook URL</label>
+							<Input
+								placeholder="https://discord.com/api/webhooks/..."
+								value={dcWebhookUrl}
+								onChange={(e) => setDcWebhookUrl(e.target.value)}
+							/>
+							<p className="text-[10px] text-muted-foreground">
+								Server Settings &rarr; Integrations &rarr; Webhooks
+							</p>
+						</div>
+					)}
+
+					{type === "slack" && (
+						<div className="space-y-1.5">
+							<label className="text-xs font-medium">Slack Incoming Webhook URL</label>
+							<Input
+								placeholder="https://hooks.slack.com/services/..."
+								value={slWebhookUrl}
+								onChange={(e) => setSlWebhookUrl(e.target.value)}
+							/>
+						</div>
+					)}
+
+					{type === "smtp" && (
+						<div className="space-y-3">
+							<div className="grid grid-cols-2 gap-3">
+								<div className="space-y-1.5">
+									<label className="text-xs font-medium">SMTP Host</label>
+									<Input
+										placeholder="smtp.gmail.com"
+										value={smtpHost}
+										onChange={(e) => setSmtpHost(e.target.value)}
+									/>
+								</div>
+								<div className="space-y-1.5">
+									<label className="text-xs font-medium">Port</label>
+									<Input
+										placeholder="587"
+										value={smtpPort}
+										onChange={(e) => setSmtpPort(e.target.value)}
+									/>
+								</div>
+							</div>
+							<div className="grid grid-cols-2 gap-3">
+								<div className="space-y-1.5">
+									<label className="text-xs font-medium">Username</label>
+									<Input
+										placeholder="user@example.com"
+										value={smtpUser}
+										onChange={(e) => setSmtpUser(e.target.value)}
+									/>
+								</div>
+								<div className="space-y-1.5">
+									<label className="text-xs font-medium">Password</label>
+									<Input
+										type="password"
+										value={smtpPass}
+										onChange={(e) => setSmtpPass(e.target.value)}
+									/>
+								</div>
+							</div>
+							<div className="grid grid-cols-2 gap-3">
+								<div className="space-y-1.5">
+									<label className="text-xs font-medium">From</label>
+									<Input
+										placeholder="alerts@example.com"
+										value={smtpFrom}
+										onChange={(e) => setSmtpFrom(e.target.value)}
+									/>
+								</div>
+								<div className="space-y-1.5">
+									<label className="text-xs font-medium">To (comma-separated)</label>
+									<Input
+										placeholder="admin@example.com"
+										value={smtpTo}
+										onChange={(e) => setSmtpTo(e.target.value)}
+									/>
+								</div>
+							</div>
+						</div>
+					)}
+
+					{type === "ntfy" && (
+						<div className="space-y-3">
+							<div className="grid grid-cols-2 gap-3">
+								<div className="space-y-1.5">
+									<label className="text-xs font-medium">Server URL</label>
+									<Input
+										placeholder="https://ntfy.sh"
+										value={ntfyServer}
+										onChange={(e) => setNtfyServer(e.target.value)}
+									/>
+								</div>
+								<div className="space-y-1.5">
+									<label className="text-xs font-medium">Topic</label>
+									<Input
+										placeholder="dockeeper-alerts"
+										value={ntfyTopic}
+										onChange={(e) => setNtfyTopic(e.target.value)}
+									/>
+								</div>
+							</div>
+							<div className="space-y-1.5">
+								<label className="text-xs font-medium">Token (optional)</label>
+								<Input
+									type="password"
+									placeholder="Bearer token for auth"
+									value={ntfyToken}
+									onChange={(e) => setNtfyToken(e.target.value)}
+								/>
+							</div>
 						</div>
 					)}
 

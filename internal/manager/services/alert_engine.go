@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -18,6 +19,10 @@ type AlertEngine struct {
 	app       core.App
 	store     *store.AlertStore
 	notifySvc *NotificationService
+
+	// In-memory timing trackers for active_delay / clear_delay.
+	firstBreachAt sync.Map // ruleID -> time.Time
+	firstClearAt  sync.Map // ruleID -> time.Time
 }
 
 // NewAlertEngine creates an AlertEngine.
@@ -25,7 +30,7 @@ func NewAlertEngine(app core.App, alertStore *store.AlertStore, notifySvc *Notif
 	return &AlertEngine{app: app, store: alertStore, notifySvc: notifySvc}
 }
 
-// EvaluateRules checks all enabled alert rules and transitions state as needed.
+// EvaluateRules checks all enabled metric-type alert rules and transitions state as needed.
 func (e *AlertEngine) EvaluateRules() {
 	rules, err := e.store.GetEnabledRules()
 	if err != nil {
@@ -36,11 +41,88 @@ func (e *AlertEngine) EvaluateRules() {
 	ctx := context.Background()
 
 	for _, rule := range rules {
-		e.evaluateRule(ctx, rule)
+		ruleType := rule.GetString("rule_type")
+		if ruleType == "event" {
+			continue // event rules handled by EventAlertHandler
+		}
+		e.evaluateMetricRule(ctx, rule)
 	}
 }
 
-func (e *AlertEngine) evaluateRule(ctx context.Context, rule *core.Record) {
+// HandleEventRule is called by the EventAlertHandler for event-based rules.
+func (e *AlertEngine) HandleEventRule(ctx context.Context, rule *core.Record, serverName, containerName string) {
+	if !e.checkCooldown(rule) {
+		return
+	}
+
+	if rule.GetBool("suppress_during_updates") {
+		scope := rule.GetString("scope")
+		if e.isUpdateInProgress(scope) {
+			slog.Debug("alert engine: suppressed during update", "rule", rule.Id)
+			return
+		}
+	}
+
+	// Event rules fire immediately.
+	currentState := rule.GetString("state")
+	if currentState != "firing" {
+		if err := e.store.UpdateRuleState(rule.Id, "firing"); err != nil {
+			slog.Error("alert engine: update state failed", "rule", rule.Id, "error", err)
+			return
+		}
+	}
+
+	channels := e.getChannelIDs(rule)
+	targetName := serverName
+	targetType := "server"
+	if containerName != "" {
+		targetName = containerName
+		targetType = "container"
+	}
+
+	e.notifySvc.Dispatch(ctx, channels, rule.Id, notify.AlertMessage{
+		RuleName:   rule.GetString("name"),
+		TargetType: targetType,
+		TargetName: targetName,
+		State:      "firing",
+	})
+}
+
+// ResolveEventRule transitions an event rule back to OK.
+func (e *AlertEngine) ResolveEventRule(ctx context.Context, rule *core.Record, serverName, containerName string) {
+	currentState := rule.GetString("state")
+	if currentState != "firing" {
+		return
+	}
+
+	if !e.checkCooldown(rule) {
+		return
+	}
+
+	if err := e.store.UpdateRuleState(rule.Id, "resolved"); err != nil {
+		slog.Error("alert engine: update state failed", "rule", rule.Id, "error", err)
+		return
+	}
+
+	channels := e.getChannelIDs(rule)
+	targetName := serverName
+	targetType := "server"
+	if containerName != "" {
+		targetName = containerName
+		targetType = "container"
+	}
+
+	e.notifySvc.Dispatch(ctx, channels, rule.Id, notify.AlertMessage{
+		RuleName:   rule.GetString("name"),
+		TargetType: targetType,
+		TargetName: targetName,
+		State:      "resolved",
+	})
+
+	_ = e.store.UpdateRuleState(rule.Id, "ok")
+}
+
+func (e *AlertEngine) evaluateMetricRule(ctx context.Context, rule *core.Record) {
 	metric := rule.GetString("metric")
 	operator := rule.GetString("operator")
 	threshold := rule.GetFloat("threshold")
@@ -48,24 +130,35 @@ func (e *AlertEngine) evaluateRule(ctx context.Context, rule *core.Record) {
 	targetType := rule.GetString("target_type")
 	targetID := rule.GetString("target_id")
 	currentState := rule.GetString("state")
+	activeDelay := rule.GetInt("active_delay")
+	clearDelay := rule.GetInt("clear_delay")
 
 	if metric == "" || targetID == "" {
 		return
 	}
 
-	// Query metrics for the last `duration` seconds.
+	// Check suppress_during_updates.
+	if rule.GetBool("suppress_during_updates") {
+		scope := fmt.Sprintf("container:%s", targetID)
+		if targetType == "server" {
+			scope = fmt.Sprintf("server:%s", targetID)
+		}
+		if e.isUpdateInProgress(scope) {
+			slog.Debug("alert engine: suppressed during update", "rule", rule.Id)
+			return
+		}
+	}
+
 	samples, err := e.queryMetrics(targetType, targetID, metric, duration)
 	if err != nil {
 		slog.Debug("alert engine: metrics query failed", "rule", rule.Id, "error", err)
 		return
 	}
 
-	// Need at least 1 sample to evaluate.
 	if len(samples) == 0 {
 		return
 	}
 
-	// Check if ALL samples satisfy the condition.
 	conditionMet := true
 	var latestValue float64
 	for _, val := range samples {
@@ -76,15 +169,37 @@ func (e *AlertEngine) evaluateRule(ctx context.Context, rule *core.Record) {
 		}
 	}
 
-	// State transitions.
+	now := time.Now()
+
 	switch {
-	case conditionMet && currentState == "ok":
-		// OK → FIRING
+	case conditionMet && (currentState == "ok" || currentState == "resolved"):
+		// Track breach start for active_delay.
+		if _, loaded := e.firstBreachAt.LoadOrStore(rule.Id, now); loaded {
+			// Already tracking.
+		}
+		e.firstClearAt.Delete(rule.Id)
+
+		// Check active_delay.
+		if activeDelay > 0 {
+			if breachStart, ok := e.firstBreachAt.Load(rule.Id); ok {
+				if now.Sub(breachStart.(time.Time)) < time.Duration(activeDelay)*time.Second {
+					return // Not enough time elapsed.
+				}
+			}
+		}
+
+		// Check cooldown.
+		if !e.checkCooldown(rule) {
+			return
+		}
+
 		slog.Info("alert engine: rule firing", "rule", rule.Id, "metric", metric, "value", latestValue)
 		if err := e.store.UpdateRuleState(rule.Id, "firing"); err != nil {
 			slog.Error("alert engine: update state failed", "rule", rule.Id, "error", err)
 			return
 		}
+
+		e.firstBreachAt.Delete(rule.Id)
 
 		targetName := e.resolveTargetName(targetType, targetID)
 		channels := e.getChannelIDs(rule)
@@ -100,12 +215,33 @@ func (e *AlertEngine) evaluateRule(ctx context.Context, rule *core.Record) {
 		})
 
 	case !conditionMet && currentState == "firing":
-		// FIRING → RESOLVED
+		// Track clear start for clear_delay.
+		if _, loaded := e.firstClearAt.LoadOrStore(rule.Id, now); loaded {
+			// Already tracking.
+		}
+		e.firstBreachAt.Delete(rule.Id)
+
+		// Check clear_delay.
+		if clearDelay > 0 {
+			if clearStart, ok := e.firstClearAt.Load(rule.Id); ok {
+				if now.Sub(clearStart.(time.Time)) < time.Duration(clearDelay)*time.Second {
+					return // Not enough time elapsed.
+				}
+			}
+		}
+
+		// Check cooldown.
+		if !e.checkCooldown(rule) {
+			return
+		}
+
 		slog.Info("alert engine: rule resolved", "rule", rule.Id, "metric", metric, "value", latestValue)
 		if err := e.store.UpdateRuleState(rule.Id, "resolved"); err != nil {
 			slog.Error("alert engine: update state failed", "rule", rule.Id, "error", err)
 			return
 		}
+
+		e.firstClearAt.Delete(rule.Id)
 
 		targetName := e.resolveTargetName(targetType, targetID)
 		channels := e.getChannelIDs(rule)
@@ -120,9 +256,57 @@ func (e *AlertEngine) evaluateRule(ctx context.Context, rule *core.Record) {
 			State:      "resolved",
 		})
 
-		// Transition back to OK after resolved notification.
 		_ = e.store.UpdateRuleState(rule.Id, "ok")
+
+	case conditionMet && currentState == "firing":
+		// Still firing — reset clear tracker.
+		e.firstClearAt.Delete(rule.Id)
+
+	case !conditionMet && (currentState == "ok" || currentState == "resolved"):
+		// Still ok — reset breach tracker.
+		e.firstBreachAt.Delete(rule.Id)
 	}
+}
+
+// checkCooldown returns true if enough time has passed since last notification.
+func (e *AlertEngine) checkCooldown(rule *core.Record) bool {
+	cooldown := rule.GetInt("notification_cooldown")
+	if cooldown <= 0 {
+		return true
+	}
+
+	lastTriggered := rule.GetString("last_triggered")
+	if lastTriggered == "" {
+		return true
+	}
+
+	t, err := time.Parse(time.RFC3339, lastTriggered)
+	if err != nil {
+		return true
+	}
+
+	return time.Since(t) >= time.Duration(cooldown)*time.Second
+}
+
+// isUpdateInProgress checks if the target has an active update.
+func (e *AlertEngine) isUpdateInProgress(scope string) bool {
+	// Parse scope to get container/server ID.
+	var filter string
+	if len(scope) > 10 && scope[:10] == "container:" {
+		containerID := scope[10:]
+		filter = fmt.Sprintf("container = '%s' && (status = 'pending' || status = 'pulling' || status = 'replacing' || status = 'verifying')", containerID)
+	} else if len(scope) > 7 && scope[:7] == "server:" {
+		serverID := scope[7:]
+		filter = fmt.Sprintf("server = '%s' && (status = 'pending' || status = 'pulling' || status = 'replacing' || status = 'verifying')", serverID)
+	} else {
+		return false
+	}
+
+	records, err := e.app.FindRecordsByFilter(constants.CollUpdateHistory, filter, "", 1, 0)
+	if err != nil {
+		return false
+	}
+	return len(records) > 0
 }
 
 // queryMetrics fetches metric values for the given target within the duration window.

@@ -52,7 +52,7 @@ func (c *TelegramChannel) Send(ctx context.Context, msg AlertMessage) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("telegram send: %w", err)
 	}

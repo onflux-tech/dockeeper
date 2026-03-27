@@ -136,3 +136,103 @@ export function useRegenerateEnrollmentToken() {
 		onError: (err) => toast.error(`Failed to regenerate token: ${err.message}`),
 	});
 }
+
+// ── Blackout Windows ──────────────────────────────────────
+
+export interface BlackoutWindow {
+	id: string;
+	server: string;
+	name: string;
+	start_time: string;
+	end_time: string;
+	recurring: boolean;
+	weekdays: number[];
+	time_start: string;
+	time_end: string;
+	enabled: boolean;
+}
+
+export function useBlackoutWindows() {
+	return useQuery<BlackoutWindow[]>({
+		queryKey: ["blackout-windows"],
+		queryFn: () => fetchJson("/api/dk/blackout-windows", { headers: authHeaders() }),
+	});
+}
+
+export function useCreateBlackoutWindow() {
+	const qc = useQueryClient();
+	return useMutation<{ id: string }, Error, Record<string, unknown>>({
+		mutationFn: (input) =>
+			fetchJson("/api/dk/blackout-windows", {
+				method: "POST",
+				headers: authHeaders(true),
+				body: JSON.stringify(input),
+			}),
+		onSuccess: () => {
+			void qc.invalidateQueries({ queryKey: ["blackout-windows"] });
+			toast.success("Blackout window created");
+		},
+		onError: (err) => toast.error(`Create failed: ${err.message}`),
+	});
+}
+
+export function useUpdateBlackoutWindow() {
+	const qc = useQueryClient();
+	return useMutation<{ status: string }, Error, { id: string; fields: Record<string, unknown> }>({
+		mutationFn: ({ id, fields }) =>
+			fetchJson(`/api/dk/blackout-windows/${id}`, {
+				method: "PUT",
+				headers: authHeaders(true),
+				body: JSON.stringify(fields),
+			}),
+		onSuccess: () => {
+			void qc.invalidateQueries({ queryKey: ["blackout-windows"] });
+			toast.success("Blackout window updated");
+		},
+		onError: (err) => toast.error(`Update failed: ${err.message}`),
+	});
+}
+
+export function useDeleteBlackoutWindow() {
+	const qc = useQueryClient();
+	return useMutation<{ status: string }, Error, string>({
+		mutationFn: (id) =>
+			fetchJson(`/api/dk/blackout-windows/${id}`, {
+				method: "DELETE",
+				headers: authHeaders(),
+			}),
+		onSuccess: () => {
+			void qc.invalidateQueries({ queryKey: ["blackout-windows"] });
+			toast.success("Blackout window deleted");
+		},
+		onError: (err) => toast.error(`Delete failed: ${err.message}`),
+	});
+}
+
+// ── Retention Settings ────────────────────────────────────
+
+export type RetentionSettings = Record<string, string>;
+
+export function useRetentionSettings() {
+	return useQuery<RetentionSettings>({
+		queryKey: ["retention-settings"],
+		queryFn: () => fetchJson("/api/dk/settings/retention", { headers: authHeaders() }),
+	});
+}
+
+export function useUpdateRetention() {
+	const qc = useQueryClient();
+	return useMutation<{ status: string }, Error, RetentionSettings>({
+		mutationFn: (input) =>
+			fetchJson("/api/dk/settings/retention", {
+				method: "PUT",
+				headers: authHeaders(true),
+				body: JSON.stringify(input),
+			}),
+		onSuccess: () => {
+			void qc.invalidateQueries({ queryKey: ["retention-settings"] });
+			toast.success("Retention settings saved");
+		},
+		onError: (err) => toast.error(`Save failed: ${err.message}`),
+	});
+}

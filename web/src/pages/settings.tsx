@@ -14,6 +14,8 @@ import {
 	KeyRound,
 	Plus,
 	Trash2,
+	Moon,
+	Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +36,13 @@ import {
 	useCreateRegistryCredential,
 	useDeleteRegistryCredential,
 } from "@/hooks/use-updates";
+import {
+	useRetentionSettings,
+	useUpdateRetention,
+	useBlackoutWindows,
+	useCreateBlackoutWindow,
+	useDeleteBlackoutWindow,
+} from "@/hooks/use-settings";
 
 export default function SettingsPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +66,14 @@ export default function SettingsPage() {
 						<Server className="h-4 w-4" />
 						System
 					</TabsTrigger>
+					<TabsTrigger value="retention" className="gap-1.5">
+						<Clock className="h-4 w-4" />
+						Retention
+					</TabsTrigger>
+					<TabsTrigger value="blackout" className="gap-1.5">
+						<Moon className="h-4 w-4" />
+						Blackout
+					</TabsTrigger>
 					<TabsTrigger value="profile" className="gap-1.5">
 						<User className="h-4 w-4" />
 						Profile
@@ -73,6 +90,12 @@ export default function SettingsPage() {
 
 				<TabsContent value="system">
 					<SystemTab />
+				</TabsContent>
+				<TabsContent value="retention">
+					<RetentionTab />
+				</TabsContent>
+				<TabsContent value="blackout">
+					<BlackoutTab />
 				</TabsContent>
 				<TabsContent value="profile">
 					<ProfileTab />
@@ -634,6 +657,227 @@ function RegistryTab() {
 				<Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
 					<Plus className="mr-1.5 h-4 w-4" />
 					Add Credential
+				</Button>
+			)}
+		</div>
+	);
+}
+
+/* ── Retention Tab ─────────────────────────────────────── */
+
+const RETENTION_LABELS: Record<string, string> = {
+	retention_raw_hours: "Raw Metrics (hours)",
+	retention_hourly_days: "Hourly Aggregates (days)",
+	retention_daily_days: "Daily Aggregates (days)",
+	retention_events_days: "Events (days)",
+	retention_audit_logs_days: "Audit Logs (days)",
+	retention_notification_logs_days: "Notification Logs (days)",
+};
+
+function RetentionTab() {
+	const { data, isLoading } = useRetentionSettings();
+	const updateMut = useUpdateRetention();
+	const [form, setForm] = useState<Record<string, string>>({});
+	const [initialized, setInitialized] = useState(false);
+
+	if (data && !initialized) {
+		setForm({ ...data });
+		setInitialized(true);
+	}
+
+	if (isLoading) {
+		return (
+			<div className="space-y-4">
+				{[1, 2, 3].map((i) => (
+					<Skeleton key={i} className="h-10 w-full" />
+				))}
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6">
+			<div>
+				<h3 className="text-lg font-medium">Data Retention</h3>
+				<p className="text-sm text-muted-foreground">
+					Configure how long each type of data is kept before automatic cleanup.
+				</p>
+			</div>
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				{Object.entries(RETENTION_LABELS).map(([key, label]) => (
+					<div key={key} className="space-y-2">
+						<Label htmlFor={key}>{label}</Label>
+						<Input
+							id={key}
+							type="number"
+							min={1}
+							value={form[key] ?? ""}
+							onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+						/>
+					</div>
+				))}
+			</div>
+			<Button onClick={() => updateMut.mutate(form)} disabled={updateMut.isPending}>
+				{updateMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+				Save Retention Settings
+			</Button>
+		</div>
+	);
+}
+
+/* ── Blackout Windows Tab ──────────────────────────────── */
+
+function BlackoutTab() {
+	const { data: windows, isLoading } = useBlackoutWindows();
+	const createMut = useCreateBlackoutWindow();
+	const deleteMut = useDeleteBlackoutWindow();
+
+	const [showForm, setShowForm] = useState(false);
+	const [name, setName] = useState("");
+	const [server, setServer] = useState("");
+	const [startTime, setStartTime] = useState("");
+	const [endTime, setEndTime] = useState("");
+
+	const handleCreate = (e: React.FormEvent) => {
+		e.preventDefault();
+		createMut.mutate(
+			{
+				name,
+				server,
+				start_time: startTime,
+				end_time: endTime,
+				recurring: false,
+				enabled: true,
+			},
+			{
+				onSuccess: () => {
+					setName("");
+					setServer("");
+					setStartTime("");
+					setEndTime("");
+					setShowForm(false);
+				},
+			},
+		);
+	};
+
+	return (
+		<div className="space-y-6">
+			<div>
+				<h3 className="text-lg font-medium">Blackout Windows</h3>
+				<p className="text-sm text-muted-foreground">
+					Define maintenance windows during which alerts are suppressed.
+				</p>
+			</div>
+
+			{isLoading ? (
+				<div className="space-y-2">
+					{[1, 2].map((i) => (
+						<Skeleton key={i} className="h-12 w-full" />
+					))}
+				</div>
+			) : windows && windows.length > 0 ? (
+				<div className="rounded-md border">
+					<table className="w-full text-sm">
+						<thead>
+							<tr className="border-b bg-muted/50">
+								<th className="px-4 py-2 text-left font-medium">Name</th>
+								<th className="px-4 py-2 text-left font-medium">Server</th>
+								<th className="px-4 py-2 text-left font-medium">Start</th>
+								<th className="px-4 py-2 text-left font-medium">End</th>
+								<th className="px-4 py-2 text-right font-medium">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{windows.map((w) => (
+								<tr key={w.id} className="border-b last:border-0">
+									<td className="px-4 py-2 font-medium">{w.name}</td>
+									<td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+										{w.server || "all"}
+									</td>
+									<td className="px-4 py-2 text-xs">
+										{w.start_time ? new Date(w.start_time).toLocaleString() : "—"}
+									</td>
+									<td className="px-4 py-2 text-xs">
+										{w.end_time ? new Date(w.end_time).toLocaleString() : "—"}
+									</td>
+									<td className="px-4 py-2 text-right">
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8 text-destructive hover:text-destructive"
+											onClick={() => deleteMut.mutate(w.id)}
+											disabled={deleteMut.isPending}
+										>
+											<Trash2 className="h-4 w-4" />
+										</Button>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			) : (
+				<p className="text-sm text-muted-foreground">No blackout windows configured.</p>
+			)}
+
+			{showForm ? (
+				<form onSubmit={handleCreate} className="space-y-4 rounded-md border p-4">
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-2">
+							<Label htmlFor="bw_name">Name</Label>
+							<Input
+								id="bw_name"
+								placeholder="Weekly maintenance"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								required
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="bw_server">Server ID (empty = all)</Label>
+							<Input
+								id="bw_server"
+								placeholder="Leave empty for all servers"
+								value={server}
+								onChange={(e) => setServer(e.target.value)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="bw_start">Start Time</Label>
+							<Input
+								id="bw_start"
+								type="datetime-local"
+								value={startTime}
+								onChange={(e) => setStartTime(e.target.value)}
+								required
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="bw_end">End Time</Label>
+							<Input
+								id="bw_end"
+								type="datetime-local"
+								value={endTime}
+								onChange={(e) => setEndTime(e.target.value)}
+								required
+							/>
+						</div>
+					</div>
+					<div className="flex gap-2">
+						<Button type="submit" disabled={createMut.isPending}>
+							{createMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+							Create Window
+						</Button>
+						<Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+							Cancel
+						</Button>
+					</div>
+				</form>
+			) : (
+				<Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+					<Plus className="mr-1.5 h-4 w-4" />
+					Add Blackout Window
 				</Button>
 			)}
 		</div>

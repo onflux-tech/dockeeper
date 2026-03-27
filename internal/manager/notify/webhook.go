@@ -69,7 +69,7 @@ func (c *WebhookChannel) Send(ctx context.Context, msg AlertMessage) error {
 		req.Header.Set(k, v)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("webhook send: %w", err)
 	}

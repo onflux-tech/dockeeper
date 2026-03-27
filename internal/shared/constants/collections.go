@@ -32,4 +32,5 @@ const (
 	CollEvents              = "events"
 	CollRegistryCredentials = "registry_credentials"
 	CollUpdateHistory       = "update_history"
+	CollBlackoutWindows     = "blackout_windows"
 )

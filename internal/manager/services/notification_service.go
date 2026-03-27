@@ -145,6 +145,14 @@ func (s *NotificationService) buildChannel(rec *core.Record) (notify.Channel, er
 		return notify.NewTelegramChannel(config)
 	case "webhook":
 		return notify.NewWebhookChannel(config)
+	case "discord":
+		return notify.NewDiscordChannel(config)
+	case "slack":
+		return notify.NewSlackChannel(config)
+	case "smtp":
+		return notify.NewSMTPChannel(config)
+	case "ntfy":
+		return notify.NewNtfyChannel(config)
 	default:
 		return nil, fmt.Errorf("unsupported channel type: %s", channelType)
 	}

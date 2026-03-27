@@ -67,9 +67,9 @@ func handleCreateChannel(e *core.RequestEvent, alertStore *store.AlertStore) err
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "name and type are required"})
 	}
 
-	validTypes := map[string]bool{"whatsapp": true, "telegram": true, "webhook": true}
+	validTypes := map[string]bool{"whatsapp": true, "telegram": true, "webhook": true, "discord": true, "slack": true, "smtp": true, "ntfy": true}
 	if !validTypes[body.Type] {
-		return e.JSON(http.StatusBadRequest, map[string]string{"error": "type must be whatsapp, telegram, or webhook"})
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "type must be whatsapp, telegram, webhook, discord, slack, smtp, or ntfy"})
 	}
 
 	id, err := alertStore.CreateChannel(map[string]any{

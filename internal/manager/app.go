@@ -91,7 +91,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// Subscribe EventBus handlers (now that stores are available).
 		eventBus.Subscribe(events.NewDBHandler(app))
 		eventBus.Subscribe(events.NewAuditHandler(auditStore))
-		eventBus.Subscribe(events.NewAlertHandler())
+		// AlertHandler is subscribed below after alertEngine is created.
 
 		// Volume + Cascade services (cascade depends on volumeSvc).
 		volumeSvc := services.NewVolumeService(app, auditStore, pool)
@@ -146,6 +146,16 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		routes.RegisterAlertRoutes(se, app, alertStore, rbac)
 		routes.RegisterNotificationRoutes(se, app, alertStore, notifySvc, rbac)
 		jobs.RegisterAlertJobs(app, alertEngine)
+
+		// Blackout windows service + routes.
+		blackoutSvc := services.NewBlackoutService(app)
+		routes.RegisterBlackoutRoutes(se, blackoutSvc, rbac)
+
+		// Subscribe event-based alert handler (needs alertEngine + blackoutSvc).
+		eventBus.Subscribe(events.NewAlertHandler(app, alertStore, alertEngine, blackoutSvc))
+
+		// Retention settings routes.
+		routes.RegisterRetentionRoutes(se, app, rbac)
 
 		// Traefik route read-only API.
 		routes.RegisterTraefikRoutes(se, app, rbac)

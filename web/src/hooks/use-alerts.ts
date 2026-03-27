@@ -36,12 +36,20 @@ export function useAlertRules(serverId?: string) {
 
 interface CreateRuleInput {
 	name: string;
-	metric: string;
-	operator: string;
-	threshold: number;
-	duration: number;
-	target_type: string;
-	target_id: string;
+	rule_type: string;
+	metric?: string;
+	operator?: string;
+	threshold?: number;
+	duration?: number;
+	target_type?: string;
+	target_id?: string;
+	event_type?: string;
+	scope?: string;
+	active_delay?: number;
+	clear_delay?: number;
+	notification_cooldown?: number;
+	suppress_during_updates?: boolean;
+	template?: string;
 	channels: string[];
 	enabled: boolean;
 }
