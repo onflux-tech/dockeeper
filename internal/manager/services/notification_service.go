@@ -111,13 +111,29 @@ func (s *NotificationService) buildChannel(rec *core.Record) (notify.Channel, er
 	channelType := rec.GetString("type")
 
 	// Parse config JSON.
+	// PocketBase returns types.JsonRaw ([]byte alias) for JSON fields loaded from DB,
+	// but may return map[string]any for in-memory records. Handle all cases.
 	configRaw := rec.Get("config")
 	config := make(map[string]any)
 	switch v := configRaw.(type) {
 	case map[string]any:
 		config = v
 	case string:
+		if v == "" {
+			return nil, fmt.Errorf("empty config")
+		}
 		if err := json.Unmarshal([]byte(v), &config); err != nil {
+			return nil, fmt.Errorf("invalid config JSON: %w", err)
+		}
+	default:
+		if configRaw == nil {
+			return nil, fmt.Errorf("empty config")
+		}
+		raw, err := json.Marshal(configRaw)
+		if err != nil || string(raw) == "null" {
+			return nil, fmt.Errorf("unsupported or empty config type: %T", configRaw)
+		}
+		if err := json.Unmarshal(raw, &config); err != nil {
 			return nil, fmt.Errorf("invalid config JSON: %w", err)
 		}
 	}
