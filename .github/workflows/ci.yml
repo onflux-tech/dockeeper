@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  push:
+    branches: [production, develop]
+
+jobs:
+  docker:
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      version: ${{ github.ref_name == 'production' && 'latest' || 'develop' }}
+      tag_latest: false
+    permissions:
+      contents: read
+      packages: write
