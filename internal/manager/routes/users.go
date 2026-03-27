@@ -17,7 +17,7 @@ func RegisterUserRoutes(se *core.ServeEvent, app core.App, rbacStore *store.RBAC
 	groups := se.Router.Group("/api/dk/groups")
 
 	// Users CRUD.
-	users.GET("", handleListUsers(app)).BindFunc(rbac.RequireCapability(constants.CapUsersView))
+	users.GET("", handleListUsers(app, rbacStore)).BindFunc(rbac.RequireCapability(constants.CapUsersView))
 	users.POST("", handleCreateUser(app)).BindFunc(rbac.RequireCapability(constants.CapUsersManage))
 	users.PATCH("/{id}", handleUpdateUser(app)).BindFunc(rbac.RequireCapability(constants.CapUsersManage))
 	users.DELETE("/{id}", handleDeleteUser(app)).BindFunc(rbac.RequireCapability(constants.CapUsersManage))
@@ -33,18 +33,43 @@ func RegisterUserRoutes(se *core.ServeEvent, app core.App, rbacStore *store.RBAC
 	groups.DELETE("/{id}/members/{userId}", handleRemoveMember(rbacStore)).BindFunc(rbac.RequireCapability(constants.CapUsersManage))
 }
 
-func handleListUsers(app core.App) func(e *core.RequestEvent) error {
+func handleListUsers(app core.App, rbacStore *store.RBACStore) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		records, err := app.FindRecordsByFilter(core.CollectionNameSuperusers, "", "-created", 200, 0)
 		if err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
+		// Preload all groups for name lookup.
+		allGroups, _ := rbacStore.GetGroups()
+		groupNames := make(map[string]string, len(allGroups))
+		for _, g := range allGroups {
+			groupNames[g.Id] = g.GetString("name")
+		}
+
+		// Preload all memberships.
+		allMembers, _ := app.FindRecordsByFilter(constants.CollGroupMembers, "", "", 0, 0)
+		userGroups := make(map[string][]map[string]string) // userID -> [{id, name}]
+		for _, m := range allMembers {
+			uid := m.GetString("user")
+			gid := m.GetString("group")
+			gname := groupNames[gid]
+			if gname == "" {
+				continue
+			}
+			userGroups[uid] = append(userGroups[uid], map[string]string{"id": gid, "name": gname})
+		}
+
 		users := make([]map[string]any, 0, len(records))
 		for _, r := range records {
+			groups := userGroups[r.Id]
+			if groups == nil {
+				groups = []map[string]string{}
+			}
 			users = append(users, map[string]any{
 				"id":      r.Id,
 				"email":   r.Email(),
+				"groups":  groups,
 				"created": r.GetString("created"),
 				"updated": r.GetString("updated"),
 			})

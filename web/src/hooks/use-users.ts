@@ -26,6 +26,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 export interface User {
 	id: string;
 	email: string;
+	groups: { id: string; name: string }[];
 	created: string;
 	updated: string;
 }

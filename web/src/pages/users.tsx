@@ -128,6 +128,7 @@ function UsersTab() {
 				<TableHeader>
 					<TableRow>
 						<TableHead>Email</TableHead>
+						<TableHead>Groups</TableHead>
 						<TableHead>Created</TableHead>
 						<TableHead className="w-[80px]" />
 					</TableRow>
@@ -136,6 +137,19 @@ function UsersTab() {
 					{users?.map((user) => (
 						<TableRow key={user.id}>
 							<TableCell className="font-medium">{user.email}</TableCell>
+							<TableCell>
+								{user.groups?.length > 0 ? (
+									<div className="flex flex-wrap gap-1">
+										{user.groups.map((g) => (
+											<Badge key={g.id} variant="secondary" className="text-xs">
+												{g.name}
+											</Badge>
+										))}
+									</div>
+								) : (
+									<span className="text-xs text-muted-foreground">No group</span>
+								)}
+							</TableCell>
 							<TableCell className="text-muted-foreground">
 								{new Date(user.created).toLocaleDateString()}
 							</TableCell>
@@ -152,7 +166,7 @@ function UsersTab() {
 					))}
 					{users?.length === 0 && (
 						<TableRow>
-							<TableCell colSpan={3} className="text-center text-muted-foreground">
+							<TableCell colSpan={4} className="text-center text-muted-foreground">
 								No users found
 							</TableCell>
 						</TableRow>
