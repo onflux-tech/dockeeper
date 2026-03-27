@@ -60,6 +60,10 @@ func handleListAuditLogs(e *core.RequestEvent, app core.App) error {
 		filter = appendFilter(filter, "(action ~ {:search} || target_type ~ {:search} || target_id ~ {:search})")
 		params["search"] = search
 	}
+	if serverID := q.Get("server_id"); serverID != "" {
+		filter = appendFilter(filter, "target_type = 'server' && target_id = {:server_id}")
+		params["server_id"] = serverID
+	}
 
 	// Total count for pagination.
 	allRecords, err := app.FindRecordsByFilter(

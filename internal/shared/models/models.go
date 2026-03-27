@@ -6,6 +6,7 @@ import "github.com/pocketbase/pocketbase/tools/types"
 type Server struct {
 	ID            string         `json:"id"`
 	Name          string         `json:"name"`
+	Description   string         `json:"description"`
 	Hostname      string         `json:"hostname"`
 	IPAddress     string         `json:"ip_address"`
 	OS            string         `json:"os"`

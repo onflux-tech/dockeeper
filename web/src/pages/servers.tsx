@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink } from "lucide-react";
+import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import {
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { CascadeDeleteDialog } from "@/components/cascade-delete-dialog";
+import { EditServerDialog } from "@/components/server/edit-server-dialog";
 import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useDeleteServer } from "@/hooks/use-servers";
@@ -54,6 +55,7 @@ export default function ServersPage() {
 	useRealtime("servers");
 
 	const [deleteTarget, setDeleteTarget] = useState<ServerRecord | null>(null);
+	const [editTarget, setEditTarget] = useState<ServerRecord | null>(null);
 	const servers = serversResult?.items ?? [];
 	const totalServers = serversResult?.totalItems ?? 0;
 
@@ -171,6 +173,15 @@ export default function ServersPage() {
 													<ExternalLink className="mr-2 h-4 w-4" />
 													View Details
 												</DropdownMenuItem>
+												<DropdownMenuItem
+													onClick={(e) => {
+														e.stopPropagation();
+														setEditTarget(server);
+													}}
+												>
+													<Pencil className="mr-2 h-4 w-4" />
+													Edit
+												</DropdownMenuItem>
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
 													className="text-destructive focus:text-destructive"
@@ -216,6 +227,17 @@ export default function ServersPage() {
 						deleteServer.mutate(deleteTarget.id);
 						setDeleteTarget(null);
 					}}
+				/>
+			)}
+
+			{editTarget && (
+				<EditServerDialog
+					key={editTarget.id}
+					open={editTarget !== null}
+					onOpenChange={(open) => {
+						if (!open) setEditTarget(null);
+					}}
+					server={editTarget}
 				/>
 			)}
 		</div>

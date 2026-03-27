@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ import { useServerMetrics, type TimeRange } from "@/hooks/use-server-metrics";
 import { ServerInfo } from "@/components/server/server-info";
 import { MetricsCharts } from "@/components/server/metrics-charts";
 import { ContainerTable } from "@/components/server/container-table";
+import { EditServerDialog } from "@/components/server/edit-server-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 
@@ -35,6 +36,7 @@ export default function ServerDetailPage() {
 	const [containersPage, setContainersPage] = useState(1);
 	const [containerSearch, setContainerSearch] = useState("");
 	const [containerStatus, setContainerStatus] = useState("all");
+	const [editOpen, setEditOpen] = useState(false);
 
 	const { data: server, isLoading: loadingServer } = useRecord("servers", id);
 	const { data: metricsData, isLoading: loadingMetrics } = useServerMetrics(id, range);
@@ -80,9 +82,15 @@ export default function ServerDetailPage() {
 				) : (
 					<>
 						<h1 className="text-2xl font-semibold">
-							{server?.hostname || server?.name || "Server"}
+							{server?.name || server?.hostname || "Server"}
 						</h1>
 						{server && <Badge variant={statusVariant}>{server.status}</Badge>}
+						{server && (
+							<Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+								<Pencil className="mr-1.5 h-3.5 w-3.5" />
+								Edit
+							</Button>
+						)}
 					</>
 				)}
 			</div>
@@ -145,6 +153,15 @@ export default function ServerDetailPage() {
 					/>
 				</TabsContent>
 			</Tabs>
+
+			{server && (
+				<EditServerDialog
+					key={server.id + server.updated}
+					open={editOpen}
+					onOpenChange={setEditOpen}
+					server={server}
+				/>
+			)}
 		</div>
 	);
 }

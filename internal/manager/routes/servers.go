@@ -44,6 +44,10 @@ func RegisterServerRoutes(se *core.ServeEvent, app core.App, auditStore *store.A
 		return handleInstallScript(e, app, version)
 	}).BindFunc(middleware.RequireSuperuser)
 
+	servers.PATCH("/{id}", func(e *core.RequestEvent) error {
+		return handleUpdateServer(e, app, auditStore)
+	}).BindFunc(middleware.RequireSuperuser)
+
 	servers.DELETE("/{id}", func(e *core.RequestEvent) error {
 		return handleDeleteServer(e, cascadeSvc)
 	}).BindFunc(middleware.RequireSuperuser)
@@ -113,6 +117,50 @@ func handleProvisionServer(e *core.RequestEvent, app core.App, auditStore *store
 		"name":             body.Name,
 		"enrollment_token": token,
 		"status":           "pending",
+	})
+}
+
+func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.AuditStore) error {
+	serverID := e.Request.PathValue("id")
+
+	var body struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	if err := e.BindBody(&body); err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+
+	body.Name = strings.TrimSpace(body.Name)
+	if body.Name == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "name is required"})
+	}
+
+	record, err := app.FindRecordById(constants.CollServers, serverID)
+	if err != nil {
+		return e.JSON(http.StatusNotFound, map[string]string{"error": "server not found"})
+	}
+
+	record.Set("name", body.Name)
+	record.Set("description", body.Description)
+
+	if err := app.Save(record); err != nil {
+		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	userID := ""
+	if e.Auth != nil {
+		userID = e.Auth.Id
+	}
+	auditStore.Log("server.update", userID, "server", record.Id, e.RealIP(), map[string]any{
+		"name":        body.Name,
+		"description": body.Description,
+	})
+
+	return e.JSON(http.StatusOK, map[string]any{
+		"id":          record.Id,
+		"name":        body.Name,
+		"description": body.Description,
 	})
 }
 

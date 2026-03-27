@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { getAccessToken } from "@/lib/api";
 import type { ServerRecord } from "@/types/pocketbase";
 
@@ -70,5 +71,29 @@ export function useDeleteServer() {
 				headers: authHeaders(),
 			}),
 		onSuccess: () => qc.invalidateQueries({ queryKey: ["servers"] }),
+	});
+}
+
+export function useUpdateServer() {
+	const qc = useQueryClient();
+	return useMutation<
+		{ id: string; name: string; description: string },
+		Error,
+		{ id: string; name: string; description: string }
+	>({
+		mutationFn: ({ id, ...body }) =>
+			fetchJson(`/api/dk/servers/${id}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json", ...authHeaders() },
+				body: JSON.stringify(body),
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["servers"] });
+			qc.invalidateQueries({ queryKey: ["collection", "servers"] });
+			toast.success("Server updated");
+		},
+		onError: (err) => {
+			toast.error(err.message || "Failed to update server");
+		},
 	});
 }

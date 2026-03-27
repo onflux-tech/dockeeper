@@ -20,6 +20,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
+import { ServerFilterSelect } from "@/components/server-filter-select";
 import { relativeTime } from "@/lib/format";
 
 const TARGET_TYPES = [
@@ -46,6 +47,7 @@ export default function AuditLogsPage() {
 	const [page, setPage] = useState(1);
 	const [search, setSearch] = useState("");
 	const [targetType, setTargetType] = useState("");
+	const [serverId, setServerId] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 
 	const { data, isLoading } = useAuditLogs({
@@ -53,6 +55,7 @@ export default function AuditLogsPage() {
 		perPage: 25,
 		target_type: targetType || undefined,
 		search: debouncedSearch || undefined,
+		server_id: serverId || undefined,
 	});
 
 	const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -101,6 +104,13 @@ export default function AuditLogsPage() {
 						))}
 					</SelectContent>
 				</Select>
+				<ServerFilterSelect
+					value={serverId || "all"}
+					onValueChange={(v) => {
+						setServerId(v === "all" ? "" : v);
+						setPage(1);
+					}}
+				/>
 			</div>
 
 			{/* Table */}

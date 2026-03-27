@@ -45,6 +45,7 @@ export interface AuditLogFilters {
 	search?: string;
 	from?: string;
 	to?: string;
+	server_id?: string;
 }
 
 export function useAuditLogs(filters: AuditLogFilters = {}) {
@@ -56,6 +57,7 @@ export function useAuditLogs(filters: AuditLogFilters = {}) {
 	if (filters.search) qs.set("search", filters.search);
 	if (filters.from) qs.set("from", filters.from);
 	if (filters.to) qs.set("to", filters.to);
+	if (filters.server_id) qs.set("server_id", filters.server_id);
 
 	const queryStr = qs.toString();
 	const url = `/api/dk/audit-logs${queryStr ? `?${queryStr}` : ""}`;

@@ -6,6 +6,7 @@ import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ContainerTable, type SortKey, type SortDir } from "@/components/server/container-table";
+import { ServerFilterSelect } from "@/components/server-filter-select";
 import { Button } from "@/components/ui/button";
 
 const SORT_MAP: Record<SortKey, string> = {
@@ -20,7 +21,7 @@ export default function ContainersPage() {
 		useListFilters({
 			defaultSort: "-created",
 			searchFields: ["name", "image"],
-			customFilters: { status: "status" },
+			customFilters: { status: "status", server: "server" },
 		});
 
 	const { data: containersResult, isLoading } = useCollection("containers", pbOptions);
@@ -62,6 +63,13 @@ export default function ContainersPage() {
 						Create
 					</Link>
 				</Button>
+			</div>
+
+			<div className="flex items-center gap-3">
+				<ServerFilterSelect
+					value={filters.custom.server ?? "all"}
+					onValueChange={(v) => setCustom("server", v)}
+				/>
 			</div>
 
 			<ContainerTable

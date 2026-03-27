@@ -38,6 +38,7 @@ import { useDeleteChannel, useTestChannel } from "@/hooks/use-notifications";
 import { RuleDialog } from "@/components/alerts/rule-dialog";
 import { ChannelDialog } from "@/components/notifications/channel-dialog";
 import { containsAnyFilter } from "@/lib/pocketbase-filters";
+import { ServerFilterSelect } from "@/components/server-filter-select";
 import type {
 	AlertRuleRecord,
 	NotificationLogRecord,
@@ -62,6 +63,7 @@ const STATE_VARIANT: Record<string, "default" | "destructive" | "secondary" | "o
 
 export default function AlertsPage() {
 	const [ruleSearch, setRuleSearch] = useState("");
+	const [serverFilter, setServerFilter] = useState("all");
 	const [rulesPage, setRulesPage] = useState(1);
 	const [channelsPage, setChannelsPage] = useState(1);
 	const [historyPage, setHistoryPage] = useState(1);
@@ -114,8 +116,11 @@ export default function AlertsPage() {
 	const testChannelMut = useTestChannel();
 
 	const servers = (serversResult?.items ?? []) as ServerRecord[];
-	const containers = (containersResult?.items ?? []) as ContainerRecord[];
-	const rules = useMemo(
+	const containers = useMemo(
+		() => (containersResult?.items ?? []) as ContainerRecord[],
+		[containersResult?.items],
+	);
+	const allRules = useMemo(
 		() => (rulesResult?.items ?? []) as AlertRuleRecord[],
 		[rulesResult?.items],
 	);
@@ -123,17 +128,40 @@ export default function AlertsPage() {
 		() => (channelsResult?.items ?? []) as NotificationChannelRecord[],
 		[channelsResult?.items],
 	);
-	const logs = useMemo(
+	const allLogs = useMemo(
 		() => (logsResult?.items ?? []) as NotificationLogRecord[],
 		[logsResult?.items],
 	);
+
+	// Server-filtered container IDs for cross-referencing
+	const serverContainerIds = useMemo(() => {
+		if (serverFilter === "all") return null;
+		return new Set(containers.filter((c) => c.server === serverFilter).map((c) => c.id));
+	}, [serverFilter, containers]);
+
+	// Filter rules by server (server targets + container targets belonging to server)
+	const rules = useMemo(() => {
+		if (serverFilter === "all") return allRules;
+		return allRules.filter((r) => {
+			if (r.target_type === "server" && r.target_id === serverFilter) return true;
+			if (r.target_type === "container" && serverContainerIds?.has(r.target_id)) return true;
+			return false;
+		});
+	}, [allRules, serverFilter, serverContainerIds]);
+
+	// Filter logs by matching rule IDs from filtered rules
+	const filteredRuleIds = useMemo(() => new Set(rules.map((r) => r.id)), [rules]);
+	const logs = useMemo(() => {
+		if (serverFilter === "all") return allLogs;
+		return allLogs.filter((l) => filteredRuleIds.has(l.alert_rule));
+	}, [allLogs, serverFilter, filteredRuleIds]);
 
 	const firingCount = useMemo(() => rules.filter((r) => r.state === "firing").length, [rules]);
 
 	const resolveTargetName = (targetType: string, targetId: string) => {
 		if (targetType === "server") {
 			const s = servers.find((sv) => sv.id === targetId);
-			return s?.hostname ?? targetId.slice(0, 8);
+			return s?.name || s?.hostname || targetId.slice(0, 8);
 		}
 		const c = containers.find((ct) => ct.id === targetId);
 		return c?.name ?? targetId.slice(0, 8);
@@ -156,6 +184,8 @@ export default function AlertsPage() {
 					</Badge>
 				)}
 			</div>
+
+			<ServerFilterSelect value={serverFilter} onValueChange={setServerFilter} />
 
 			<Tabs defaultValue="rules">
 				<TabsList>
