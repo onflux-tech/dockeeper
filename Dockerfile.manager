@@ -1,3 +1,4 @@
+# check=skip=FromPlatformFlagConstDisallowed
 # ─── Stage 1: Build React frontend ────────────────────────
 FROM --platform=linux/amd64 node:22-alpine AS frontend-builder
 WORKDIR /app/web

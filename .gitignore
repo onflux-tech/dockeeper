@@ -37,9 +37,6 @@ web/node_modules/
 web/dist/
 web/.cache/
 
-# Proto generated
-proto/gen/
-
 # Build artifacts
 dist/
 release/
@@ -47,5 +44,5 @@ release/
 # Specs (keep in repo but ignore local drafts)
 .specs/
 
-# Github
-.github/
+# Claude
+.claude/
