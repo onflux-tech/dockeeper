@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -19,11 +20,12 @@ type DiscoveryHandler struct {
 	agentpb.UnimplementedAgentDiscoveryServiceServer
 	app       core.App
 	resources *store.ResourceStore
+	bus       *events.Bus
 }
 
 // NewDiscoveryHandler creates a new DiscoveryHandler.
-func NewDiscoveryHandler(app core.App, resources *store.ResourceStore) *DiscoveryHandler {
-	return &DiscoveryHandler{app: app, resources: resources}
+func NewDiscoveryHandler(app core.App, resources *store.ResourceStore, bus *events.Bus) *DiscoveryHandler {
+	return &DiscoveryHandler{app: app, resources: resources, bus: bus}
 }
 
 // ReportContainers upserts container records and marks removed containers.
@@ -44,7 +46,7 @@ func (h *DiscoveryHandler) ReportContainers(ctx context.Context, req *agentpb.Re
 		return nil, status.Error(codes.Internal, "failed to store containers")
 	}
 
-	hooks.UpdateHeartbeat(h.app, sid)
+	hooks.UpdateHeartbeat(h.app, h.bus, sid)
 	return &agentpb.ReportContainersResponse{ReceivedCount: int32(count)}, nil
 }
 
@@ -66,7 +68,7 @@ func (h *DiscoveryHandler) ReportImages(ctx context.Context, req *agentpb.Report
 		return nil, status.Error(codes.Internal, "failed to store images")
 	}
 
-	hooks.UpdateHeartbeat(h.app, sid)
+	hooks.UpdateHeartbeat(h.app, h.bus, sid)
 	return &agentpb.ReportImagesResponse{ReceivedCount: int32(count)}, nil
 }
 
@@ -88,7 +90,7 @@ func (h *DiscoveryHandler) ReportNetworks(ctx context.Context, req *agentpb.Repo
 		return nil, status.Error(codes.Internal, "failed to store networks")
 	}
 
-	hooks.UpdateHeartbeat(h.app, sid)
+	hooks.UpdateHeartbeat(h.app, h.bus, sid)
 	return &agentpb.ReportNetworksResponse{ReceivedCount: int32(count)}, nil
 }
 
@@ -110,7 +112,7 @@ func (h *DiscoveryHandler) ReportVolumes(ctx context.Context, req *agentpb.Repor
 		return nil, status.Error(codes.Internal, "failed to store volumes")
 	}
 
-	hooks.UpdateHeartbeat(h.app, sid)
+	hooks.UpdateHeartbeat(h.app, h.bus, sid)
 	return &agentpb.ReportVolumesResponse{ReceivedCount: int32(count)}, nil
 }
 

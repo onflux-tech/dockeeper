@@ -6,6 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
@@ -15,15 +16,15 @@ const (
 
 // RegisterOfflineChecker registers a cron job that marks agents as offline
 // when they haven't sent a heartbeat within the threshold.
-func RegisterOfflineChecker(app core.App) {
+func RegisterOfflineChecker(app core.App, bus *events.Bus) {
 	if err := app.Cron().Add("agent_offline_check", "*/1 * * * *", func() {
-		checkOfflineAgents(app)
+		checkOfflineAgents(app, bus)
 	}); err != nil {
 		slog.Error("failed to register offline checker cron", "error", err)
 	}
 }
 
-func checkOfflineAgents(app core.App) {
+func checkOfflineAgents(app core.App, bus *events.Bus) {
 	cutoff := time.Now().Add(-offlineThreshold).UTC().Format("2006-01-02 15:04:05.000Z")
 
 	records, err := app.FindRecordsByFilter(
@@ -43,23 +44,49 @@ func checkOfflineAgents(app core.App) {
 			slog.Error("failed to mark agent offline", "server_id", r.Id, "error", err)
 			continue
 		}
-		slog.Warn("agent marked offline", "server_id", r.Id, "hostname", r.GetString("hostname"))
+
+		hostname := r.GetString("hostname")
+		slog.Warn("agent marked offline", "server_id", r.Id, "hostname", hostname)
+
+		if bus != nil {
+			bus.Publish(events.Event{
+				Type:       events.ServerOffline,
+				Severity:   events.SeverityCritical,
+				ServerID:   r.Id,
+				ServerName: hostname,
+				Timestamp:  time.Now().UTC(),
+			})
+		}
 	}
 }
 
 // UpdateHeartbeat sets the server's last_seen to now and status to online.
 // It returns false if the server record does not exist (e.g. deleted).
-func UpdateHeartbeat(app core.App, serverID string) bool {
+func UpdateHeartbeat(app core.App, bus *events.Bus, serverID string) bool {
 	record, err := app.FindRecordById(constants.CollServers, serverID)
 	if err != nil {
 		slog.Error("heartbeat: server not found", "server_id", serverID, "error", err)
 		return false
 	}
 
+	wasOffline := record.GetString("status") != "online"
+
 	record.Set("last_seen", time.Now().UTC())
 	record.Set("status", "online")
 	if err := app.Save(record); err != nil {
 		slog.Error("heartbeat: failed to update", "server_id", serverID, "error", err)
 	}
+
+	// Publish server.online only on transition from offline → online.
+	if wasOffline && bus != nil {
+		bus.Publish(events.Event{
+			Type:       events.ServerOnline,
+			Severity:   events.SeverityInfo,
+			ServerID:   serverID,
+			ServerName: record.GetString("hostname"),
+			Timestamp:  time.Now().UTC(),
+		})
+	}
+
 	return true
 }

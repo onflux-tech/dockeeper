@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -22,7 +23,7 @@ type Server struct {
 
 // NewServer creates a configured gRPC server with TLS, interceptors and
 // the enrollment service registered.
-func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr string) (*Server, error) {
+func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr string, bus *events.Bus) (*Server, error) {
 	tlsCfg, err := ca.ServerTLSConfig()
 	if err != nil {
 		return nil, fmt.Errorf("server TLS config: %w", err)
@@ -35,20 +36,20 @@ func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr stri
 	)
 
 	// Register services.
-	enrollment := NewEnrollmentHandler(app, ca)
+	enrollment := NewEnrollmentHandler(app, ca, bus)
 	agentpb.RegisterAgentEnrollmentServiceServer(gs, enrollment)
 
 	metricsStore := store.NewMetricsStore(app)
-	resourceStore := store.NewResourceStore(app)
+	resourceStore := store.NewResourceStore(app, bus)
 
-	metricsHandler := NewMetricsHandler(app, metricsStore)
+	metricsHandler := NewMetricsHandler(app, metricsStore, bus)
 	agentpb.RegisterAgentMetricsServiceServer(gs, metricsHandler)
 
-	discoveryHandler := NewDiscoveryHandler(app, resourceStore)
+	discoveryHandler := NewDiscoveryHandler(app, resourceStore, bus)
 	agentpb.RegisterAgentDiscoveryServiceServer(gs, discoveryHandler)
 
 	traefikStore := store.NewTraefikStore(app)
-	traefikHandler := NewTraefikHandler(app, traefikStore)
+	traefikHandler := NewTraefikHandler(app, traefikStore, bus)
 	agentpb.RegisterAgentTraefikServiceServer(gs, traefikHandler)
 
 	return &Server{grpcServer: gs, addr: addr}, nil

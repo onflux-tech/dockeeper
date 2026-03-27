@@ -12,6 +12,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	dkgrpc "github.com/onflux-tech/dockeeper/internal/manager/grpc"
 	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
 	"github.com/onflux-tech/dockeeper/internal/manager/jobs"
@@ -39,8 +40,11 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 	// Register hooks.
 	hooks.RegisterAdminSetupHook(app)
 
+	// Create EventBus and subscribe handlers (wired to stores inside OnServe).
+	eventBus := events.NewBus()
+
 	// Register agent offline checker cron (every 1 min).
-	hooks.RegisterOfflineChecker(app)
+	hooks.RegisterOfflineChecker(app, eventBus)
 
 	// Register metrics aggregation and cleanup jobs.
 	jobs.RegisterJobs(app)
@@ -74,6 +78,11 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		auditStore := store.NewAuditStore(app)
 		dispatcher := services.NewGRPCCommandDispatcher()
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
+
+		// Subscribe EventBus handlers (now that stores are available).
+		eventBus.Subscribe(events.NewDBHandler(app))
+		eventBus.Subscribe(events.NewAuditHandler(auditStore))
+		eventBus.Subscribe(events.NewAlertHandler())
 
 		// Volume + Cascade services (cascade depends on volumeSvc).
 		volumeSvc := services.NewVolumeService(app, auditStore)
@@ -139,6 +148,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		routes.RegisterAuditRoutes(se, app, rbac)
 		hooks.RegisterAuditHooks(app, auditStore)
 
+		// Events API route.
+		routes.RegisterEventRoutes(se, app, rbac)
+
 		// Serve embedded frontend (SPA fallback).
 		registerFrontendHandler(se, frontendFS)
 
@@ -159,7 +171,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 			return err
 		}
 
-		grpcServer, err := dkgrpc.NewServer(app, ca, grpcAddr)
+		grpcServer, err := dkgrpc.NewServer(app, ca, grpcAddr, eventBus)
 		if err != nil {
 			slog.Error("failed to create gRPC server", "error", err)
 			return err
@@ -172,9 +184,10 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 			}
 		}()
 
-		// Register termination hook to stop gRPC server.
+		// Register termination hook to stop gRPC server and EventBus.
 		app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
 			grpcServer.Stop()
+			eventBus.Close()
 			return te.Next()
 		})
 

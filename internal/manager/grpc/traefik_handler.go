@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -19,11 +20,12 @@ type TraefikHandler struct {
 	agentpb.UnimplementedAgentTraefikServiceServer
 	app   core.App
 	store *store.TraefikStore
+	bus   *events.Bus
 }
 
 // NewTraefikHandler creates a new TraefikHandler.
-func NewTraefikHandler(app core.App, traefikStore *store.TraefikStore) *TraefikHandler {
-	return &TraefikHandler{app: app, store: traefikStore}
+func NewTraefikHandler(app core.App, traefikStore *store.TraefikStore, bus *events.Bus) *TraefikHandler {
+	return &TraefikHandler{app: app, store: traefikStore, bus: bus}
 }
 
 // ReportTraefikRoutes upserts Traefik route records for a server.
@@ -40,7 +42,7 @@ func (h *TraefikHandler) ReportTraefikRoutes(ctx context.Context, req *agentpb.R
 		return nil, status.Error(codes.Internal, "failed to store traefik routes")
 	}
 
-	hooks.UpdateHeartbeat(h.app, sid)
+	hooks.UpdateHeartbeat(h.app, h.bus, sid)
 	return &agentpb.ReportTraefikRoutesResponse{ReceivedCount: int32(count)}, nil
 }
 

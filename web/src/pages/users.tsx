@@ -24,6 +24,13 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 import {
 	useUsers,
@@ -32,6 +39,8 @@ import {
 	useGroups,
 	useCreateGroup,
 	useDeleteGroup,
+	useUpdateGroup,
+	useAddMember,
 	useAPIKeys,
 	useCreateAPIKey,
 	useDeleteAPIKey,
@@ -40,57 +49,59 @@ import {
 
 // ── Capabilities List ────────────────────────────────────
 
-const ALL_CAPABILITIES = [
-	"servers.view",
-	"servers.manage",
-	"containers.view",
-	"containers.manage",
-	"images.view",
-	"images.manage",
-	"networks.view",
-	"networks.manage",
-	"volumes.view",
-	"volumes.manage",
-	"compose.view",
-	"compose.manage",
-	"metrics.view",
-	"alerts.view",
-	"alerts.manage",
-	"notifications.view",
-	"notifications.manage",
-	"backups.view",
-	"backups.manage",
-	"settings.view",
-	"settings.manage",
-	"users.view",
-	"users.manage",
-	"audit.view",
-	"traefik.view",
-	"traefik.manage",
+// Group by domain for a nicer matrix layout.
+const CAP_DOMAINS = [
+	{ domain: "Servers", caps: ["servers.view", "servers.manage"] },
+	{ domain: "Containers", caps: ["containers.view", "containers.manage"] },
+	{ domain: "Images", caps: ["images.view", "images.manage"] },
+	{ domain: "Networks", caps: ["networks.view", "networks.manage"] },
+	{ domain: "Volumes", caps: ["volumes.view", "volumes.manage"] },
+	{ domain: "Compose", caps: ["compose.view", "compose.manage"] },
+	{ domain: "Metrics", caps: ["metrics.view"] },
+	{ domain: "Alerts", caps: ["alerts.view", "alerts.manage"] },
+	{ domain: "Notifications", caps: ["notifications.view", "notifications.manage"] },
+	{ domain: "Backups", caps: ["backups.view", "backups.manage"] },
+	{ domain: "Settings", caps: ["settings.view", "settings.manage"] },
+	{ domain: "Users", caps: ["users.view", "users.manage"] },
+	{ domain: "Audit", caps: ["audit.view"] },
+	{ domain: "Events", caps: ["events.view"] },
+	{ domain: "Traefik", caps: ["traefik.view", "traefik.manage"] },
 ];
 
 // ── Users Tab ────────────────────────────────────────────
 
 function UsersTab() {
 	const { data: users, isLoading } = useUsers();
+	const { data: groups } = useGroups();
 	const createUser = useCreateUser();
 	const deleteUser = useDeleteUser();
+	const addMember = useAddMember();
 
 	const [showCreate, setShowCreate] = useState(false);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [groupId, setGroupId] = useState("");
+	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
 	function handleCreate() {
 		createUser.mutate(
 			{ email, password },
 			{
-				onSuccess: () => {
+				onSuccess: (data) => {
+					if (groupId) {
+						addMember.mutate({ groupId, userId: data.id });
+					}
 					setShowCreate(false);
 					setEmail("");
 					setPassword("");
+					setGroupId("");
 				},
 			},
 		);
+	}
+
+	function handleDelete(id: string) {
+		deleteUser.mutate(id, { onSuccess: () => setConfirmDeleteId(null) });
 	}
 
 	if (isLoading) {
@@ -132,7 +143,7 @@ function UsersTab() {
 								<Button
 									variant="ghost"
 									size="icon"
-									onClick={() => deleteUser.mutate(user.id)}
+									onClick={() => setConfirmDeleteId(user.id)}
 								>
 									<Trash2 className="h-4 w-4 text-destructive" />
 								</Button>
@@ -149,6 +160,7 @@ function UsersTab() {
 				</TableBody>
 			</Table>
 
+			{/* Create User Dialog */}
 			<Dialog open={showCreate} onOpenChange={setShowCreate}>
 				<DialogContent>
 					<DialogHeader>
@@ -174,6 +186,22 @@ function UsersTab() {
 								placeholder="Minimum 8 characters"
 							/>
 						</div>
+						<div>
+							<Label>Group (optional)</Label>
+							<Select value={groupId} onValueChange={setGroupId}>
+								<SelectTrigger>
+									<SelectValue placeholder="No group" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">No group</SelectItem>
+									{groups?.map((g) => (
+										<SelectItem key={g.id} value={g.id}>
+											{g.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 					</div>
 					<DialogFooter>
 						<Button variant="outline" onClick={() => setShowCreate(false)}>
@@ -188,6 +216,30 @@ function UsersTab() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Delete Confirmation Dialog */}
+			<Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete User</DialogTitle>
+						<DialogDescription>
+							Are you sure you want to delete this user? This action cannot be undone.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+							disabled={deleteUser.isPending}
+						>
+							Delete
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 }
@@ -197,12 +249,15 @@ function UsersTab() {
 function GroupsTab() {
 	const { data: groups, isLoading } = useGroups();
 	const createGroup = useCreateGroup();
+	const updateGroup = useUpdateGroup();
 	const deleteGroup = useDeleteGroup();
 
 	const [showCreate, setShowCreate] = useState(false);
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [selectedCaps, setSelectedCaps] = useState<string[]>([]);
+	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+	const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
 
 	function toggleCap(cap: string) {
 		setSelectedCaps((prev) =>
@@ -222,6 +277,32 @@ function GroupsTab() {
 				},
 			},
 		);
+	}
+
+	function openEdit(group: { id: string; name: string; description: string; capabilities: string[] }) {
+		setEditingGroupId(group.id);
+		setName(group.name);
+		setDescription(group.description);
+		setSelectedCaps(group.capabilities ?? []);
+	}
+
+	function handleUpdate() {
+		if (!editingGroupId) return;
+		updateGroup.mutate(
+			{ id: editingGroupId, name, description, capabilities: selectedCaps },
+			{
+				onSuccess: () => {
+					setEditingGroupId(null);
+					setName("");
+					setDescription("");
+					setSelectedCaps([]);
+				},
+			},
+		);
+	}
+
+	function handleDelete(id: string) {
+		deleteGroup.mutate(id, { onSuccess: () => setConfirmDeleteId(null) });
 	}
 
 	if (isLoading) {
@@ -246,7 +327,7 @@ function GroupsTab() {
 
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{groups?.map((group) => (
-					<Card key={group.id}>
+					<Card key={group.id} className="cursor-pointer hover:ring-1 hover:ring-ring" onClick={() => !group.is_preset && openEdit(group)}>
 						<CardHeader className="pb-3">
 							<div className="flex items-center justify-between">
 								<CardTitle className="text-base">{group.name}</CardTitle>
@@ -261,7 +342,10 @@ function GroupsTab() {
 											variant="ghost"
 											size="icon"
 											className="h-7 w-7"
-											onClick={() => deleteGroup.mutate(group.id)}
+											onClick={(e) => {
+												e.stopPropagation();
+												setConfirmDeleteId(group.id);
+											}}
 										>
 											<Trash2 className="h-3.5 w-3.5 text-destructive" />
 										</Button>
@@ -292,12 +376,24 @@ function GroupsTab() {
 				))}
 			</div>
 
-			<Dialog open={showCreate} onOpenChange={setShowCreate}>
-				<DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+			{/* Create / Edit Group Dialog */}
+			<Dialog
+				open={showCreate || !!editingGroupId}
+				onOpenChange={(open) => {
+					if (!open) {
+						setShowCreate(false);
+						setEditingGroupId(null);
+						setName("");
+						setDescription("");
+						setSelectedCaps([]);
+					}
+				}}
+			>
+				<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
 					<DialogHeader>
-						<DialogTitle>Create Group</DialogTitle>
+						<DialogTitle>{editingGroupId ? "Edit Group" : "Create Group"}</DialogTitle>
 						<DialogDescription>
-							Define a new role group with capabilities.
+							{editingGroupId ? "Update group details and capabilities." : "Define a new role group with capabilities."}
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
@@ -319,33 +415,64 @@ function GroupsTab() {
 						</div>
 						<div>
 							<Label>Capabilities</Label>
-							<div className="mt-2 grid grid-cols-2 gap-1.5">
-								{ALL_CAPABILITIES.map((cap) => (
-									<label
-										key={cap}
-										className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs hover:bg-muted"
-									>
-										<input
-											type="checkbox"
-											className="accent-primary"
-											checked={selectedCaps.includes(cap)}
-											onChange={() => toggleCap(cap)}
-										/>
-										{cap}
-									</label>
+							<div className="mt-2 space-y-2">
+								{CAP_DOMAINS.map(({ domain, caps }) => (
+									<div key={domain} className="flex items-center gap-3 rounded-md border px-3 py-2">
+										<span className="w-24 text-xs font-medium text-muted-foreground">{domain}</span>
+										<div className="flex flex-1 gap-3">
+											{caps.map((cap) => (
+												<label
+													key={cap}
+													className="flex cursor-pointer items-center gap-1.5 text-xs"
+												>
+													<input
+														type="checkbox"
+														className="accent-primary"
+														checked={selectedCaps.includes(cap)}
+														onChange={() => toggleCap(cap)}
+													/>
+													{cap.split(".")[1]}
+												</label>
+											))}
+										</div>
+									</div>
 								))}
 							</div>
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowCreate(false)}>
+						<Button variant="outline" onClick={() => { setShowCreate(false); setEditingGroupId(null); }}>
 							Cancel
 						</Button>
 						<Button
-							onClick={handleCreate}
-							disabled={!name || createGroup.isPending}
+							onClick={editingGroupId ? handleUpdate : handleCreate}
+							disabled={!name || (editingGroupId ? updateGroup.isPending : createGroup.isPending)}
 						>
-							Create
+							{editingGroupId ? "Save" : "Create"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete Confirmation Dialog */}
+			<Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete Group</DialogTitle>
+						<DialogDescription>
+							Are you sure you want to delete this group? Members will lose these capabilities.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+							disabled={deleteGroup.isPending}
+						>
+							Delete
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -365,6 +492,7 @@ function APIKeysTab() {
 	const [keyName, setKeyName] = useState("");
 	const [selectedCaps, setSelectedCaps] = useState<string[]>([]);
 	const [createdKey, setCreatedKey] = useState<CreatedAPIKey | null>(null);
+	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
 	function toggleCap(cap: string) {
 		setSelectedCaps((prev) =>
@@ -383,6 +511,10 @@ function APIKeysTab() {
 				},
 			},
 		);
+	}
+
+	function handleDelete(id: string) {
+		deleteKey.mutate(id, { onSuccess: () => setConfirmDeleteId(null) });
 	}
 
 	if (isLoading) {
@@ -440,7 +572,7 @@ function APIKeysTab() {
 								<Button
 									variant="ghost"
 									size="icon"
-									onClick={() => deleteKey.mutate(key.id)}
+									onClick={() => setConfirmDeleteId(key.id)}
 								>
 									<Trash2 className="h-4 w-4 text-destructive" />
 								</Button>
@@ -464,7 +596,7 @@ function APIKeysTab() {
 					if (!open) setShowCreate(false);
 				}}
 			>
-				<DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+				<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
 					<DialogHeader>
 						<DialogTitle>Create API Key</DialogTitle>
 						<DialogDescription>
@@ -482,20 +614,27 @@ function APIKeysTab() {
 						</div>
 						<div>
 							<Label>Capabilities</Label>
-							<div className="mt-2 grid grid-cols-2 gap-1.5">
-								{ALL_CAPABILITIES.map((cap) => (
-									<label
-										key={cap}
-										className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs hover:bg-muted"
-									>
-										<input
-											type="checkbox"
-											className="accent-primary"
-											checked={selectedCaps.includes(cap)}
-											onChange={() => toggleCap(cap)}
-										/>
-										{cap}
-									</label>
+							<div className="mt-2 space-y-2">
+								{CAP_DOMAINS.map(({ domain, caps }) => (
+									<div key={domain} className="flex items-center gap-3 rounded-md border px-3 py-2">
+										<span className="w-24 text-xs font-medium text-muted-foreground">{domain}</span>
+										<div className="flex flex-1 gap-3">
+											{caps.map((cap) => (
+												<label
+													key={cap}
+													className="flex cursor-pointer items-center gap-1.5 text-xs"
+												>
+													<input
+														type="checkbox"
+														className="accent-primary"
+														checked={selectedCaps.includes(cap)}
+														onChange={() => toggleCap(cap)}
+													/>
+													{cap.split(".")[1]}
+												</label>
+											))}
+										</div>
+									</div>
 								))}
 							</div>
 						</div>
@@ -567,6 +706,30 @@ function APIKeysTab() {
 							}}
 						>
 							Done
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete API Key Confirmation Dialog */}
+			<Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Revoke API Key</DialogTitle>
+						<DialogDescription>
+							Are you sure you want to revoke this API key? Applications using it will immediately lose access.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+							disabled={deleteKey.isPending}
+						>
+							Revoke
 						</Button>
 					</DialogFooter>
 				</DialogContent>

@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
@@ -14,12 +17,19 @@ import (
 // ResourceStore handles upsert and sync operations for containers, images,
 // networks and volumes in PocketBase.
 type ResourceStore struct {
-	app core.App
+	app       core.App
+	bus       *events.Bus
+	debounce  sync.Map // key: serverID+containerID → time.Time
+	debounceTTL time.Duration
 }
 
 // NewResourceStore creates a new ResourceStore.
-func NewResourceStore(app core.App) *ResourceStore {
-	return &ResourceStore{app: app}
+func NewResourceStore(app core.App, bus *events.Bus) *ResourceStore {
+	return &ResourceStore{
+		app:         app,
+		bus:         bus,
+		debounceTTL: 5 * time.Second,
+	}
 }
 
 // UpsertContainers creates or updates container records and marks containers
@@ -30,6 +40,9 @@ func (s *ResourceStore) UpsertContainers(serverID string, containers []*agentpb.
 		return 0, fmt.Errorf("find collection %s: %w", constants.CollContainers, err)
 	}
 
+	// Resolve server name for events.
+	serverName := s.resolveServerName(serverID)
+
 	reported := make(map[string]bool, len(containers))
 	count := 0
 
@@ -37,6 +50,7 @@ func (s *ResourceStore) UpsertContainers(serverID string, containers []*agentpb.
 		reported[c.GetContainerId()] = true
 
 		rec, err := s.findContainer(serverID, c.GetContainerId())
+		isNew := false
 		if err != nil {
 			// Fallback: look up by server + name to handle container recreate
 			// (same name, new Docker ID after update/recreate operations).
@@ -44,13 +58,18 @@ func (s *ResourceStore) UpsertContainers(serverID string, containers []*agentpb.
 			if err != nil {
 				rec = core.NewRecord(col)
 				rec.Set("server", serverID)
+				isNew = true
 			}
 			rec.Set("container_id", c.GetContainerId())
 		}
 
+		// Capture old status before update for state diff detection.
+		oldStatus := rec.GetString("status")
+		newStatus := c.GetStatus()
+
 		rec.Set("name", c.GetName())
 		rec.Set("image", c.GetImage())
-		rec.Set("status", c.GetStatus())
+		rec.Set("status", newStatus)
 		rec.Set("ports", parseJSONField(c.GetPortsJson()))
 		rec.Set("labels", parseJSONField(c.GetLabelsJson()))
 		rec.Set("volumes", parseJSONField(c.GetVolumesJson()))
@@ -80,12 +99,88 @@ func (s *ResourceStore) UpsertContainers(serverID string, containers []*agentpb.
 			continue
 		}
 		count++
+
+		// Publish state transition events.
+		if s.bus != nil {
+			if isNew {
+				s.publishContainerEvent(events.ContainerCreated, serverID, serverName, rec.Id, c.GetName(), nil)
+			} else if oldStatus != newStatus && oldStatus != "" {
+				s.publishStateTransition(oldStatus, newStatus, serverID, serverName, rec.Id, c.GetName())
+			}
+		}
 	}
 
 	// Mark containers not in report as "removed".
-	s.markRemovedContainers(serverID, reported)
+	s.markRemovedContainers(serverID, serverName, reported)
 
 	return count, nil
+}
+
+// publishStateTransition determines the event type for a container state change.
+func (s *ResourceStore) publishStateTransition(oldStatus, newStatus, serverID, serverName, recordID, name string) {
+	var eventType events.EventType
+	var details map[string]any
+
+	switch {
+	case newStatus == "dead":
+		// "dead" status indicates a crash or abnormal exit.
+		eventType = events.ContainerCrashed
+		details = map[string]any{"old_status": oldStatus}
+	case newStatus == "exited":
+		eventType = events.ContainerStopped
+		details = map[string]any{"old_status": oldStatus}
+	case newStatus == "running" && (oldStatus == "exited" || oldStatus == "created" || oldStatus == "dead"):
+		eventType = events.ContainerStarted
+		details = map[string]any{"old_status": oldStatus}
+	case newStatus == "restarting":
+		eventType = events.ContainerRestarting
+		details = map[string]any{"old_status": oldStatus}
+	default:
+		return // no relevant transition
+	}
+
+	s.publishContainerEvent(eventType, serverID, serverName, recordID, name, details)
+}
+
+// publishContainerEvent publishes a container event with debounce.
+func (s *ResourceStore) publishContainerEvent(t events.EventType, serverID, serverName, containerID, containerName string, details map[string]any) {
+	key := fmt.Sprintf("%s:%s:%s", serverID, containerID, string(t))
+	if last, ok := s.debounce.Load(key); ok {
+		if time.Since(last.(time.Time)) < s.debounceTTL {
+			return // debounced
+		}
+	}
+	s.debounce.Store(key, time.Now())
+
+	s.bus.Publish(events.Event{
+		Type:          t,
+		Severity:      events.SeverityFor(t),
+		ServerID:      serverID,
+		ServerName:    serverName,
+		ContainerID:   containerID,
+		ContainerName: containerName,
+		Details:       details,
+		Timestamp:     time.Now().UTC(),
+	})
+}
+
+// CleanupDebounce removes stale debounce entries. Call periodically.
+func (s *ResourceStore) CleanupDebounce() {
+	s.debounce.Range(func(key, value any) bool {
+		if time.Since(value.(time.Time)) > 5*time.Minute {
+			s.debounce.Delete(key)
+		}
+		return true
+	})
+}
+
+// resolveServerName looks up the server hostname.
+func (s *ResourceStore) resolveServerName(serverID string) string {
+	rec, err := s.app.FindRecordById(constants.CollServers, serverID)
+	if err != nil {
+		return ""
+	}
+	return rec.GetString("hostname")
 }
 
 // UpsertImages creates or updates image records for a server.
@@ -209,7 +304,7 @@ func (s *ResourceStore) findByKey(collection, serverID, keyField, keyValue strin
 }
 
 // markRemovedContainers deletes container records not present in the reported set.
-func (s *ResourceStore) markRemovedContainers(serverID string, reported map[string]bool) {
+func (s *ResourceStore) markRemovedContainers(serverID, serverName string, reported map[string]bool) {
 	records, err := s.app.FindRecordsByFilter(
 		constants.CollContainers,
 		"server = {:sid}",
@@ -224,10 +319,15 @@ func (s *ResourceStore) markRemovedContainers(serverID string, reported map[stri
 	for _, r := range records {
 		cid := r.GetString("container_id")
 		if !reported[cid] {
+			containerName := r.GetString("name")
+			recordID := r.Id
 			if err := s.app.Delete(r); err != nil {
 				slog.Error("failed to delete removed container", "container_id", cid, "error", err)
 			} else {
 				slog.Info("container deleted (no longer on host)", "server_id", serverID, "container_id", cid)
+				if s.bus != nil {
+					s.publishContainerEvent(events.ContainerRemoved, serverID, serverName, recordID, containerName, nil)
+				}
 			}
 		}
 	}

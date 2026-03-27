@@ -6,6 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -17,11 +18,12 @@ type MetricsHandler struct {
 	agentpb.UnimplementedAgentMetricsServiceServer
 	app     core.App
 	metrics *store.MetricsStore
+	bus     *events.Bus
 }
 
 // NewMetricsHandler creates a new MetricsHandler.
-func NewMetricsHandler(app core.App, metrics *store.MetricsStore) *MetricsHandler {
-	return &MetricsHandler{app: app, metrics: metrics}
+func NewMetricsHandler(app core.App, metrics *store.MetricsStore, bus *events.Bus) *MetricsHandler {
+	return &MetricsHandler{app: app, metrics: metrics, bus: bus}
 }
 
 // StreamMetrics receives a client-stream of system metrics and stores each one.
@@ -61,7 +63,7 @@ func (h *MetricsHandler) StreamMetrics(stream agentpb.AgentMetricsService_Stream
 		}
 		count++
 
-		hooks.UpdateHeartbeat(h.app, sid)
+		hooks.UpdateHeartbeat(h.app, h.bus, sid)
 	}
 }
 

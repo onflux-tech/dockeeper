@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -23,11 +24,12 @@ type EnrollmentHandler struct {
 	agentpb.UnimplementedAgentEnrollmentServiceServer
 	app *pocketbase.PocketBase
 	ca  *services.CertAuthority
+	bus *events.Bus
 }
 
 // NewEnrollmentHandler creates a new enrollment handler.
-func NewEnrollmentHandler(app *pocketbase.PocketBase, ca *services.CertAuthority) *EnrollmentHandler {
-	return &EnrollmentHandler{app: app, ca: ca}
+func NewEnrollmentHandler(app *pocketbase.PocketBase, ca *services.CertAuthority, bus *events.Bus) *EnrollmentHandler {
+	return &EnrollmentHandler{app: app, ca: ca, bus: bus}
 }
 
 // Enroll validates the enrollment token, creates or updates a server record in PocketBase,
@@ -105,6 +107,23 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 		"hostname", info.GetHostname(),
 		"cert_expires", expiresAt.Format(time.RFC3339),
 	)
+
+	if h.bus != nil {
+		h.bus.Publish(events.Event{
+			Type:       events.ServerEnrolled,
+			Severity:   events.SeverityFor(events.ServerEnrolled),
+			ServerID:   server.Id,
+			ServerName: info.GetHostname(),
+			Details: map[string]any{
+				"ip_address":     ipAddress,
+				"os":             info.GetOs(),
+				"arch":           info.GetArch(),
+				"docker_version": info.GetDockerVersion(),
+				"agent_version":  info.GetAgentVersion(),
+			},
+			Timestamp: time.Now().UTC(),
+		})
+	}
 
 	return &agentpb.EnrollResponse{
 		ServerId:      server.Id,

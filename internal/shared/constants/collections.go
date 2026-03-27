@@ -29,4 +29,5 @@ const (
 	CollGroups       = "groups"
 	CollGroupMembers = "group_members"
 	CollAPIKeys      = "api_keys"
+	CollEvents       = "events"
 )

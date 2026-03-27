@@ -1,4 +1,5 @@
 import {
+	Activity,
 	BarChart3,
 	Bell,
 	Container,
@@ -59,6 +60,7 @@ export const navigation: NavGroup[] = [
 		items: [
 			{ label: "Settings", href: "/settings", icon: Settings },
 			{ label: "Users", href: "/users", icon: Users },
+			{ label: "Events", href: "/events", icon: Activity },
 			{ label: "Audit Logs", href: "/audit-logs", icon: ScrollText },
 		],
 	},
