@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -21,11 +19,12 @@ import (
 type ComposeService struct {
 	app   core.App
 	audit *store.AuditStore
+	pool  *grpc_pool.Pool
 }
 
 // NewComposeService creates a ComposeService.
-func NewComposeService(app core.App, audit *store.AuditStore) *ComposeService {
-	return &ComposeService{app: app, audit: audit}
+func NewComposeService(app core.App, audit *store.AuditStore, pool *grpc_pool.Pool) *ComposeService {
+	return &ComposeService{app: app, audit: audit, pool: pool}
 }
 
 // StackInfo holds resolved stack/server information for agent operations.
@@ -154,14 +153,10 @@ func (s *ComposeService) resolveServer(serverID string) (string, error) {
 
 // runComposeDown executes compose down on the agent synchronously.
 func (s *ComposeService) runComposeDown(ctx context.Context, info *StackInfo) error {
-	addr := net.JoinHostPort(info.AgentAddr, agentCommandPort)
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := s.pool.Get(info.AgentAddr)
 	if err != nil {
 		return fmt.Errorf("dial agent: %w", err)
 	}
-	defer closeConn(conn, addr)
 
 	client := agentpb.NewAgentComposeServiceClient(conn)
 

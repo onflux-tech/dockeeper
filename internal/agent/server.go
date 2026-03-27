@@ -49,6 +49,9 @@ func NewAgentServer(exec executor.Executor, orch collector.OrchestratorClient, l
 	backups := grpchandlers.NewBackupHandler(exec, logger)
 	agentpb.RegisterAgentBackupServiceServer(gs, backups)
 
+	updates := grpchandlers.NewUpdateHandler(exec, logger)
+	agentpb.RegisterAgentUpdateServiceServer(gs, updates)
+
 	execH, err := grpchandlers.NewExecHandler(logger)
 	if err != nil {
 		logger.Warn("exec handler unavailable, terminal disabled", "error", err)

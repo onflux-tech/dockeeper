@@ -1814,3 +1814,147 @@ var AgentTraefikService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "dockeeper/agent/v1/agent.proto",
 }
+
+const (
+	AgentUpdateService_CheckImageDigest_FullMethodName       = "/dockeeper.agent.v1.AgentUpdateService/CheckImageDigest"
+	AgentUpdateService_ExecuteContainerUpdate_FullMethodName = "/dockeeper.agent.v1.AgentUpdateService/ExecuteContainerUpdate"
+)
+
+// AgentUpdateServiceClient is the client API for AgentUpdateService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AgentUpdateServiceClient interface {
+	CheckImageDigest(ctx context.Context, in *CheckImageDigestRequest, opts ...grpc.CallOption) (*CheckImageDigestResponse, error)
+	ExecuteContainerUpdate(ctx context.Context, in *ExecuteContainerUpdateRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ContainerUpdateProgress], error)
+}
+
+type agentUpdateServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAgentUpdateServiceClient(cc grpc.ClientConnInterface) AgentUpdateServiceClient {
+	return &agentUpdateServiceClient{cc}
+}
+
+func (c *agentUpdateServiceClient) CheckImageDigest(ctx context.Context, in *CheckImageDigestRequest, opts ...grpc.CallOption) (*CheckImageDigestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckImageDigestResponse)
+	err := c.cc.Invoke(ctx, AgentUpdateService_CheckImageDigest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentUpdateServiceClient) ExecuteContainerUpdate(ctx context.Context, in *ExecuteContainerUpdateRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ContainerUpdateProgress], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &AgentUpdateService_ServiceDesc.Streams[0], AgentUpdateService_ExecuteContainerUpdate_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ExecuteContainerUpdateRequest, ContainerUpdateProgress]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentUpdateService_ExecuteContainerUpdateClient = grpc.ServerStreamingClient[ContainerUpdateProgress]
+
+// AgentUpdateServiceServer is the server API for AgentUpdateService service.
+// All implementations must embed UnimplementedAgentUpdateServiceServer
+// for forward compatibility.
+type AgentUpdateServiceServer interface {
+	CheckImageDigest(context.Context, *CheckImageDigestRequest) (*CheckImageDigestResponse, error)
+	ExecuteContainerUpdate(*ExecuteContainerUpdateRequest, grpc.ServerStreamingServer[ContainerUpdateProgress]) error
+	mustEmbedUnimplementedAgentUpdateServiceServer()
+}
+
+// UnimplementedAgentUpdateServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAgentUpdateServiceServer struct{}
+
+func (UnimplementedAgentUpdateServiceServer) CheckImageDigest(context.Context, *CheckImageDigestRequest) (*CheckImageDigestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckImageDigest not implemented")
+}
+func (UnimplementedAgentUpdateServiceServer) ExecuteContainerUpdate(*ExecuteContainerUpdateRequest, grpc.ServerStreamingServer[ContainerUpdateProgress]) error {
+	return status.Error(codes.Unimplemented, "method ExecuteContainerUpdate not implemented")
+}
+func (UnimplementedAgentUpdateServiceServer) mustEmbedUnimplementedAgentUpdateServiceServer() {}
+func (UnimplementedAgentUpdateServiceServer) testEmbeddedByValue()                            {}
+
+// UnsafeAgentUpdateServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AgentUpdateServiceServer will
+// result in compilation errors.
+type UnsafeAgentUpdateServiceServer interface {
+	mustEmbedUnimplementedAgentUpdateServiceServer()
+}
+
+func RegisterAgentUpdateServiceServer(s grpc.ServiceRegistrar, srv AgentUpdateServiceServer) {
+	// If the following call panics, it indicates UnimplementedAgentUpdateServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AgentUpdateService_ServiceDesc, srv)
+}
+
+func _AgentUpdateService_CheckImageDigest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckImageDigestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentUpdateServiceServer).CheckImageDigest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentUpdateService_CheckImageDigest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentUpdateServiceServer).CheckImageDigest(ctx, req.(*CheckImageDigestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentUpdateService_ExecuteContainerUpdate_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ExecuteContainerUpdateRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(AgentUpdateServiceServer).ExecuteContainerUpdate(m, &grpc.GenericServerStream[ExecuteContainerUpdateRequest, ContainerUpdateProgress]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentUpdateService_ExecuteContainerUpdateServer = grpc.ServerStreamingServer[ContainerUpdateProgress]
+
+// AgentUpdateService_ServiceDesc is the grpc.ServiceDesc for AgentUpdateService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AgentUpdateService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "dockeeper.agent.v1.AgentUpdateService",
+	HandlerType: (*AgentUpdateServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CheckImageDigest",
+			Handler:    _AgentUpdateService_CheckImageDigest_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ExecuteContainerUpdate",
+			Handler:       _AgentUpdateService_ExecuteContainerUpdate_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "dockeeper/agent/v1/agent.proto",
+}

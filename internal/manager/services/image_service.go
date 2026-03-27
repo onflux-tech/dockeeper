@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -20,11 +18,12 @@ import (
 type ImageService struct {
 	app   core.App
 	audit *store.AuditStore
+	pool  *grpc_pool.Pool
 }
 
 // NewImageService creates an ImageService.
-func NewImageService(app core.App, audit *store.AuditStore) *ImageService {
-	return &ImageService{app: app, audit: audit}
+func NewImageService(app core.App, audit *store.AuditStore, pool *grpc_pool.Pool) *ImageService {
+	return &ImageService{app: app, audit: audit, pool: pool}
 }
 
 // ImageInfo holds the resolved image information needed for agent operations.
@@ -79,11 +78,11 @@ func (s *ImageService) RemoveImage(ctx context.Context, imageRecordID string, fo
 		return nil, err
 	}
 
-	conn, client, err := dialImageService(info.AgentAddr)
+	conn, err := s.pool.Get(info.AgentAddr)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, info.AgentAddr)
+	client := agentpb.NewAgentImageServiceClient(conn)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
@@ -124,11 +123,11 @@ func (s *ImageService) PruneImages(ctx context.Context, serverID string, all boo
 		return nil, err
 	}
 
-	conn, client, err := dialImageService(agentIP)
+	conn, err := s.pool.Get(agentIP)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, agentIP)
+	client := agentpb.NewAgentImageServiceClient(conn)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, 2*commandTimeout)
 	defer cancel()
@@ -151,19 +150,3 @@ func (s *ImageService) PruneImages(ctx context.Context, serverID string, all boo
 	return resp, nil
 }
 
-func dialImageService(agentIP string) (*grpc.ClientConn, agentpb.AgentImageServiceClient, error) {
-	addr := net.JoinHostPort(agentIP, agentCommandPort)
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("dial agent %s: %w", addr, err)
-	}
-	return conn, agentpb.NewAgentImageServiceClient(conn), nil
-}
-
-func closeConn(conn *grpc.ClientConn, addr string) {
-	if err := conn.Close(); err != nil {
-		slog.Warn("failed to close agent connection", "addr", addr, "error", err)
-	}
-}

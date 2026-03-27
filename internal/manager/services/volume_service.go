@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -20,11 +18,12 @@ import (
 type VolumeService struct {
 	app   core.App
 	audit *store.AuditStore
+	pool  *grpc_pool.Pool
 }
 
 // NewVolumeService creates a VolumeService.
-func NewVolumeService(app core.App, audit *store.AuditStore) *VolumeService {
-	return &VolumeService{app: app, audit: audit}
+func NewVolumeService(app core.App, audit *store.AuditStore, pool *grpc_pool.Pool) *VolumeService {
+	return &VolumeService{app: app, audit: audit, pool: pool}
 }
 
 // VolumeInfo holds the resolved volume information needed for agent operations.
@@ -69,11 +68,10 @@ func (s *VolumeService) CreateVolume(
 		return nil, err
 	}
 
-	conn, client, err := dialVolumeService(agentIP)
+	client, err := s.volumeClient(agentIP)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, agentIP)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
@@ -110,11 +108,10 @@ func (s *VolumeService) RemoveVolume(ctx context.Context, volumeRecordID string,
 		return nil, err
 	}
 
-	conn, client, err := dialVolumeService(info.AgentAddr)
+	client, err := s.volumeClient(info.AgentAddr)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, info.AgentAddr)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
@@ -155,11 +152,10 @@ func (s *VolumeService) InspectVolume(ctx context.Context, volumeRecordID string
 		return nil, err
 	}
 
-	conn, client, err := dialVolumeService(info.AgentAddr)
+	client, err := s.volumeClient(info.AgentAddr)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, info.AgentAddr)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
@@ -185,15 +181,12 @@ func (s *VolumeService) resolveServer(serverID string) (string, error) {
 	return server.GetString("ip_address"), nil
 }
 
-func dialVolumeService(agentIP string) (*grpc.ClientConn, agentpb.AgentVolumeServiceClient, error) {
-	addr := net.JoinHostPort(agentIP, agentCommandPort)
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+func (s *VolumeService) volumeClient(agentIP string) (agentpb.AgentVolumeServiceClient, error) {
+	conn, err := s.pool.Get(agentIP)
 	if err != nil {
-		return nil, nil, fmt.Errorf("dial agent %s: %w", addr, err)
+		return nil, err
 	}
-	return conn, agentpb.NewAgentVolumeServiceClient(conn), nil
+	return agentpb.NewAgentVolumeServiceClient(conn), nil
 }
 
 func (s *VolumeService) upsertCreatedVolume(serverID, name, driver string) {

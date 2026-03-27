@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -20,11 +18,12 @@ import (
 type NetworkService struct {
 	app   core.App
 	audit *store.AuditStore
+	pool  *grpc_pool.Pool
 }
 
 // NewNetworkService creates a NetworkService.
-func NewNetworkService(app core.App, audit *store.AuditStore) *NetworkService {
-	return &NetworkService{app: app, audit: audit}
+func NewNetworkService(app core.App, audit *store.AuditStore, pool *grpc_pool.Pool) *NetworkService {
+	return &NetworkService{app: app, audit: audit, pool: pool}
 }
 
 // NetworkInfo holds the resolved network information needed for agent operations.
@@ -60,6 +59,15 @@ func (s *NetworkService) ResolveNetwork(networkRecordID string) (*NetworkInfo, e
 	}, nil
 }
 
+// getNetworkClient returns a network service client from the connection pool.
+func (s *NetworkService) getNetworkClient(agentIP string) (agentpb.AgentNetworkServiceClient, error) {
+	conn, err := s.pool.Get(agentIP)
+	if err != nil {
+		return nil, err
+	}
+	return agentpb.NewAgentNetworkServiceClient(conn), nil
+}
+
 // CreateNetwork creates a network on an agent via gRPC.
 func (s *NetworkService) CreateNetwork(
 	ctx context.Context, serverID string,
@@ -71,11 +79,10 @@ func (s *NetworkService) CreateNetwork(
 		return nil, err
 	}
 
-	conn, client, err := dialNetworkService(agentIP)
+	client, err := s.getNetworkClient(agentIP)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, agentIP)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
@@ -120,11 +127,10 @@ func (s *NetworkService) RemoveNetwork(ctx context.Context, networkRecordID, use
 		return nil, ErrProtectedNetwork
 	}
 
-	conn, client, err := dialNetworkService(info.AgentAddr)
+	client, err := s.getNetworkClient(info.AgentAddr)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, info.AgentAddr)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
@@ -171,11 +177,10 @@ func (s *NetworkService) ConnectContainer(ctx context.Context, networkRecordID, 
 	}
 	dockerContainerID := container.GetString("container_id")
 
-	conn, client, err := dialNetworkService(info.AgentAddr)
+	client, err := s.getNetworkClient(info.AgentAddr)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, info.AgentAddr)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
@@ -214,11 +219,10 @@ func (s *NetworkService) DisconnectContainer(ctx context.Context, networkRecordI
 	}
 	dockerContainerID := container.GetString("container_id")
 
-	conn, client, err := dialNetworkService(info.AgentAddr)
+	client, err := s.getNetworkClient(info.AgentAddr)
 	if err != nil {
 		return nil, err
 	}
-	defer closeConn(conn, info.AgentAddr)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
@@ -257,17 +261,6 @@ func (s *NetworkService) ResolveServer(serverID string) (string, error) {
 		return "", ErrServerOffline
 	}
 	return server.GetString("ip_address"), nil
-}
-
-func dialNetworkService(agentIP string) (*grpc.ClientConn, agentpb.AgentNetworkServiceClient, error) {
-	addr := net.JoinHostPort(agentIP, agentCommandPort)
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("dial agent %s: %w", addr, err)
-	}
-	return conn, agentpb.NewAgentNetworkServiceClient(conn), nil
 }
 
 func (s *NetworkService) upsertCreatedNetwork(serverID, networkID, name, driver, subnet, gateway string, internal bool) {

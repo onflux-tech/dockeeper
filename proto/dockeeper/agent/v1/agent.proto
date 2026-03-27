@@ -501,3 +501,34 @@ message ReportTraefikRoutesRequest {
 message ReportTraefikRoutesResponse {
   int32 received_count = 1;
 }
+
+// ── Updates ──────────────────────────────────────────
+
+service AgentUpdateService {
+  rpc CheckImageDigest(CheckImageDigestRequest) returns (CheckImageDigestResponse);
+  rpc ExecuteContainerUpdate(ExecuteContainerUpdateRequest) returns (stream ContainerUpdateProgress);
+}
+
+message CheckImageDigestRequest {
+  string image_ref = 1;
+  string registry_auth = 2; // base64-encoded JSON auth config
+}
+
+message CheckImageDigestResponse {
+  string current_digest = 1;
+  string remote_digest = 2;
+  bool update_available = 3;
+}
+
+message ExecuteContainerUpdateRequest {
+  string container_id = 1;
+  string new_image = 2;
+  string registry_auth = 3;
+  bool backup_before = 4;
+}
+
+message ContainerUpdateProgress {
+  string step = 1;     // pulling, stopping, creating, starting, verifying, done, failed, rolledback
+  string message = 2;
+  float progress = 3;  // 0.0-1.0 for pull progress
+}

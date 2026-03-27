@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"io"
+	"time"
 )
 
 // Result holds the outcome of a container command execution.
@@ -55,6 +56,13 @@ type Executor interface {
 	BackupVolume(ctx context.Context, mountpoint string, s3 S3Config, progress func(BackupProgressInfo)) error
 	RestoreVolume(ctx context.Context, mountpoint string, s3 S3Config, progress func(BackupProgressInfo)) error
 	Uninstall(ctx context.Context) Result
+	// Update operations.
+	CheckImageDigest(ctx context.Context, imageRef string) (string, error)
+	PullImageWithAuth(ctx context.Context, imageRef, registryAuth string) (io.ReadCloser, error)
+	SnapshotContainer(ctx context.Context, containerID string) (*ContainerSnapshot, error)
+	ReplaceContainer(ctx context.Context, containerID, newImage string, snap *ContainerSnapshot) (string, error)
+	RollbackContainer(ctx context.Context, currentID string, snap *ContainerSnapshot) (string, error)
+	WaitHealthy(ctx context.Context, containerID string, timeout time.Duration) error
 }
 
 // NetworkCreateOpts holds options for creating a Docker network.

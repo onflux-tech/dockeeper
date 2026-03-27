@@ -30,8 +30,14 @@ const (
 	BackupFailed    EventType = "backup.failed"
 
 	// Image events.
-	ImagePulled  EventType = "image.pulled"
-	ImageRemoved EventType = "image.removed"
+	ImagePulled         EventType = "image.pulled"
+	ImageRemoved        EventType = "image.removed"
+	ImageUpdateAvailable EventType = "image.update.available"
+
+	// Update events.
+	ContainerUpdateCompleted  EventType = "container.update.completed"
+	ContainerUpdateFailed     EventType = "container.update.failed"
+	ContainerUpdateRolledback EventType = "container.update.rolledback"
 )
 
 // Severity indicates the importance level of an event.
@@ -58,9 +64,9 @@ type Event struct {
 // SeverityFor returns the default severity for a given event type.
 func SeverityFor(t EventType) Severity {
 	switch t {
-	case ContainerCrashed, ServerOffline, ComposeFailed, BackupFailed:
+	case ContainerCrashed, ServerOffline, ComposeFailed, BackupFailed, ContainerUpdateFailed:
 		return SeverityCritical
-	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved:
+	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved, ContainerUpdateRolledback:
 		return SeverityWarning
 	default:
 		return SeverityInfo

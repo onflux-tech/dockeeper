@@ -43,6 +43,10 @@ export interface ContainerRecord extends BaseRecord {
 	container_created_at: string;
 	started_at: string;
 	compose_stack: string;
+	compose_project: string;
+	compose_service: string;
+	update_digest: string;
+	last_update_check: string;
 }
 
 export interface ImageRecord extends BaseRecord {

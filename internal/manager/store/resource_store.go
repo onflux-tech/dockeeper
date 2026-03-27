@@ -100,6 +100,9 @@ func (s *ResourceStore) UpsertContainers(serverID string, containers []*agentpb.
 		}
 		count++
 
+		// Link to compose stack if container has compose labels.
+		s.linkComposeStack(serverID, rec, c.GetLabelsJson())
+
 		// Publish state transition events.
 		if s.bus != nil {
 			if isNew {
@@ -344,4 +347,54 @@ func parseJSONField(raw string) any {
 		return nil
 	}
 	return v
+}
+
+// linkComposeStack extracts compose labels and links the container to its compose stack.
+func (s *ResourceStore) linkComposeStack(serverID string, rec *core.Record, labelsJSON string) {
+	if labelsJSON == "" {
+		return
+	}
+
+	var labels map[string]string
+	if err := json.Unmarshal([]byte(labelsJSON), &labels); err != nil {
+		return
+	}
+
+	project := labels["com.docker.compose.project"]
+	service := labels["com.docker.compose.service"]
+
+	if project == "" {
+		return
+	}
+
+	changed := false
+
+	if rec.GetString("compose_project") != project {
+		rec.Set("compose_project", project)
+		changed = true
+	}
+	if service != "" && rec.GetString("compose_service") != service {
+		rec.Set("compose_service", service)
+		changed = true
+	}
+
+	// Look up compose_stacks for this server + project name.
+	stacks, err := s.app.FindRecordsByFilter(
+		constants.CollComposeStacks,
+		"server = {:sid} && name = {:name}",
+		"", 1, 0,
+		map[string]any{"sid": serverID, "name": project},
+	)
+	if err == nil && len(stacks) > 0 {
+		if rec.GetString("compose_stack") != stacks[0].Id {
+			rec.Set("compose_stack", stacks[0].Id)
+			changed = true
+		}
+	}
+
+	if changed {
+		if err := s.app.Save(rec); err != nil {
+			slog.Error("link compose stack failed", "container", rec.Id, "error", err)
+		}
+	}
 }

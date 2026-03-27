@@ -14,12 +14,14 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	dkgrpc "github.com/onflux-tech/dockeeper/internal/manager/grpc"
+	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
 	"github.com/onflux-tech/dockeeper/internal/manager/jobs"
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/routes"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
 const grpcAddr = ":50051"
@@ -66,6 +68,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		apiKeyStore := store.NewAPIKeyStore(app)
 		rbac := middleware.NewRBAC(rbacStore, apiKeyStore)
 
+		// Shared gRPC connection pool for agent communication.
+		pool := grpc_pool.New()
+
 		registerHealthRoutes(se, version, commit)
 		routes.RegisterAgentPublicRoutes(se, app)
 		routes.RegisterAuthRoutes(se, authLimiter)
@@ -74,9 +79,13 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		routes.RegisterUserRoutes(se, app, rbacStore, rbac)
 		routes.RegisterAPIKeyRoutes(se, app, apiKeyStore, rbac)
 
+		// Registry credentials routes (encryption key from env).
+		encKey := os.Getenv("DOCKEEPER_ENCRYPTION_KEY")
+		routes.RegisterRegistryCredentialRoutes(se, app, encKey, rbac)
+
 		// Container action routes.
 		auditStore := store.NewAuditStore(app)
-		dispatcher := services.NewGRPCCommandDispatcher()
+		dispatcher := services.NewGRPCCommandDispatcher(pool)
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
 
 		// Subscribe EventBus handlers (now that stores are available).
@@ -85,7 +94,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		eventBus.Subscribe(events.NewAlertHandler())
 
 		// Volume + Cascade services (cascade depends on volumeSvc).
-		volumeSvc := services.NewVolumeService(app, auditStore)
+		volumeSvc := services.NewVolumeService(app, auditStore, pool)
 		cascadeSvc := services.NewCascadeService(app, auditStore, volumeSvc)
 		routes.RegisterVolumeRoutes(se, volumeSvc, cascadeSvc, rbac)
 		routes.RegisterCascadeRoutes(se, cascadeSvc, rbac)
@@ -113,20 +122,20 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		routes.RegisterTerminalRoutes(se, app, termSvc, rbac)
 
 		// Image management routes.
-		imageSvc := services.NewImageService(app, auditStore)
+		imageSvc := services.NewImageService(app, auditStore, pool)
 		routes.RegisterImageRoutes(se, app, imageSvc, rbac)
 
 		// Compose stack management routes.
-		composeSvc := services.NewComposeService(app, auditStore)
+		composeSvc := services.NewComposeService(app, auditStore, pool)
 		routes.RegisterComposeRoutes(se, app, composeSvc, rbac)
 
 		// Network management routes.
-		networkSvc := services.NewNetworkService(app, auditStore)
+		networkSvc := services.NewNetworkService(app, auditStore, pool)
 		routes.RegisterNetworkRoutes(se, networkSvc, rbac)
 
 		// Backup system routes + scheduler.
 		backupStore := store.NewBackupStore(app)
-		backupSvc := services.NewBackupService(app, backupStore, auditStore)
+		backupSvc := services.NewBackupService(app, backupStore, auditStore, pool)
 		routes.RegisterBackupRoutes(se, app, backupSvc, backupStore, rbac)
 		jobs.RegisterBackupJobs(app, backupSvc, backupStore)
 
@@ -150,6 +159,13 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 
 		// Events API route.
 		routes.RegisterEventRoutes(se, app, rbac)
+
+		// Update orchestrator + registry adapter + cron.
+		registryAdapter := services.NewRegistryAdapter(encKey)
+		loadRegistryCredentials(app, registryAdapter)
+		updateOrch := services.NewUpdateOrchestrator(app, registryAdapter, pool, eventBus)
+		routes.RegisterUpdateRoutes(se, updateOrch, rbac)
+		registerUpdateCron(app, updateOrch)
 
 		// Serve embedded frontend (SPA fallback).
 		registerFrontendHandler(se, frontendFS)
@@ -187,6 +203,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// Register termination hook to stop gRPC server and EventBus.
 		app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
 			grpcServer.Stop()
+			pool.Close()
 			eventBus.Close()
 			return te.Next()
 		})
@@ -239,4 +256,44 @@ func registerFrontendHandler(se *core.ServeEvent, frontendFS embed.FS) {
 		fileServer.ServeHTTP(e.Response, e.Request)
 		return nil
 	})
+}
+
+// loadRegistryCredentials populates the RegistryAdapter's credential cache
+// from the registry_credentials collection.
+func loadRegistryCredentials(app core.App, adapter *services.RegistryAdapter) {
+	records, err := app.FindRecordsByFilter(
+		constants.CollRegistryCredentials,
+		"", "", 0, 0,
+	)
+	if err != nil {
+		slog.Warn("failed to load registry credentials", "error", err)
+		return
+	}
+
+	creds := make(map[string]services.RegistryCredential, len(records))
+	for _, r := range records {
+		encConfig := r.GetString("config")
+		cred, err := adapter.LoadCredential(encConfig)
+		if err != nil {
+			slog.Warn("failed to decrypt registry credential",
+				"id", r.Id,
+				"host", r.GetString("registry_host"),
+				"error", err,
+			)
+			continue
+		}
+		creds[r.GetString("registry_host")] = *cred
+	}
+
+	adapter.SetCredentials(creds)
+	slog.Info("registry credentials loaded", "count", len(creds))
+}
+
+// registerUpdateCron registers the update check cron job.
+func registerUpdateCron(app core.App, orch *services.UpdateOrchestrator) {
+	if err := app.Cron().Add("update_check", "0 */6 * * *", func() {
+		orch.RunCheckAndApply()
+	}); err != nil {
+		slog.Error("failed to register update check cron", "error", err)
+	}
 }

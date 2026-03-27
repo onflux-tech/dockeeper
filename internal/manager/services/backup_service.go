@@ -4,15 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -20,14 +18,15 @@ import (
 
 // BackupService orchestrates backup/restore operations.
 type BackupService struct {
-	app    core.App
-	store  *store.BackupStore
-	audit  *store.AuditStore
+	app   core.App
+	store *store.BackupStore
+	audit *store.AuditStore
+	pool  *grpc_pool.Pool
 }
 
 // NewBackupService creates a BackupService.
-func NewBackupService(app core.App, backupStore *store.BackupStore, audit *store.AuditStore) *BackupService {
-	return &BackupService{app: app, store: backupStore, audit: audit}
+func NewBackupService(app core.App, backupStore *store.BackupStore, audit *store.AuditStore, pool *grpc_pool.Pool) *BackupService {
+	return &BackupService{app: app, store: backupStore, audit: audit, pool: pool}
 }
 
 // TriggerBackup triggers a backup for the given policy.
@@ -248,11 +247,11 @@ func (s *BackupService) getS3Settings() (*s3Settings, error) {
 }
 
 func (s *BackupService) executeBackup(ctx context.Context, agentIP, volumeName, mountpoint string, s3Cfg *s3Settings, s3Bucket, s3Key string) error {
-	conn, client, err := dialBackupService(agentIP)
+	conn, err := s.pool.Get(agentIP)
 	if err != nil {
 		return err
 	}
-	defer closeConn(conn, agentIP)
+	client := agentpb.NewAgentBackupServiceClient(conn)
 
 	stream, err := client.BackupVolume(ctx, &agentpb.BackupVolumeRequest{
 		VolumeName: volumeName,
@@ -288,11 +287,11 @@ func (s *BackupService) executeBackup(ctx context.Context, agentIP, volumeName, 
 }
 
 func (s *BackupService) executeRestore(ctx context.Context, agentIP, volumeName, mountpoint string, s3Cfg *s3Settings, s3Bucket, s3Key string) error {
-	conn, client, err := dialBackupService(agentIP)
+	conn, err := s.pool.Get(agentIP)
 	if err != nil {
 		return err
 	}
-	defer closeConn(conn, agentIP)
+	client := agentpb.NewAgentBackupServiceClient(conn)
 
 	stream, err := client.RestoreVolume(ctx, &agentpb.RestoreVolumeRequest{
 		VolumeName: volumeName,
@@ -357,13 +356,3 @@ func (s *BackupService) deleteS3Object(ctx context.Context, s3Cfg *s3Settings, b
 	return client.RemoveObject(ctx, bucket, key, minio.RemoveObjectOptions{})
 }
 
-func dialBackupService(agentIP string) (*grpc.ClientConn, agentpb.AgentBackupServiceClient, error) {
-	addr := net.JoinHostPort(agentIP, agentCommandPort)
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("dial agent %s: %w", addr, err)
-	}
-	return conn, agentpb.NewAgentBackupServiceClient(conn), nil
-}

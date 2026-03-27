@@ -63,6 +63,14 @@ func auditAction(t EventType) string {
 		return "image.pulled"
 	case ImageRemoved:
 		return "image.removed"
+	case ImageUpdateAvailable:
+		return "image.update.available"
+	case ContainerUpdateCompleted:
+		return "container.update.completed"
+	case ContainerUpdateFailed:
+		return "container.update.failed"
+	case ContainerUpdateRolledback:
+		return "container.update.rolledback"
 	default:
 		return ""
 	}

@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
 	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -46,27 +44,21 @@ func timeoutForCommand(cmdType agentpb.CommandType) time.Duration {
 }
 
 // GRPCCommandDispatcher connects to agents via gRPC to execute commands.
-type GRPCCommandDispatcher struct{}
+type GRPCCommandDispatcher struct {
+	pool *grpc_pool.Pool
+}
 
 // NewGRPCCommandDispatcher creates a GRPCCommandDispatcher.
-func NewGRPCCommandDispatcher() *GRPCCommandDispatcher {
-	return &GRPCCommandDispatcher{}
+func NewGRPCCommandDispatcher(pool *grpc_pool.Pool) *GRPCCommandDispatcher {
+	return &GRPCCommandDispatcher{pool: pool}
 }
 
 // Dispatch dials the agent's command gRPC server and executes the command.
 func (d *GRPCCommandDispatcher) Dispatch(ctx context.Context, agentAddr string, req *agentpb.ExecuteCommandRequest) (*agentpb.ExecuteCommandResponse, error) {
-	addr := net.JoinHostPort(agentAddr, agentCommandPort)
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := d.pool.Get(agentAddr)
 	if err != nil {
-		return nil, fmt.Errorf("dial agent %s: %w", addr, err)
+		return nil, fmt.Errorf("get agent connection %s: %w", agentAddr, err)
 	}
-	defer func() {
-		if closeErr := conn.Close(); closeErr != nil {
-			slog.Warn("failed to close agent connection", "addr", addr, "error", closeErr)
-		}
-	}()
 
 	client := agentpb.NewAgentCommandsServiceClient(conn)
 

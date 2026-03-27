@@ -26,8 +26,10 @@ const (
 	CollTraefikRoutes        = "traefik_routes"
 
 	// V2 Collections (Sprint 13+)
-	CollGroups       = "groups"
-	CollGroupMembers = "group_members"
-	CollAPIKeys      = "api_keys"
-	CollEvents       = "events"
+	CollGroups              = "groups"
+	CollGroupMembers        = "group_members"
+	CollAPIKeys             = "api_keys"
+	CollEvents              = "events"
+	CollRegistryCredentials = "registry_credentials"
+	CollUpdateHistory       = "update_history"
 )

@@ -11,6 +11,9 @@ import {
 	Copy,
 	Check,
 	RefreshCw,
+	KeyRound,
+	Plus,
+	Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +29,11 @@ import {
 	useEnrollmentToken,
 	useRegenerateEnrollmentToken,
 } from "@/hooks/use-settings";
+import {
+	useRegistryCredentials,
+	useCreateRegistryCredential,
+	useDeleteRegistryCredential,
+} from "@/hooks/use-updates";
 
 export default function SettingsPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +65,10 @@ export default function SettingsPage() {
 						<Info className="h-4 w-4" />
 						About
 					</TabsTrigger>
+					<TabsTrigger value="registry" className="gap-1.5">
+						<KeyRound className="h-4 w-4" />
+						Registry
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="system">
@@ -67,6 +79,9 @@ export default function SettingsPage() {
 				</TabsContent>
 				<TabsContent value="about">
 					<AboutTab />
+				</TabsContent>
+				<TabsContent value="registry">
+					<RegistryTab />
 				</TabsContent>
 			</Tabs>
 		</div>
@@ -464,6 +479,162 @@ function AboutTab() {
 				</dl>
 			) : (
 				<p className="text-sm text-muted-foreground">Unable to fetch server info.</p>
+			)}
+		</div>
+	);
+}
+
+/* ── Registry Tab ──────────────────────────────────────── */
+
+function RegistryTab() {
+	const { data: credentials, isLoading } = useRegistryCredentials();
+	const createCred = useCreateRegistryCredential();
+	const deleteCred = useDeleteRegistryCredential();
+
+	const [showForm, setShowForm] = useState(false);
+	const [name, setName] = useState("");
+	const [host, setHost] = useState("");
+	const [username, setUsername] = useState("");
+	const [password, setPassword] = useState("");
+
+	const handleCreate = (e: React.FormEvent) => {
+		e.preventDefault();
+		createCred.mutate(
+			{ name, registry_host: host, username, password },
+			{
+				onSuccess: () => {
+					setName("");
+					setHost("");
+					setUsername("");
+					setPassword("");
+					setShowForm(false);
+				},
+			},
+		);
+	};
+
+	return (
+		<div className="space-y-6">
+			<div>
+				<h3 className="text-lg font-medium">Registry Credentials</h3>
+				<p className="text-sm text-muted-foreground">
+					Store credentials for private Docker registries. Credentials are encrypted at rest.
+				</p>
+			</div>
+
+			{isLoading ? (
+				<div className="space-y-2">
+					{[1, 2].map((i) => (
+						<Skeleton key={i} className="h-12 w-full" />
+					))}
+				</div>
+			) : (
+				<div className="space-y-2">
+					{credentials && credentials.length > 0 ? (
+						<div className="rounded-md border">
+							<table className="w-full text-sm">
+								<thead>
+									<tr className="border-b bg-muted/50">
+										<th className="px-4 py-2 text-left font-medium">Name</th>
+										<th className="px-4 py-2 text-left font-medium">Registry Host</th>
+										<th className="px-4 py-2 text-left font-medium">Created</th>
+										<th className="px-4 py-2 text-right font-medium">Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									{credentials.map((cred) => (
+										<tr key={cred.id} className="border-b last:border-0">
+											<td className="px-4 py-2 font-medium">{cred.name}</td>
+											<td className="px-4 py-2 font-mono text-muted-foreground">
+												{cred.registry_host}
+											</td>
+											<td className="px-4 py-2 text-muted-foreground">
+												{new Date(cred.created).toLocaleDateString()}
+											</td>
+											<td className="px-4 py-2 text-right">
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 text-destructive hover:text-destructive"
+													onClick={() => deleteCred.mutate(cred.id)}
+													disabled={deleteCred.isPending}
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							No registry credentials configured.
+						</p>
+					)}
+				</div>
+			)}
+
+			{showForm ? (
+				<form onSubmit={handleCreate} className="space-y-4 rounded-md border p-4">
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-2">
+							<Label htmlFor="cred_name">Label</Label>
+							<Input
+								id="cred_name"
+								placeholder="My Docker Hub"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								required
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="cred_host">Registry Host</Label>
+							<Input
+								id="cred_host"
+								placeholder="docker.io"
+								value={host}
+								onChange={(e) => setHost(e.target.value)}
+								required
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="cred_user">Username</Label>
+							<Input
+								id="cred_user"
+								placeholder="username"
+								value={username}
+								onChange={(e) => setUsername(e.target.value)}
+								required
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="cred_pass">Password / Token</Label>
+							<Input
+								id="cred_pass"
+								type="password"
+								placeholder="••••••••"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								required
+							/>
+						</div>
+					</div>
+					<div className="flex gap-2">
+						<Button type="submit" disabled={createCred.isPending}>
+							{createCred.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+							Save Credential
+						</Button>
+						<Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+							Cancel
+						</Button>
+					</div>
+				</form>
+			) : (
+				<Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+					<Plus className="mr-1.5 h-4 w-4" />
+					Add Credential
+				</Button>
 			)}
 		</div>
 	);
