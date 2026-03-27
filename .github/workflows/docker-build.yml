@@ -32,7 +32,7 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.image.name }}
+    name: Build ${{ matrix.name }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,27 +72,27 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_PREFIX }}/${{ matrix.image.name }}
+          images: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}
           tags: |
             type=raw,value=${{ inputs.version }}
             type=raw,value=latest,enable=${{ inputs.tag_latest }}
           labels: |
             org.opencontainers.image.source=https://github.com/onflux-tech/dockeeper
-            org.opencontainers.image.description=${{ matrix.image.description }}
+            org.opencontainers.image.description=${{ matrix.description }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.image.dockerfile }}
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ inputs.version }}
             COMMIT=${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.image.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           platforms: ${{ inputs.platforms }}
           provenance: false
           sbom: false
