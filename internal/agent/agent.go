@@ -18,7 +18,7 @@ import (
 )
 
 // Version is set at build time via ldflags.
-var Version = "dev"
+var Version = "0.1.0"
 
 // ErrServerGone is returned by Run when the manager reports that the server
 // record no longer exists (e.g. deleted). The caller should re-invoke Run
