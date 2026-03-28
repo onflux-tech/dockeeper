@@ -184,6 +184,11 @@ export default function ServersPage() {
 											)}
 										</Button>
 									</div>
+									<p className="text-[11px] text-muted-foreground leading-relaxed">
+										Requires port <strong>50051</strong> open on the manager and port{" "}
+										<strong>50052</strong> on the agent server. The script auto-configures
+										the firewall (ufw / firewalld / iptables) when possible.
+									</p>
 								</div>
 							</PopoverContent>
 						</Popover>
