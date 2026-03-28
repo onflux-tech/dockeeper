@@ -172,6 +172,7 @@ function SystemTab() {
 						<Label htmlFor="s3_endpoint">Endpoint</Label>
 						<Input
 							id="s3_endpoint"
+							autoComplete="off"
 							placeholder="https://s3.amazonaws.com"
 							value={s3.s3_endpoint ?? ""}
 							onChange={(e) => setS3((p) => ({ ...p, s3_endpoint: e.target.value }))}
@@ -181,6 +182,7 @@ function SystemTab() {
 						<Label htmlFor="s3_region">Region</Label>
 						<Input
 							id="s3_region"
+							autoComplete="off"
 							placeholder="us-east-1"
 							value={s3.s3_region ?? ""}
 							onChange={(e) => setS3((p) => ({ ...p, s3_region: e.target.value }))}
@@ -190,6 +192,7 @@ function SystemTab() {
 						<Label htmlFor="s3_bucket">Bucket</Label>
 						<Input
 							id="s3_bucket"
+							autoComplete="off"
 							placeholder="dockeeper-backups"
 							value={s3.s3_bucket ?? ""}
 							onChange={(e) => setS3((p) => ({ ...p, s3_bucket: e.target.value }))}
@@ -199,6 +202,7 @@ function SystemTab() {
 						<Label htmlFor="s3_access_key">Access Key</Label>
 						<Input
 							id="s3_access_key"
+							autoComplete="off"
 							placeholder="AKIAIOSFODNN7EXAMPLE"
 							value={s3.s3_access_key ?? ""}
 							onChange={(e) => setS3((p) => ({ ...p, s3_access_key: e.target.value }))}
@@ -208,6 +212,7 @@ function SystemTab() {
 						<Label htmlFor="s3_secret_key">Secret Key</Label>
 						<Input
 							id="s3_secret_key"
+							autoComplete="new-password"
 							type="password"
 							placeholder="••••••••••••••••"
 							value={s3.s3_secret_key ?? ""}

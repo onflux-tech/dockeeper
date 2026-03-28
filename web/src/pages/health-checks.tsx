@@ -20,6 +20,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
@@ -325,35 +332,33 @@ function HealthCheckDialog({
 						<>
 							<div className="space-y-2">
 								<Label>Server</Label>
-								<select
-									className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-									value={server}
-									onChange={(e) => setServer(e.target.value)}
-									required
-								>
-									<option value="">Select server...</option>
-									{servers?.items?.map((s) => (
-										<option key={s.id} value={s.id}>
-											{s.name || s.hostname}
-										</option>
-									))}
-								</select>
+								<Select value={server} onValueChange={setServer} required>
+									<SelectTrigger>
+										<SelectValue placeholder="Select server..." />
+									</SelectTrigger>
+									<SelectContent>
+										{servers?.items?.map((s) => (
+											<SelectItem key={s.id} value={s.id}>
+												{s.name || s.hostname}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
 							<div className="space-y-2">
 								<Label>Container</Label>
-								<select
-									className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-									value={container}
-									onChange={(e) => setContainer(e.target.value)}
-									required
-								>
-									<option value="">Select container...</option>
-									{filteredContainers?.map((c) => (
-										<option key={c.id} value={c.id}>
-											{c.name}
-										</option>
-									))}
-								</select>
+								<Select value={container} onValueChange={setContainer} required>
+									<SelectTrigger>
+										<SelectValue placeholder="Select container..." />
+									</SelectTrigger>
+									<SelectContent>
+										{filteredContainers?.map((c) => (
+											<SelectItem key={c.id} value={c.id}>
+												{c.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
 						</>
 					)}
