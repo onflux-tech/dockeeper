@@ -15,11 +15,12 @@ const metricsInterval = 10 * time.Second
 // MetricsCollector periodically collects system and container metrics and
 // streams them to the manager via gRPC client-streaming.
 type MetricsCollector struct {
-	orch     OrchestratorClient
-	client   agentpb.AgentMetricsServiceClient
-	serverID string
-	logger   *slog.Logger
-	system   *SystemCollector
+	orch         OrchestratorClient
+	client       agentpb.AgentMetricsServiceClient
+	serverID     string
+	logger       *slog.Logger
+	system       *SystemCollector
+	onServerGone func() // called on mTLS/auth failures to trigger re-enrollment
 }
 
 // NewMetricsCollector creates a new MetricsCollector.
@@ -36,6 +37,12 @@ func NewMetricsCollector(
 		logger:   logger,
 		system:   NewSystemCollector(),
 	}
+}
+
+// SetServerGoneCallback sets the function called when a metrics RPC returns
+// an authentication error, indicating stale certificates.
+func (m *MetricsCollector) SetServerGoneCallback(fn func()) {
+	m.onServerGone = fn
 }
 
 // Run starts the periodic metrics collection loop. It blocks until ctx is
@@ -68,6 +75,11 @@ func (m *MetricsCollector) collectSystem(ctx context.Context) {
 
 	stream, err := m.client.StreamMetrics(ctx)
 	if err != nil {
+		if IsAuthError(err) && m.onServerGone != nil {
+			m.logger.Warn("metrics: mTLS authentication failed — triggering re-enrollment", "error", err)
+			m.onServerGone()
+			return
+		}
 		m.logger.Error("metrics: open system stream failed", "error", err)
 		return
 	}
@@ -114,6 +126,11 @@ func (m *MetricsCollector) collectContainers(ctx context.Context) {
 
 	stream, err := m.client.StreamContainerMetrics(ctx)
 	if err != nil {
+		if IsAuthError(err) && m.onServerGone != nil {
+			m.logger.Warn("metrics: mTLS authentication failed — triggering re-enrollment", "error", err)
+			m.onServerGone()
+			return
+		}
 		m.logger.Error("metrics: open container stream failed", "error", err)
 		return
 	}

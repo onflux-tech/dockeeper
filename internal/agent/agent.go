@@ -104,27 +104,33 @@ func (a *Agent) Run(ctx context.Context) error {
 			}
 		}()
 
-		discovery := collector.NewDiscoveryCollector(orch, a.client.Discovery(), a.cfg.ServerID, a.logger)
-		discovery.SetServerGoneCallback(func() {
+		// Shared callback: clears enrollment and cancels context so Run()
+		// returns ErrServerGone → main.go re-enrollment loop kicks in.
+		triggerReEnrollment := func() {
 			a.mu.Lock()
 			defer a.mu.Unlock()
 			if a.serverGone {
 				return // already handling
 			}
 			a.serverGone = true
-			a.logger.Warn("server record deleted on manager, clearing enrollment for re-enrollment")
+			a.logger.Warn("authentication failed or server deleted, clearing enrollment for re-enrollment")
 			if clearErr := a.cfg.ClearEnrollment(); clearErr != nil {
 				a.logger.Error("failed to clear enrollment data", "error", clearErr)
 			}
 			cancel()
-		})
+		}
+
+		discovery := collector.NewDiscoveryCollector(orch, a.client.Discovery(), a.cfg.ServerID, a.logger)
+		discovery.SetServerGoneCallback(triggerReEnrollment)
 		go discovery.Run(ctx)
 
 		metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, a.logger)
+		metrics.SetServerGoneCallback(triggerReEnrollment)
 		go metrics.Run(ctx)
 
 		// Traefik route collector (60s cycle, graceful skip if not installed).
 		traefikColl := collector.NewTraefikCollector(orch, a.client.Traefik(), a.cfg.ServerID, a.logger)
+		traefikColl.SetServerGoneCallback(triggerReEnrollment)
 		go traefikColl.Run(ctx)
 
 		// Start reverse tunnel client — replaces the old agent gRPC server.

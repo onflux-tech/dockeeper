@@ -170,12 +170,20 @@ func (d *DiscoveryCollector) reportVolumes(ctx context.Context) {
 	d.logger.Info("discovery: volumes reported", "count", resp.GetReceivedCount())
 }
 
-// handleRPCError logs the error and, if the manager returned NotFound
-// (server deleted), triggers the server-gone callback.
+// handleRPCError logs the error and triggers the server-gone callback when
+// the manager returned NotFound (server deleted) or when the error indicates
+// an mTLS/certificate failure (e.g. the manager CA was rotated or the DB was
+// recreated). In both cases the agent clears its enrollment and re-enrolls.
 func (d *DiscoveryCollector) handleRPCError(resource string, err error) {
 	if status.Code(err) == codes.NotFound && d.onServerGone != nil {
 		d.logger.Warn("discovery: server not found on manager, triggering re-enrollment",
 			"resource", resource)
+		d.onServerGone()
+		return
+	}
+	if IsAuthError(err) && d.onServerGone != nil {
+		d.logger.Warn("discovery: mTLS authentication failed, certificates may be invalid — triggering re-enrollment",
+			"resource", resource, "error", err)
 		d.onServerGone()
 		return
 	}

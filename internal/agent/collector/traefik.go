@@ -37,15 +37,16 @@ type traefikRouter struct {
 // manager via gRPC. It first tries the Traefik API, then falls back to
 // Docker labels. If Traefik is not detected, it silently does nothing.
 type TraefikCollector struct {
-	orch       OrchestratorClient
-	client     agentpb.AgentTraefikServiceClient
-	serverID   string
-	logger     *slog.Logger
-	lastHash   [32]byte
-	hashSet    bool
-	apiURL     string // cached Traefik API base URL
-	detected   bool
-	checkedAt  time.Time
+	orch         OrchestratorClient
+	client       agentpb.AgentTraefikServiceClient
+	serverID     string
+	logger       *slog.Logger
+	lastHash     [32]byte
+	hashSet      bool
+	apiURL       string // cached Traefik API base URL
+	detected     bool
+	checkedAt    time.Time
+	onServerGone func() // called on mTLS/auth failures to trigger re-enrollment
 }
 
 // NewTraefikCollector creates a new Traefik collector.
@@ -61,6 +62,12 @@ func NewTraefikCollector(
 		serverID: serverID,
 		logger:   logger,
 	}
+}
+
+// SetServerGoneCallback sets the function called when a traefik RPC returns
+// an authentication error, indicating stale certificates.
+func (t *TraefikCollector) SetServerGoneCallback(fn func()) {
+	t.onServerGone = fn
 }
 
 // Run starts the periodic collection loop. It blocks until ctx is cancelled.
@@ -110,6 +117,11 @@ func (t *TraefikCollector) collect(ctx context.Context) {
 
 	resp, err := t.client.ReportTraefikRoutes(ctx, req)
 	if err != nil {
+		if IsAuthError(err) && t.onServerGone != nil {
+			t.logger.Warn("traefik: mTLS authentication failed — triggering re-enrollment", "error", err)
+			t.onServerGone()
+			return
+		}
 		t.logger.Error("traefik: report routes failed", "error", err)
 		return
 	}
