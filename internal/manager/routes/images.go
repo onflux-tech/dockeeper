@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
@@ -20,10 +18,8 @@ import (
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
-const agentImagePort = "50052"
-
 // RegisterImageRoutes adds image management endpoints.
-func RegisterImageRoutes(se *core.ServeEvent, app core.App, svc *services.ImageService, rbac *middleware.RBAC) {
+func RegisterImageRoutes(se *core.ServeEvent, app core.App, svc *services.ImageService, registry *channel.Registry, rbac *middleware.RBAC) {
 	images := se.Router.Group("/api/dk/images")
 
 	images.GET("", func(e *core.RequestEvent) error {
@@ -31,7 +27,7 @@ func RegisterImageRoutes(se *core.ServeEvent, app core.App, svc *services.ImageS
 	}).BindFunc(rbac.RequireCapability(constants.CapImagesView))
 
 	images.GET("/pull", func(e *core.RequestEvent) error {
-		return handlePullImageSSE(e, svc)
+		return handlePullImageSSE(e, svc, registry)
 	}).BindFunc(rbac.RequireCapability(constants.CapImagesManage))
 
 	images.DELETE("/{id}", func(e *core.RequestEvent) error {
@@ -98,8 +94,8 @@ type pullProgressEvent struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// handlePullImageSSE streams image pull progress via SSE.
-func handlePullImageSSE(e *core.RequestEvent, svc *services.ImageService) error {
+// handlePullImageSSE streams image pull progress via SSE using the reverse tunnel DataStream.
+func handlePullImageSSE(e *core.RequestEvent, svc *services.ImageService, registry *channel.Registry) error {
 	serverID := e.Request.URL.Query().Get("server_id")
 	imageRef := e.Request.URL.Query().Get("image")
 
@@ -111,33 +107,28 @@ func handlePullImageSSE(e *core.RequestEvent, svc *services.ImageService) error 
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
-	agentIP, err := svc.ResolveServer(serverID)
-	if err != nil {
+	if _, err := svc.ResolveServer(serverID); err != nil {
 		return mapImageServiceError(e, err)
 	}
 
-	// Dial agent gRPC.
-	addr := net.JoinHostPort(agentIP, agentImagePort)
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		slog.Error("failed to dial agent for image pull", "addr", addr, "error", err)
-		return e.JSON(http.StatusBadGateway, map[string]string{"error": "cannot reach agent"})
+	// Get channel from registry.
+	ch, ok := registry.Get(serverID)
+	if !ok {
+		return e.JSON(http.StatusBadGateway, map[string]string{"error": "agent not connected"})
 	}
-	defer func() {
-		if closeErr := conn.Close(); closeErr != nil {
-			slog.Warn("failed to close agent connection", "addr", addr, "error", closeErr)
-		}
-	}()
 
-	client := agentpb.NewAgentImageServiceClient(conn)
+	// Signal a DataStream for image pull.
+	streamID := channel.NewRequestID()
+	signal := &agentpb.OpenDataStreamSignal{
+		StreamId:   streamID,
+		StreamType: agentpb.DataStreamType_DATA_STREAM_TYPE_IMAGE_PULL,
+		Params:     &agentpb.OpenDataStreamSignal_PullImage{PullImage: &agentpb.ImagePullRequest{ImageRef: imageRef}},
+	}
 
-	stream, err := client.PullImage(e.Request.Context(), &agentpb.ImagePullRequest{
-		ImageRef: imageRef,
-	})
+	ctx := e.Request.Context()
+	streamCh, err := ch.SignalOpenDataStream(ctx, signal)
 	if err != nil {
-		slog.Error("failed to open image pull stream", "error", err)
+		slog.Error("failed to signal image pull data stream", "error", err)
 		return e.JSON(http.StatusBadGateway, map[string]string{"error": "failed to start image pull"})
 	}
 
@@ -163,16 +154,32 @@ func handlePullImageSSE(e *core.RequestEvent, svc *services.ImageService) error 
 	keepalive := time.NewTicker(15 * time.Second)
 	defer keepalive.Stop()
 
+	// Wait for the stream to arrive.
+	var stream agentpb.AgentDataStreamService_OpenDataStreamServer
+	select {
+	case <-ctx.Done():
+		return nil
+	case s, chanOK := <-streamCh:
+		if !chanOK {
+			data, _ := json.Marshal(pullProgressEvent{Error: "data stream channel closed", Done: true})
+			_, _ = fmt.Fprintf(w, "event: error\ndata: %s\n\n", data)
+			flusher.Flush()
+			return nil
+		}
+		stream = s
+	}
+
+	// Read DataStream messages and forward as SSE.
 	type recvResult struct {
-		msg *agentpb.ImagePullProgress
+		msg *agentpb.OpenDataStreamRequest
 		err error
 	}
-	ch := make(chan recvResult, 1)
+	recvCh := make(chan recvResult, 1)
 
 	go func() {
 		for {
 			msg, recvErr := stream.Recv()
-			ch <- recvResult{msg: msg, err: recvErr}
+			recvCh <- recvResult{msg: msg, err: recvErr}
 			if recvErr != nil {
 				return
 			}
@@ -181,14 +188,14 @@ func handlePullImageSSE(e *core.RequestEvent, svc *services.ImageService) error 
 
 	for {
 		select {
-		case <-e.Request.Context().Done():
+		case <-ctx.Done():
 			return nil
 
 		case <-keepalive.C:
 			_, _ = fmt.Fprintf(w, ": keepalive\n\n")
 			flusher.Flush()
 
-		case res := <-ch:
+		case res := <-recvCh:
 			if res.err != nil {
 				if res.err == io.EOF {
 					_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
@@ -201,13 +208,22 @@ func handlePullImageSSE(e *core.RequestEvent, svc *services.ImageService) error 
 				return nil
 			}
 
-			ev := pullProgressEvent{
-				ID:      res.msg.GetId(),
-				Status:  res.msg.GetStatus(),
-				Current: res.msg.GetCurrent(),
-				Total:   res.msg.GetTotal(),
-				Done:    res.msg.GetDone(),
-				Error:   res.msg.GetError(),
+			var ev pullProgressEvent
+
+			if progress := res.msg.GetProgress(); progress != nil {
+				ev.ID = progress.GetId()
+				ev.Status = progress.GetStatus()
+				ev.Current = progress.GetCurrent()
+				ev.Total = progress.GetTotal()
+			}
+
+			if complete := res.msg.GetComplete(); complete != nil {
+				ev.Done = true
+			}
+
+			if errPayload := res.msg.GetError(); errPayload != nil {
+				ev.Done = true
+				ev.Error = errPayload.GetMessage()
 			}
 
 			data, _ := json.Marshal(ev)

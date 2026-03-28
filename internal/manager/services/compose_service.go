@@ -10,28 +10,27 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // ComposeService handles compose stack operations, managing PocketBase records
-// and dispatching compose commands to agents via gRPC.
+// and dispatching compose commands to agents via the channel registry.
 type ComposeService struct {
-	app   core.App
-	audit *store.AuditStore
-	pool  *grpc_pool.Pool
+	app      core.App
+	audit    *store.AuditStore
+	registry *channel.Registry
 }
 
 // NewComposeService creates a ComposeService.
-func NewComposeService(app core.App, audit *store.AuditStore, pool *grpc_pool.Pool) *ComposeService {
-	return &ComposeService{app: app, audit: audit, pool: pool}
+func NewComposeService(app core.App, audit *store.AuditStore, registry *channel.Registry) *ComposeService {
+	return &ComposeService{app: app, audit: audit, registry: registry}
 }
 
 // StackInfo holds resolved stack/server information for agent operations.
 type StackInfo struct {
-	AgentAddr  string
 	ServerID   string
 	StackName  string
 	WorkingDir string
@@ -39,11 +38,9 @@ type StackInfo struct {
 
 // CreateStack creates a new compose_stacks record in PocketBase.
 func (s *ComposeService) CreateStack(serverID, name, yamlContent string) (*core.Record, error) {
-	agentIP, err := s.resolveServer(serverID)
-	if err != nil {
+	if err := s.resolveServer(serverID); err != nil {
 		return nil, err
 	}
-	_ = agentIP // validated server is online
 
 	collection, err := s.app.FindCollectionByNameOrId(constants.CollComposeStacks)
 	if err != nil {
@@ -89,13 +86,11 @@ func (s *ComposeService) ResolveStack(stackID string) (*core.Record, *StackInfo,
 	}
 
 	serverID := record.GetString("server")
-	agentIP, err := s.resolveServer(serverID)
-	if err != nil {
+	if err := s.resolveServer(serverID); err != nil {
 		return nil, nil, err
 	}
 
 	return record, &StackInfo{
-		AgentAddr: agentIP,
 		ServerID:  serverID,
 		StackName: record.GetString("name"),
 	}, nil
@@ -153,9 +148,8 @@ type ImportedStack struct {
 // ImportStacks scans containers for a server and imports compose stacks
 // based on Docker Compose labels.
 func (s *ComposeService) ImportStacks(serverID string) ([]ImportedStack, error) {
-	// Validate server exists and get agent address.
-	agentAddr, err := s.resolveServer(serverID)
-	if err != nil {
+	// Validate server exists and is online.
+	if err := s.resolveServer(serverID); err != nil {
 		return nil, err
 	}
 
@@ -218,11 +212,8 @@ func (s *ComposeService) ImportStacks(serverID string) ([]ImportedStack, error) 
 		return nil, fmt.Errorf("find compose_stacks collection: %w", err)
 	}
 
-	// Get gRPC connection to fetch YAML content from agent.
-	var composeClient agentpb.AgentComposeServiceClient
-	if conn, connErr := s.pool.Get(agentAddr); connErr == nil {
-		composeClient = agentpb.NewAgentComposeServiceClient(conn)
-	}
+	// Get channel to fetch YAML content from agent via SendCommand.
+	ch, hasChannel := s.registry.Get(serverID)
 
 	var imported []ImportedStack
 
@@ -248,19 +239,25 @@ func (s *ComposeService) ImportStacks(serverID string) ([]ImportedStack, error) 
 		rec.Set("source", "imported")
 		rec.Set("services_count", len(pi.svcs))
 
-		// Fetch compose YAML from agent via `docker compose config`.
-		if composeClient != nil {
+		// Fetch compose YAML from agent via SendCommand.
+		if hasChannel {
 			ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
-			resp, configErr := composeClient.ComposeConfig(ctx, &agentpb.ComposeConfigRequest{
-				ProjectName: projectName,
-				WorkingDir:  pi.workingDir,
-				Files:       pi.files,
+			result, err := ch.SendCommand(ctx, &agentpb.ChannelCommand{
+				RequestId: channel.NewRequestID(),
+				Priority:  2,
+				Command: &agentpb.ChannelCommand_ComposeConfig{ComposeConfig: &agentpb.ComposeConfigRequest{
+					ProjectName: projectName,
+					WorkingDir:  pi.workingDir,
+					Files:       pi.files,
+				}},
 			})
 			cancel()
-			if configErr == nil && resp.GetYamlContent() != "" {
-				rec.Set("yaml_content", resp.GetYamlContent())
-			} else if configErr != nil {
-				slog.Warn("import stack: compose config failed", "project", projectName, "error", configErr)
+			if err == nil {
+				if configResp := result.GetComposeConfig(); configResp != nil && configResp.GetYamlContent() != "" {
+					rec.Set("yaml_content", configResp.GetYamlContent())
+				}
+			} else {
+				slog.Warn("import stack: compose config failed", "project", projectName, "error", err)
 			}
 		}
 
@@ -294,47 +291,59 @@ func (s *ComposeService) ImportStacks(serverID string) ([]ImportedStack, error) 
 	return imported, nil
 }
 
-func (s *ComposeService) resolveServer(serverID string) (string, error) {
+func (s *ComposeService) resolveServer(serverID string) error {
 	server, err := s.app.FindRecordById(constants.CollServers, serverID)
 	if err != nil {
-		return "", ErrServerNotFound
+		return ErrServerNotFound
 	}
 	if server.GetString("status") != "online" {
-		return "", ErrServerOffline
+		return ErrServerOffline
 	}
-	return server.GetString("ip_address"), nil
+	return nil
 }
 
-// runComposeDown executes compose down on the agent synchronously.
+// runComposeDown executes compose down on the agent via DataStream.
 func (s *ComposeService) runComposeDown(ctx context.Context, info *StackInfo) error {
-	conn, err := s.pool.Get(info.AgentAddr)
-	if err != nil {
-		return fmt.Errorf("dial agent: %w", err)
+	ch, ok := s.registry.Get(info.ServerID)
+	if !ok {
+		return fmt.Errorf("no active channel for server %s", info.ServerID)
 	}
 
-	client := agentpb.NewAgentComposeServiceClient(conn)
-
-	cmdCtx, cancel := context.WithTimeout(ctx, 2*commandTimeout)
-	defer cancel()
-
-	stream, err := client.ComposeDown(cmdCtx, &agentpb.ComposeRequest{
-		ProjectName: info.StackName,
-	})
-	if err != nil {
-		return fmt.Errorf("compose down: %w", err)
+	streamID := channel.NewRequestID()
+	signal := &agentpb.OpenDataStreamSignal{
+		StreamId:   streamID,
+		StreamType: agentpb.DataStreamType_DATA_STREAM_TYPE_COMPOSE_DOWN,
+		Params:     &agentpb.OpenDataStreamSignal_ComposeDown{ComposeDown: &agentpb.ComposeRequest{ProjectName: info.StackName}},
 	}
 
-	// Drain the stream.
-	for {
-		msg, recvErr := stream.Recv()
-		if recvErr != nil {
-			break
+	streamCh, err := ch.SignalOpenDataStream(ctx, signal)
+	if err != nil {
+		return fmt.Errorf("signal compose down: %w", err)
+	}
+
+	// Wait for the DataStream to arrive.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case stream, ok := <-streamCh:
+		if !ok {
+			return fmt.Errorf("data stream channel closed")
 		}
-		if msg.GetDone() {
-			if msg.GetExitCode() != 0 {
-				return fmt.Errorf("compose down exited with code %d", msg.GetExitCode())
+		// Drain the stream.
+		for {
+			msg, recvErr := stream.Recv()
+			if recvErr != nil {
+				break
 			}
-			break
+			if complete := msg.GetComplete(); complete != nil {
+				if complete.GetExitCode() != 0 {
+					return fmt.Errorf("compose down exited with code %d", complete.GetExitCode())
+				}
+				break
+			}
+			if errPayload := msg.GetError(); errPayload != nil {
+				return fmt.Errorf("compose down error: %s", errPayload.GetMessage())
+			}
 		}
 	}
 

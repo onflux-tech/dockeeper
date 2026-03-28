@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
@@ -20,10 +18,8 @@ import (
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
-const agentComposePort = "50052"
-
 // RegisterComposeRoutes adds compose stack management endpoints.
-func RegisterComposeRoutes(se *core.ServeEvent, app core.App, svc *services.ComposeService, rbac *middleware.RBAC) {
+func RegisterComposeRoutes(se *core.ServeEvent, app core.App, svc *services.ComposeService, registry *channel.Registry, rbac *middleware.RBAC) {
 	compose := se.Router.Group("/api/dk/compose")
 
 	compose.GET("", func(e *core.RequestEvent) error {
@@ -52,15 +48,15 @@ func RegisterComposeRoutes(se *core.ServeEvent, app core.App, svc *services.Comp
 
 	// SSE streaming endpoints for compose operations.
 	compose.GET("/{id}/up", func(e *core.RequestEvent) error {
-		return handleComposeSSE(e, svc, "up")
+		return handleComposeSSE(e, svc, registry, "up")
 	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
 	compose.GET("/{id}/down", func(e *core.RequestEvent) error {
-		return handleComposeSSE(e, svc, "down")
+		return handleComposeSSE(e, svc, registry, "down")
 	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
 	compose.GET("/{id}/pull", func(e *core.RequestEvent) error {
-		return handleComposeSSE(e, svc, "pull")
+		return handleComposeSSE(e, svc, registry, "pull")
 	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
 	// Stack import endpoint (under servers group).
@@ -232,8 +228,8 @@ type composeOutputEvent struct {
 	Error    string `json:"error,omitempty"`
 }
 
-// handleComposeSSE streams compose operation output via SSE.
-func handleComposeSSE(e *core.RequestEvent, svc *services.ComposeService, operation string) error {
+// handleComposeSSE streams compose operation output via SSE using the reverse tunnel DataStream.
+func handleComposeSSE(e *core.RequestEvent, svc *services.ComposeService, registry *channel.Registry, operation string) error {
 	stackID := e.Request.PathValue("id")
 
 	record, info, err := svc.ResolveStack(stackID)
@@ -241,40 +237,37 @@ func handleComposeSSE(e *core.RequestEvent, svc *services.ComposeService, operat
 		return mapComposeServiceError(e, err)
 	}
 
-	// Dial agent gRPC.
-	addr := net.JoinHostPort(info.AgentAddr, agentComposePort)
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		slog.Error("failed to dial agent for compose", "addr", addr, "error", err)
-		return e.JSON(http.StatusBadGateway, map[string]string{"error": "cannot reach agent"})
-	}
-	defer func() {
-		if closeErr := conn.Close(); closeErr != nil {
-			slog.Warn("failed to close agent connection", "addr", addr, "error", closeErr)
-		}
-	}()
-
-	client := agentpb.NewAgentComposeServiceClient(conn)
-
-	req := &agentpb.ComposeRequest{
-		ProjectName: info.StackName,
+	// Get channel from registry.
+	ch, ok := registry.Get(info.ServerID)
+	if !ok {
+		return e.JSON(http.StatusBadGateway, map[string]string{"error": "agent not connected"})
 	}
 
-	var stream agentpb.AgentComposeService_ComposeUpClient
+	// Build the DataStream signal.
+	composeReq := &agentpb.ComposeRequest{ProjectName: info.StackName}
+	streamID := channel.NewRequestID()
+	signal := &agentpb.OpenDataStreamSignal{
+		StreamId: streamID,
+	}
+
 	switch operation {
 	case "up":
-		stream, err = client.ComposeUp(e.Request.Context(), req)
+		signal.StreamType = agentpb.DataStreamType_DATA_STREAM_TYPE_COMPOSE_UP
+		signal.Params = &agentpb.OpenDataStreamSignal_ComposeUp{ComposeUp: composeReq}
 	case "down":
-		stream, err = client.ComposeDown(e.Request.Context(), req)
+		signal.StreamType = agentpb.DataStreamType_DATA_STREAM_TYPE_COMPOSE_DOWN
+		signal.Params = &agentpb.OpenDataStreamSignal_ComposeDown{ComposeDown: composeReq}
 	case "pull":
-		stream, err = client.ComposePull(e.Request.Context(), req)
+		signal.StreamType = agentpb.DataStreamType_DATA_STREAM_TYPE_COMPOSE_PULL
+		signal.Params = &agentpb.OpenDataStreamSignal_ComposePull{ComposePull: composeReq}
 	default:
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid operation"})
 	}
+
+	ctx := e.Request.Context()
+	streamCh, err := ch.SignalOpenDataStream(ctx, signal)
 	if err != nil {
-		slog.Error("failed to open compose stream", "operation", operation, "error", err)
+		slog.Error("failed to signal compose data stream", "operation", operation, "error", err)
 		return e.JSON(http.StatusBadGateway, map[string]string{"error": "failed to start compose " + operation})
 	}
 
@@ -300,16 +293,32 @@ func handleComposeSSE(e *core.RequestEvent, svc *services.ComposeService, operat
 	keepalive := time.NewTicker(15 * time.Second)
 	defer keepalive.Stop()
 
+	// Wait for the stream to arrive.
+	var stream agentpb.AgentDataStreamService_OpenDataStreamServer
+	select {
+	case <-ctx.Done():
+		return nil
+	case s, chanOK := <-streamCh:
+		if !chanOK {
+			data, _ := json.Marshal(composeOutputEvent{Error: "data stream channel closed", Done: true})
+			_, _ = fmt.Fprintf(w, "event: error\ndata: %s\n\n", data)
+			flusher.Flush()
+			return nil
+		}
+		stream = s
+	}
+
+	// Read DataStream messages and forward as SSE.
 	type recvResult struct {
-		msg *agentpb.ComposeOutput
+		msg *agentpb.OpenDataStreamRequest
 		err error
 	}
-	ch := make(chan recvResult, 1)
+	recvCh := make(chan recvResult, 1)
 
 	go func() {
 		for {
 			msg, recvErr := stream.Recv()
-			ch <- recvResult{msg: msg, err: recvErr}
+			recvCh <- recvResult{msg: msg, err: recvErr}
 			if recvErr != nil {
 				return
 			}
@@ -318,14 +327,14 @@ func handleComposeSSE(e *core.RequestEvent, svc *services.ComposeService, operat
 
 	for {
 		select {
-		case <-e.Request.Context().Done():
+		case <-ctx.Done():
 			return nil
 
 		case <-keepalive.C:
 			_, _ = fmt.Fprintf(w, ": keepalive\n\n")
 			flusher.Flush()
 
-		case res := <-ch:
+		case res := <-recvCh:
 			if res.err != nil {
 				if res.err == io.EOF {
 					_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
@@ -338,12 +347,21 @@ func handleComposeSSE(e *core.RequestEvent, svc *services.ComposeService, operat
 				return nil
 			}
 
-			ev := composeOutputEvent{
-				Line:     res.msg.GetLine(),
-				Stream:   res.msg.GetStream(),
-				Done:     res.msg.GetDone(),
-				ExitCode: res.msg.GetExitCode(),
-				Error:    res.msg.GetError(),
+			var ev composeOutputEvent
+
+			if text := res.msg.GetText(); text != nil {
+				ev.Line = text.GetLine()
+				ev.Stream = text.GetStream()
+			}
+
+			if complete := res.msg.GetComplete(); complete != nil {
+				ev.Done = true
+				ev.ExitCode = complete.GetExitCode()
+			}
+
+			if errPayload := res.msg.GetError(); errPayload != nil {
+				ev.Done = true
+				ev.Error = errPayload.GetMessage()
 			}
 
 			data, _ := json.Marshal(ev)
@@ -352,7 +370,7 @@ func handleComposeSSE(e *core.RequestEvent, svc *services.ComposeService, operat
 
 			if ev.Done {
 				// Update stack status based on operation + exit code.
-				if ev.ExitCode == 0 {
+				if ev.ExitCode == 0 && ev.Error == "" {
 					switch operation {
 					case "up":
 						svc.MarkStackStatus(record.Id, "running", 0)

@@ -7,31 +7,30 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // NetworkService handles network operations by resolving the target server
-// and dispatching commands to the agent via gRPC.
+// and dispatching commands to the agent via the reverse tunnel command channel.
 type NetworkService struct {
-	app   core.App
-	audit *store.AuditStore
-	pool  *grpc_pool.Pool
+	app      core.App
+	audit    *store.AuditStore
+	registry *channel.Registry
 }
 
 // NewNetworkService creates a NetworkService.
-func NewNetworkService(app core.App, audit *store.AuditStore, pool *grpc_pool.Pool) *NetworkService {
-	return &NetworkService{app: app, audit: audit, pool: pool}
+func NewNetworkService(app core.App, audit *store.AuditStore, registry *channel.Registry) *NetworkService {
+	return &NetworkService{app: app, audit: audit, registry: registry}
 }
 
 // NetworkInfo holds the resolved network information needed for agent operations.
 type NetworkInfo struct {
-	AgentAddr string
-	DockerID  string
-	ServerID  string
-	Name      string
+	DockerID string
+	ServerID string
+	Name     string
 }
 
 // ResolveNetwork looks up a network PocketBase record and returns agent info.
@@ -52,47 +51,40 @@ func (s *NetworkService) ResolveNetwork(networkRecordID string) (*NetworkInfo, e
 	}
 
 	return &NetworkInfo{
-		AgentAddr: server.GetString("ip_address"),
-		DockerID:  net.GetString("network_id"),
-		ServerID:  serverID,
-		Name:      net.GetString("name"),
+		DockerID: net.GetString("network_id"),
+		ServerID: serverID,
+		Name:     net.GetString("name"),
 	}, nil
 }
 
-// getNetworkClient returns a network service client from the connection pool.
-func (s *NetworkService) getNetworkClient(agentIP string) (agentpb.AgentNetworkServiceClient, error) {
-	conn, err := s.pool.Get(agentIP)
-	if err != nil {
-		return nil, err
-	}
-	return agentpb.NewAgentNetworkServiceClient(conn), nil
-}
-
-// CreateNetwork creates a network on an agent via gRPC.
+// CreateNetwork creates a network on an agent via the command channel.
 func (s *NetworkService) CreateNetwork(
 	ctx context.Context, serverID string,
 	name, driver, subnet, gateway string, internal bool,
 	userID, ip string,
 ) (*agentpb.CreateNetworkResponse, error) {
-	agentIP, err := s.ResolveServer(serverID)
-	if err != nil {
+	if _, err := s.ResolveServer(serverID); err != nil {
 		return nil, err
 	}
 
-	client, err := s.getNetworkClient(agentIP)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(serverID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", serverID)
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	resp, err := client.CreateNetwork(cmdCtx, &agentpb.CreateNetworkRequest{
-		Name:     name,
-		Driver:   driver,
-		Subnet:   subnet,
-		Gateway:  gateway,
-		Internal: internal,
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  1,
+		Command: &agentpb.ChannelCommand_CreateNetwork{CreateNetwork: &agentpb.CreateNetworkRequest{
+			Name:     name,
+			Driver:   driver,
+			Subnet:   subnet,
+			Gateway:  gateway,
+			Internal: internal,
+		}},
 	})
 
 	details := map[string]any{
@@ -106,6 +98,17 @@ func (s *NetworkService) CreateNetwork(
 		return nil, fmt.Errorf("create network: %w", err)
 	}
 
+	if errResult := result.GetError(); errResult != nil {
+		details["error"] = errResult.GetMessage()
+		s.audit.Log("network.create.failed", userID, "network", "", ip, details)
+		return nil, fmt.Errorf("create network: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetCreateNetwork()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
+	}
+
 	if resp.GetSuccess() {
 		s.upsertCreatedNetwork(serverID, resp.GetNetworkId(), name, driver, subnet, gateway, internal)
 	}
@@ -116,7 +119,7 @@ func (s *NetworkService) CreateNetwork(
 	return resp, nil
 }
 
-// RemoveNetwork removes a network on the agent via gRPC.
+// RemoveNetwork removes a network on the agent via the command channel.
 func (s *NetworkService) RemoveNetwork(ctx context.Context, networkRecordID, userID, ip string) (*agentpb.RemoveNetworkResponse, error) {
 	info, err := s.ResolveNetwork(networkRecordID)
 	if err != nil {
@@ -127,16 +130,20 @@ func (s *NetworkService) RemoveNetwork(ctx context.Context, networkRecordID, use
 		return nil, ErrProtectedNetwork
 	}
 
-	client, err := s.getNetworkClient(info.AgentAddr)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(info.ServerID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", info.ServerID)
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	resp, err := client.RemoveNetwork(cmdCtx, &agentpb.RemoveNetworkRequest{
-		NetworkId: info.DockerID,
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  1,
+		Command: &agentpb.ChannelCommand_RemoveNetwork{RemoveNetwork: &agentpb.RemoveNetworkRequest{
+			NetworkId: info.DockerID,
+		}},
 	})
 
 	details := map[string]any{
@@ -148,6 +155,17 @@ func (s *NetworkService) RemoveNetwork(ctx context.Context, networkRecordID, use
 		details["error"] = err.Error()
 		s.audit.Log("network.remove.failed", userID, "network", networkRecordID, ip, details)
 		return nil, fmt.Errorf("remove network: %w", err)
+	}
+
+	if errResult := result.GetError(); errResult != nil {
+		details["error"] = errResult.GetMessage()
+		s.audit.Log("network.remove.failed", userID, "network", networkRecordID, ip, details)
+		return nil, fmt.Errorf("remove network: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetRemoveNetwork()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
 	}
 
 	if resp.GetSuccess() {
@@ -163,7 +181,7 @@ func (s *NetworkService) RemoveNetwork(ctx context.Context, networkRecordID, use
 	return resp, nil
 }
 
-// ConnectContainer connects a container to a network via the agent.
+// ConnectContainer connects a container to a network via the command channel.
 func (s *NetworkService) ConnectContainer(ctx context.Context, networkRecordID, containerRecordID, userID, ip string) (*agentpb.NetworkConnectResponse, error) {
 	info, err := s.ResolveNetwork(networkRecordID)
 	if err != nil {
@@ -177,17 +195,21 @@ func (s *NetworkService) ConnectContainer(ctx context.Context, networkRecordID, 
 	}
 	dockerContainerID := container.GetString("container_id")
 
-	client, err := s.getNetworkClient(info.AgentAddr)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(info.ServerID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", info.ServerID)
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	resp, err := client.ConnectContainer(cmdCtx, &agentpb.NetworkConnectRequest{
-		NetworkId:   info.DockerID,
-		ContainerId: dockerContainerID,
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  1,
+		Command: &agentpb.ChannelCommand_ConnectContainer{ConnectContainer: &agentpb.NetworkConnectRequest{
+			NetworkId:   info.DockerID,
+			ContainerId: dockerContainerID,
+		}},
 	})
 
 	details := map[string]any{
@@ -201,12 +223,23 @@ func (s *NetworkService) ConnectContainer(ctx context.Context, networkRecordID, 
 		return nil, fmt.Errorf("connect container: %w", err)
 	}
 
+	if errResult := result.GetError(); errResult != nil {
+		details["error"] = errResult.GetMessage()
+		s.audit.Log("network.connect.failed", userID, "network", networkRecordID, ip, details)
+		return nil, fmt.Errorf("connect container: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetConnectContainer()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
+	}
+
 	details["success"] = resp.GetSuccess()
 	s.audit.Log("network.connect", userID, "network", networkRecordID, ip, details)
 	return resp, nil
 }
 
-// DisconnectContainer disconnects a container from a network via the agent.
+// DisconnectContainer disconnects a container from a network via the command channel.
 func (s *NetworkService) DisconnectContainer(ctx context.Context, networkRecordID, containerRecordID string, force bool, userID, ip string) (*agentpb.NetworkDisconnectResponse, error) {
 	info, err := s.ResolveNetwork(networkRecordID)
 	if err != nil {
@@ -219,18 +252,22 @@ func (s *NetworkService) DisconnectContainer(ctx context.Context, networkRecordI
 	}
 	dockerContainerID := container.GetString("container_id")
 
-	client, err := s.getNetworkClient(info.AgentAddr)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(info.ServerID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", info.ServerID)
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	resp, err := client.DisconnectContainer(cmdCtx, &agentpb.NetworkDisconnectRequest{
-		NetworkId:   info.DockerID,
-		ContainerId: dockerContainerID,
-		Force:       force,
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  1,
+		Command: &agentpb.ChannelCommand_DisconnectContainer{DisconnectContainer: &agentpb.NetworkDisconnectRequest{
+			NetworkId:   info.DockerID,
+			ContainerId: dockerContainerID,
+			Force:       force,
+		}},
 	})
 
 	details := map[string]any{
@@ -245,13 +282,23 @@ func (s *NetworkService) DisconnectContainer(ctx context.Context, networkRecordI
 		return nil, fmt.Errorf("disconnect container: %w", err)
 	}
 
+	if errResult := result.GetError(); errResult != nil {
+		details["error"] = errResult.GetMessage()
+		s.audit.Log("network.disconnect.failed", userID, "network", networkRecordID, ip, details)
+		return nil, fmt.Errorf("disconnect container: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetDisconnectContainer()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
+	}
+
 	details["success"] = resp.GetSuccess()
 	s.audit.Log("network.disconnect", userID, "network", networkRecordID, ip, details)
 	return resp, nil
 }
 
-// ResolveServer validates a server is online and returns its IP address.
-// This is a duplicate-safe helper; the canonical one is in image_service.go.
+// ResolveServer validates a server is online and returns its ID.
 func (s *NetworkService) ResolveServer(serverID string) (string, error) {
 	server, err := s.app.FindRecordById(constants.CollServers, serverID)
 	if err != nil {
@@ -260,7 +307,7 @@ func (s *NetworkService) ResolveServer(serverID string) (string, error) {
 	if server.GetString("status") != "online" {
 		return "", ErrServerOffline
 	}
-	return server.GetString("ip_address"), nil
+	return serverID, nil
 }
 
 func (s *NetworkService) upsertCreatedNetwork(serverID, networkID, name, driver, subnet, gateway string, internal bool) {

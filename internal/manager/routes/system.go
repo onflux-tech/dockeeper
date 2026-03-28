@@ -178,7 +178,7 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 
 		// Stream the binary to the agent via gRPC.
 		ctx := e.Request.Context()
-		if err := svc.UpdateAgent(ctx, serverIP, release.TagName, binaryData, checksum); err != nil {
+		if err := svc.UpdateAgent(ctx, serverID, release.TagName, binaryData, checksum); err != nil {
 			sendSSE("error", map[string]any{"message": err.Error()})
 			return nil
 		}

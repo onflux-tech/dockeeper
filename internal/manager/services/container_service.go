@@ -10,7 +10,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -25,7 +25,6 @@ var (
 )
 
 const (
-	agentCommandPort     = "50052"
 	commandTimeout       = 30 * time.Second
 	updateCommandTimeout = 150 * time.Second // pull + recreate needs more time
 	internalRestartDelay = 750 * time.Millisecond
@@ -33,7 +32,7 @@ const (
 
 // CommandDispatcher sends a command to an agent and returns the result.
 type CommandDispatcher interface {
-	Dispatch(ctx context.Context, agentAddr string, req *agentpb.ExecuteCommandRequest) (*agentpb.ExecuteCommandResponse, error)
+	Dispatch(ctx context.Context, serverID string, req *agentpb.ExecuteCommandRequest) (*agentpb.ExecuteCommandResponse, error)
 }
 
 func timeoutForCommand(cmdType agentpb.CommandType) time.Duration {
@@ -43,29 +42,44 @@ func timeoutForCommand(cmdType agentpb.CommandType) time.Duration {
 	return commandTimeout
 }
 
-// GRPCCommandDispatcher connects to agents via gRPC to execute commands.
-type GRPCCommandDispatcher struct {
-	pool *grpc_pool.Pool
+// RegistryCommandDispatcher dispatches commands through the channel registry (reverse tunnel).
+type RegistryCommandDispatcher struct {
+	registry *channel.Registry
 }
 
-// NewGRPCCommandDispatcher creates a GRPCCommandDispatcher.
-func NewGRPCCommandDispatcher(pool *grpc_pool.Pool) *GRPCCommandDispatcher {
-	return &GRPCCommandDispatcher{pool: pool}
+// NewRegistryCommandDispatcher creates a RegistryCommandDispatcher.
+func NewRegistryCommandDispatcher(registry *channel.Registry) *RegistryCommandDispatcher {
+	return &RegistryCommandDispatcher{registry: registry}
 }
 
-// Dispatch dials the agent's command gRPC server and executes the command.
-func (d *GRPCCommandDispatcher) Dispatch(ctx context.Context, agentAddr string, req *agentpb.ExecuteCommandRequest) (*agentpb.ExecuteCommandResponse, error) {
-	conn, err := d.pool.Get(agentAddr)
-	if err != nil {
-		return nil, fmt.Errorf("get agent connection %s: %w", agentAddr, err)
+// Dispatch sends an ExecuteCommandRequest via the reverse tunnel command channel.
+func (d *RegistryCommandDispatcher) Dispatch(ctx context.Context, serverID string, req *agentpb.ExecuteCommandRequest) (*agentpb.ExecuteCommandResponse, error) {
+	ch, ok := d.registry.Get(serverID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", serverID)
 	}
-
-	client := agentpb.NewAgentCommandsServiceClient(conn)
 
 	cmdCtx, cmdCancel := context.WithTimeout(ctx, timeoutForCommand(req.GetType()))
 	defer cmdCancel()
 
-	return client.ExecuteCommand(cmdCtx, req)
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  1, // HIGH — container operations
+		Command:   &agentpb.ChannelCommand_ExecuteCommand{ExecuteCommand: req},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("send command via channel: %w", err)
+	}
+
+	if errResult := result.GetError(); errResult != nil {
+		return nil, fmt.Errorf("agent error: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetExecuteCommand()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
+	}
+	return resp, nil
 }
 
 // ContainerService handles container action requests by resolving the
@@ -123,7 +137,6 @@ func (s *ContainerService) ExecuteAction(
 	}
 
 	// 4. Build gRPC request.
-	agentAddr := server.GetString("ip_address")
 	dockerContainerID := container.GetString("container_id")
 
 	req := &agentpb.ExecuteCommandRequest{
@@ -136,7 +149,7 @@ func (s *ContainerService) ExecuteAction(
 	// 5. Dispatch to agent.
 	if cmdType == agentpb.CommandType_COMMAND_TYPE_RESTART && isDockeeperRuntimeContainer(container) {
 		s.applyContainerActionState(container, cmdType)
-		s.scheduleInternalRestart(agentAddr, req, container, userID, ip)
+		s.scheduleInternalRestart(serverID, req, container, userID, ip)
 
 		details := map[string]any{
 			"command":        cmdType.String(),
@@ -154,7 +167,7 @@ func (s *ContainerService) ExecuteAction(
 		}, nil
 	}
 
-	resp, err := s.dispatcher.Dispatch(ctx, agentAddr, req)
+	resp, err := s.dispatcher.Dispatch(ctx, serverID, req)
 
 	// 6. Create audit log.
 	details := map[string]any{
@@ -200,7 +213,7 @@ func isDockeeperRuntimeContainer(container *core.Record) bool {
 }
 
 func (s *ContainerService) scheduleInternalRestart(
-	agentAddr string,
+	serverID string,
 	req *agentpb.ExecuteCommandRequest,
 	container *core.Record,
 	userID, ip string,
@@ -208,7 +221,6 @@ func (s *ContainerService) scheduleInternalRestart(
 	containerID := container.Id
 	containerName := container.GetString("name")
 	dockerContainerID := container.GetString("container_id")
-	serverID := container.GetString("server")
 	paramsCopy := make(map[string]string, len(req.GetParams()))
 	for key, value := range req.GetParams() {
 		paramsCopy[key] = value
@@ -227,7 +239,7 @@ func (s *ContainerService) scheduleInternalRestart(
 			Params:      paramsCopy,
 		}
 
-		resp, err := s.dispatcher.Dispatch(bgCtx, agentAddr, bgReq)
+		resp, err := s.dispatcher.Dispatch(bgCtx, serverID, bgReq)
 		if err != nil {
 			slog.Warn("scheduled internal restart failed",
 				"container_id", dockerContainerID,

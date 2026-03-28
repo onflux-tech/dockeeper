@@ -18,8 +18,8 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/events"
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
@@ -46,7 +46,7 @@ type SelfUpdateService struct {
 	githubRepo     string
 	httpClient     *http.Client
 	bus            *events.Bus
-	pool           *grpc_pool.Pool
+	registry       *channel.Registry
 	app            core.App
 
 	mu          sync.RWMutex
@@ -56,7 +56,7 @@ type SelfUpdateService struct {
 }
 
 // NewSelfUpdateService creates a new SelfUpdateService.
-func NewSelfUpdateService(app core.App, bus *events.Bus, pool *grpc_pool.Pool, currentVersion string) *SelfUpdateService {
+func NewSelfUpdateService(app core.App, bus *events.Bus, registry *channel.Registry, currentVersion string) *SelfUpdateService {
 	return &SelfUpdateService{
 		currentVersion: currentVersion,
 		githubOwner:    "onflux-tech",
@@ -64,9 +64,9 @@ func NewSelfUpdateService(app core.App, bus *events.Bus, pool *grpc_pool.Pool, c
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		bus:  bus,
-		pool: pool,
-		app:  app,
+		bus:      bus,
+		registry: registry,
+		app:      app,
 	}
 }
 
@@ -243,53 +243,68 @@ func (s *SelfUpdateService) ExecuteManagerUpdate(release *Release) error {
 	return nil
 }
 
-// UpdateAgent sends a new agent binary to an agent via gRPC streaming.
-func (s *SelfUpdateService) UpdateAgent(ctx context.Context, serverIP, version string, binaryData []byte, checksum string) error {
-	conn, err := s.pool.Get(serverIP)
+// UpdateAgent sends a new agent binary to an agent via a DataStream.
+func (s *SelfUpdateService) UpdateAgent(ctx context.Context, serverID, version string, binaryData []byte, checksum string) error {
+	ch, ok := s.registry.Get(serverID)
+	if !ok {
+		return fmt.Errorf("no active channel for server %s", serverID)
+	}
+
+	streamID := channel.NewRequestID()
+	signal := &agentpb.OpenDataStreamSignal{
+		StreamId:   streamID,
+		StreamType: agentpb.DataStreamType_DATA_STREAM_TYPE_AGENT_UPDATE,
+		Params: &agentpb.OpenDataStreamSignal_UpdateBinary{
+			UpdateBinary: &agentpb.DataStreamUpdateBinaryParams{
+				Version:  version,
+				Checksum: checksum,
+			},
+		},
+	}
+
+	streamCh, err := ch.SignalOpenDataStream(ctx, signal)
 	if err != nil {
-		return fmt.Errorf("connect to agent: %w", err)
+		return fmt.Errorf("signal agent update: %w", err)
 	}
 
-	client := agentpb.NewAgentUpdateServiceClient(conn)
-	stream, err := client.UpdateAgentBinary(ctx)
-	if err != nil {
-		return fmt.Errorf("open stream: %w", err)
-	}
-
-	// Send in 64KB chunks
-	const chunkSize = 64 * 1024
-	for i := 0; i < len(binaryData); i += chunkSize {
-		end := i + chunkSize
-		if end > len(binaryData) {
-			end = len(binaryData)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case stream, ok := <-streamCh:
+		if !ok {
+			return fmt.Errorf("update stream channel closed")
 		}
 
-		isLast := end >= len(binaryData)
-		chunk := &agentpb.UpdateBinaryChunk{
-			Chunk:       binaryData[i:end],
-			IsLastChunk: isLast,
-		}
-		if isLast {
-			chunk.Checksum = checksum
-			chunk.Version = version
+		// Send binary data in 64KB chunks via the stream.
+		const chunkSize = 64 * 1024
+		for i := 0; i < len(binaryData); i += chunkSize {
+			end := i + chunkSize
+			if end > len(binaryData) {
+				end = len(binaryData)
+			}
+			if sendErr := stream.Send(&agentpb.OpenDataStreamResponse{
+				StreamId: streamID,
+				Payload:  &agentpb.OpenDataStreamResponse_Data{Data: binaryData[i:end]},
+			}); sendErr != nil {
+				return fmt.Errorf("send binary chunk: %w", sendErr)
+			}
 		}
 
-		if err := stream.Send(chunk); err != nil {
-			return fmt.Errorf("send chunk: %w", err)
+		// Wait for completion.
+		for {
+			msg, recvErr := stream.Recv()
+			if recvErr != nil {
+				return fmt.Errorf("agent update stream: %w", recvErr)
+			}
+			if complete := msg.GetComplete(); complete != nil {
+				slog.Info("agent binary updated", "server", serverID, "version", version)
+				return nil
+			}
+			if errPayload := msg.GetError(); errPayload != nil {
+				return fmt.Errorf("agent update failed: %s", errPayload.GetMessage())
+			}
 		}
 	}
-
-	resp, err := stream.CloseAndRecv()
-	if err != nil {
-		return fmt.Errorf("close stream: %w", err)
-	}
-
-	if !resp.GetSuccess() {
-		return fmt.Errorf("agent update failed: %s", resp.GetError())
-	}
-
-	slog.Info("agent binary updated", "server", serverIP, "version", resp.GetCurrentVersion())
-	return nil
 }
 
 // DownloadAsset downloads a release asset and returns its bytes and SHA256 checksum.

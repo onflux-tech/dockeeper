@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/events"
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
@@ -26,10 +26,10 @@ const (
 
 // UpdateOrchestrator coordinates container image update checks and saga execution.
 type UpdateOrchestrator struct {
-	app      core.App
-	registry *RegistryAdapter
-	pool     *grpc_pool.Pool
-	bus      *events.Bus
+	app             core.App
+	registryAdapter *RegistryAdapter
+	registry        *channel.Registry
+	bus             *events.Bus
 
 	// Per-host semaphores to limit concurrent updates.
 	hostSem sync.Map // serverID → chan struct{}
@@ -38,15 +38,15 @@ type UpdateOrchestrator struct {
 // NewUpdateOrchestrator creates a new orchestrator.
 func NewUpdateOrchestrator(
 	app core.App,
-	registry *RegistryAdapter,
-	pool *grpc_pool.Pool,
+	registryAdapter *RegistryAdapter,
+	channelReg *channel.Registry,
 	bus *events.Bus,
 ) *UpdateOrchestrator {
 	return &UpdateOrchestrator{
-		app:      app,
-		registry: registry,
-		pool:     pool,
-		bus:      bus,
+		app:             app,
+		registryAdapter: registryAdapter,
+		registry:        channelReg,
+		bus:             bus,
 	}
 }
 
@@ -111,7 +111,7 @@ func (o *UpdateOrchestrator) CheckForUpdates(ctx context.Context) ([]CheckResult
 				Image:         rec.GetString("image"),
 			}
 
-			remoteDigest, err := o.registry.GetLatestDigest(ctx, rec.GetString("image"))
+			remoteDigest, err := o.registryAdapter.GetLatestDigest(ctx, rec.GetString("image"))
 			if err != nil {
 				result.Error = err.Error()
 				mu.Lock()
@@ -248,7 +248,6 @@ func (o *UpdateOrchestrator) ExecuteUpdate(ctx context.Context, containerID stri
 		return fmt.Errorf("timeout waiting for host semaphore: %w", ctx.Err())
 	}
 
-	agentIP := server.GetString("ip_address")
 	dockerContainerID := container.GetString("container_id")
 	containerName := container.GetString("name")
 	oldImage := container.GetString("image")
@@ -264,74 +263,114 @@ func (o *UpdateOrchestrator) ExecuteUpdate(ctx context.Context, containerID stri
 		return fmt.Errorf("create history: %w", err)
 	}
 
-	// Connect to agent.
-	conn, err := o.pool.Get(agentIP)
-	if err != nil {
-		o.failHistory(historyRec, fmt.Sprintf("connect to agent: %s", err))
-		return fmt.Errorf("get agent connection: %w", err)
+	// Get the agent's active channel.
+	ch, ok := o.registry.Get(serverID)
+	if !ok {
+		o.failHistory(historyRec, "no active channel for agent")
+		return fmt.Errorf("no active channel for server %s", serverID)
 	}
 
-	client := agentpb.NewAgentUpdateServiceClient(conn)
-
-	// Execute the saga via streaming RPC.
+	// Signal the agent to open a DataStream for the container update.
 	o.updateHistoryStatus(historyRec, "pulling")
 
-	stream, err := client.ExecuteContainerUpdate(ctx, &agentpb.ExecuteContainerUpdateRequest{
-		ContainerId:  dockerContainerID,
-		NewImage:     newImage,
-		RegistryAuth: registryAuth,
-	})
-	if err != nil {
-		o.failHistory(historyRec, fmt.Sprintf("start update stream: %s", err))
-		o.publishUpdateEvent(events.ContainerUpdateFailed, serverID, serverName, containerID, containerName, oldImage, newImage, err.Error())
-		return fmt.Errorf("start update: %w", err)
+	streamID := channel.NewRequestID()
+	signal := &agentpb.OpenDataStreamSignal{
+		StreamId:   streamID,
+		StreamType: agentpb.DataStreamType_DATA_STREAM_TYPE_CONTAINER_UPDATE,
+		Params: &agentpb.OpenDataStreamSignal_ContainerUpdate{
+			ContainerUpdate: &agentpb.ExecuteContainerUpdateRequest{
+				ContainerId:  dockerContainerID,
+				NewImage:     newImage,
+				RegistryAuth: registryAuth,
+			},
+		},
 	}
 
-	// Consume progress stream.
+	streamCh, err := ch.SignalOpenDataStream(ctx, signal)
+	if err != nil {
+		o.failHistory(historyRec, fmt.Sprintf("signal data stream: %s", err))
+		o.publishUpdateEvent(events.ContainerUpdateFailed, serverID, serverName, containerID, containerName, oldImage, newImage, err.Error())
+		return fmt.Errorf("signal update stream: %w", err)
+	}
+
+	// Wait for the agent to open the DataStream.
+	var stream agentpb.AgentDataStreamService_OpenDataStreamServer
+	select {
+	case <-ctx.Done():
+		o.failHistory(historyRec, "timeout waiting for data stream")
+		return fmt.Errorf("timeout waiting for data stream: %w", ctx.Err())
+	case s, ok := <-streamCh:
+		if !ok {
+			o.failHistory(historyRec, "data stream channel closed")
+			return fmt.Errorf("update data stream channel closed")
+		}
+		stream = s
+	}
+
+	// Consume progress stream from the agent.
 	var lastStep string
 	for {
-		progress, err := stream.Recv()
-		if err == io.EOF {
+		msg, recvErr := stream.Recv()
+		if recvErr != nil {
+			if lastStep == "" {
+				o.failHistory(historyRec, fmt.Sprintf("stream error: %s", recvErr))
+				o.publishUpdateEvent(events.ContainerUpdateFailed, serverID, serverName, containerID, containerName, oldImage, newImage, recvErr.Error())
+				return fmt.Errorf("update stream: %w", recvErr)
+			}
 			break
 		}
-		if err != nil {
-			o.failHistory(historyRec, fmt.Sprintf("stream error: %s", err))
-			o.publishUpdateEvent(events.ContainerUpdateFailed, serverID, serverName, containerID, containerName, oldImage, newImage, err.Error())
-			return fmt.Errorf("update stream: %w", err)
+
+		if text := msg.GetText(); text != nil {
+			line := text.GetLine()
+			step := extractUpdateStep(line)
+			if step != "" {
+				lastStep = step
+			}
+
+			slog.Debug("update progress",
+				"container", containerID,
+				"step", lastStep,
+				"line", line,
+			)
+
+			// Map agent steps to history status.
+			switch lastStep {
+			case "pulling":
+				o.updateHistoryStatus(historyRec, "pulling")
+			case "snapshot", "stopping", "creating", "starting", "replacing":
+				o.updateHistoryStatus(historyRec, "replacing")
+			case "verifying":
+				o.updateHistoryStatus(historyRec, "verifying")
+			case "done":
+				o.completeHistory(historyRec, "success")
+				o.publishUpdateEvent(events.ContainerUpdateCompleted, serverID, serverName, containerID, containerName, oldImage, newImage, "")
+				return nil
+			case "rolledback":
+				o.completeHistory(historyRec, "rolledback")
+				o.publishUpdateEvent(events.ContainerUpdateRolledback, serverID, serverName, containerID, containerName, oldImage, newImage, line)
+				return fmt.Errorf("update rolled back: %s", line)
+			case "failed":
+				o.failHistory(historyRec, line)
+				o.publishUpdateEvent(events.ContainerUpdateFailed, serverID, serverName, containerID, containerName, oldImage, newImage, line)
+				return fmt.Errorf("update failed: %s", line)
+			}
 		}
 
-		lastStep = progress.GetStep()
-		slog.Debug("update progress",
-			"container", containerID,
-			"step", lastStep,
-			"message", progress.GetMessage(),
-			"progress", progress.GetProgress(),
-		)
-
-		// Map agent steps to history status.
-		switch lastStep {
-		case "pulling":
-			o.updateHistoryStatus(historyRec, "pulling")
-		case "stopping", "creating", "starting":
-			o.updateHistoryStatus(historyRec, "replacing")
-		case "verifying":
-			o.updateHistoryStatus(historyRec, "verifying")
-		case "done":
+		if complete := msg.GetComplete(); complete != nil {
 			o.completeHistory(historyRec, "success")
 			o.publishUpdateEvent(events.ContainerUpdateCompleted, serverID, serverName, containerID, containerName, oldImage, newImage, "")
 			return nil
-		case "rolledback":
-			o.completeHistory(historyRec, "rolledback")
-			o.publishUpdateEvent(events.ContainerUpdateRolledback, serverID, serverName, containerID, containerName, oldImage, newImage, progress.GetMessage())
-			return fmt.Errorf("update rolled back: %s", progress.GetMessage())
-		case "failed":
-			o.failHistory(historyRec, progress.GetMessage())
-			o.publishUpdateEvent(events.ContainerUpdateFailed, serverID, serverName, containerID, containerName, oldImage, newImage, progress.GetMessage())
-			return fmt.Errorf("update failed: %s", progress.GetMessage())
+		}
+
+		if errPayload := msg.GetError(); errPayload != nil {
+			errMsg := errPayload.GetMessage()
+			o.failHistory(historyRec, errMsg)
+			o.publishUpdateEvent(events.ContainerUpdateFailed, serverID, serverName, containerID, containerName, oldImage, newImage, errMsg)
+			return fmt.Errorf("update failed: %s", errMsg)
 		}
 	}
 
-	// If stream ended cleanly without "done", treat as success.
+	// If stream ended cleanly without "done", treat as failure.
 	if lastStep == "" {
 		o.failHistory(historyRec, "update stream ended without result")
 		return fmt.Errorf("update stream ended without result")
@@ -389,9 +428,9 @@ func (o *UpdateOrchestrator) resolveServerName(serverID string) string {
 func (o *UpdateOrchestrator) resolveRegistryAuth(imageRef string) string {
 	ref := ParseImageRef(imageRef)
 
-	o.registry.mu.RLock()
-	cred, ok := o.registry.credentials[ref.Registry]
-	o.registry.mu.RUnlock()
+	o.registryAdapter.mu.RLock()
+	cred, ok := o.registryAdapter.credentials[ref.Registry]
+	o.registryAdapter.mu.RUnlock()
 
 	if !ok || cred.Username == "" {
 		return ""
@@ -474,4 +513,15 @@ func (o *UpdateOrchestrator) publishUpdateEvent(
 		Details:       details,
 		Timestamp:     time.Now().UTC(),
 	})
+}
+
+// extractUpdateStep parses the step name from a DataStreamText line
+// in the format "[step] message (progress%)".
+func extractUpdateStep(line string) string {
+	if len(line) > 2 && line[0] == '[' {
+		if idx := strings.IndexByte(line, ']'); idx > 0 {
+			return line[1:idx]
+		}
+	}
+	return ""
 }

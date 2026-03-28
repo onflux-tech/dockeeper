@@ -15,9 +15,9 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	dkgrpc "github.com/onflux-tech/dockeeper/internal/manager/grpc"
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
 	"github.com/onflux-tech/dockeeper/internal/manager/jobs"
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -71,8 +71,8 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		apiKeyStore := store.NewAPIKeyStore(app)
 		rbac := middleware.NewRBAC(rbacStore, apiKeyStore)
 
-		// Shared gRPC connection pool for agent communication.
-		pool := grpc_pool.New()
+		// Channel registry for reverse tunnel agent communication.
+		registry := channel.NewRegistry(app, eventBus)
 
 		registerHealthRoutes(se, version, commit)
 		routes.RegisterAgentPublicRoutes(se, app)
@@ -91,7 +91,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 
 		// Container action routes.
 		auditStore := store.NewAuditStore(app)
-		dispatcher := services.NewGRPCCommandDispatcher(pool)
+		dispatcher := services.NewRegistryCommandDispatcher(registry)
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
 
 		// Subscribe EventBus handlers (now that stores are available).
@@ -100,7 +100,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// AlertHandler is subscribed below after alertEngine is created.
 
 		// Volume + Cascade services (cascade depends on volumeSvc).
-		volumeSvc := services.NewVolumeService(app, auditStore, pool)
+		volumeSvc := services.NewVolumeService(app, auditStore, registry)
 		cascadeSvc := services.NewCascadeService(app, auditStore, volumeSvc)
 		routes.RegisterVolumeRoutes(se, volumeSvc, cascadeSvc, rbac)
 		routes.RegisterCascadeRoutes(se, cascadeSvc, rbac)
@@ -120,28 +120,28 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		routes.RegisterContainerCreateRoutes(se, containerCreateSvc, rbac)
 
 		// Container logs SSE streaming route.
-		routes.RegisterContainerLogRoutes(se, app, rbac)
+		routes.RegisterContainerLogRoutes(se, app, registry, rbac)
 
 		// Terminal WebSocket proxy route.
 		termStore := store.NewTerminalStore(app)
 		termSvc := services.NewTerminalService(app, termStore, auditStore)
-		routes.RegisterTerminalRoutes(se, app, termSvc, rbac)
+		routes.RegisterTerminalRoutes(se, app, termSvc, registry, rbac)
 
 		// Image management routes.
-		imageSvc := services.NewImageService(app, auditStore, pool)
-		routes.RegisterImageRoutes(se, app, imageSvc, rbac)
+		imageSvc := services.NewImageService(app, auditStore, registry)
+		routes.RegisterImageRoutes(se, app, imageSvc, registry, rbac)
 
 		// Compose stack management routes.
-		composeSvc := services.NewComposeService(app, auditStore, pool)
-		routes.RegisterComposeRoutes(se, app, composeSvc, rbac)
+		composeSvc := services.NewComposeService(app, auditStore, registry)
+		routes.RegisterComposeRoutes(se, app, composeSvc, registry, rbac)
 
 		// Network management routes.
-		networkSvc := services.NewNetworkService(app, auditStore, pool)
+		networkSvc := services.NewNetworkService(app, auditStore, registry)
 		routes.RegisterNetworkRoutes(se, networkSvc, rbac)
 
 		// Backup system routes + scheduler.
 		backupStore := store.NewBackupStore(app)
-		backupSvc := services.NewBackupService(app, backupStore, auditStore, pool)
+		backupSvc := services.NewBackupService(app, backupStore, auditStore, registry)
 		routes.RegisterBackupRoutes(se, app, backupSvc, backupStore, rbac)
 		jobs.RegisterBackupJobs(app, backupSvc, backupStore)
 
@@ -162,7 +162,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 
 		// Health checks system.
 		healthStore := store.NewHealthStore(app)
-		healthScheduler := services.NewHealthScheduler(app, healthStore, pool, eventBus)
+		healthScheduler := services.NewHealthScheduler(app, healthStore, registry, eventBus)
 		routes.RegisterHealthCheckRoutes(se, app, healthStore, healthScheduler, rbac)
 
 		// Dashboard layout persistence.
@@ -195,7 +195,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// Update orchestrator + registry adapter + cron.
 		registryAdapter := services.NewRegistryAdapter(encKey)
 		loadRegistryCredentials(app, registryAdapter)
-		updateOrch := services.NewUpdateOrchestrator(app, registryAdapter, pool, eventBus)
+		updateOrch := services.NewUpdateOrchestrator(app, registryAdapter, registry, eventBus)
 		routes.RegisterUpdateRoutes(se, updateOrch, rbac)
 		registerUpdateCron(app, updateOrch)
 
@@ -211,7 +211,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		}
 
 		// Self-update system routes.
-		selfUpdateSvc := services.NewSelfUpdateService(app, eventBus, pool, version)
+		selfUpdateSvc := services.NewSelfUpdateService(app, eventBus, registry, version)
 		routes.RegisterSystemRoutes(se, app, selfUpdateSvc, rbac)
 
 		// Serve embedded frontend (SPA fallback).
@@ -234,7 +234,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 			return err
 		}
 
-		grpcServer, err := dkgrpc.NewServer(app, ca, grpcAddr, eventBus)
+		grpcServer, err := dkgrpc.NewServer(app, ca, grpcAddr, eventBus, registry)
 		if err != nil {
 			slog.Error("failed to create gRPC server", "error", err)
 			return err
@@ -253,7 +253,6 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
 			healthScheduler.Stop()
 			grpcServer.Stop()
-			pool.Close()
 			eventBus.Close()
 			return te.Next()
 		})

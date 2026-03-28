@@ -10,7 +10,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -18,15 +18,15 @@ import (
 
 // BackupService orchestrates backup/restore operations.
 type BackupService struct {
-	app   core.App
-	store *store.BackupStore
-	audit *store.AuditStore
-	pool  *grpc_pool.Pool
+	app      core.App
+	store    *store.BackupStore
+	audit    *store.AuditStore
+	registry *channel.Registry
 }
 
 // NewBackupService creates a BackupService.
-func NewBackupService(app core.App, backupStore *store.BackupStore, audit *store.AuditStore, pool *grpc_pool.Pool) *BackupService {
-	return &BackupService{app: app, store: backupStore, audit: audit, pool: pool}
+func NewBackupService(app core.App, backupStore *store.BackupStore, audit *store.AuditStore, registry *channel.Registry) *BackupService {
+	return &BackupService{app: app, store: backupStore, audit: audit, registry: registry}
 }
 
 // TriggerBackup triggers a backup for the given policy.
@@ -52,7 +52,7 @@ func (s *BackupService) TriggerBackup(ctx context.Context, policyID, userID, ip 
 	}
 	mountpoint := volumes[0].GetString("mountpoint")
 
-	// Resolve server → get agent IP.
+	// Resolve server — verify it's online.
 	server, err := s.app.FindRecordById(constants.CollServers, serverID)
 	if err != nil {
 		return "", ErrServerNotFound
@@ -60,7 +60,6 @@ func (s *BackupService) TriggerBackup(ctx context.Context, policyID, userID, ip 
 	if server.GetString("status") != "online" {
 		return "", ErrServerOffline
 	}
-	agentIP := server.GetString("ip_address")
 
 	// Get S3 config from settings.
 	s3Cfg, err := s.getS3Settings()
@@ -81,7 +80,7 @@ func (s *BackupService) TriggerBackup(ctx context.Context, policyID, userID, ip 
 	// Dispatch to agent (async via goroutine for long-running).
 	go func() {
 		bgCtx := context.Background()
-		backupErr := s.executeBackup(bgCtx, agentIP, volumeName, mountpoint, s3Cfg, s3Bucket, s3Key)
+		backupErr := s.executeBackup(bgCtx, serverID, volumeName, mountpoint, s3Cfg, s3Bucket, s3Key)
 		if backupErr != nil {
 			slog.Error("backup failed", "policy", policyID, "volume", volumeName, "error", backupErr)
 			_ = s.store.MarkBackupFailed(recordID, backupErr.Error())
@@ -134,7 +133,6 @@ func (s *BackupService) TriggerRestore(ctx context.Context, backupRecordID, user
 	if server.GetString("status") != "online" {
 		return ErrServerOffline
 	}
-	agentIP := server.GetString("ip_address")
 
 	// Get S3 config.
 	s3Cfg, err := s.getS3Settings()
@@ -153,7 +151,7 @@ func (s *BackupService) TriggerRestore(ctx context.Context, backupRecordID, user
 	// Execute restore asynchronously.
 	go func() {
 		bgCtx := context.Background()
-		restoreErr := s.executeRestore(bgCtx, agentIP, volumeName, mountpoint, s3Cfg, s3Bucket, s3Key)
+		restoreErr := s.executeRestore(bgCtx, serverID, volumeName, mountpoint, s3Cfg, s3Bucket, s3Key)
 		if restoreErr != nil {
 			slog.Error("restore failed", "record", backupRecordID, "error", restoreErr)
 		} else {
@@ -246,82 +244,110 @@ func (s *BackupService) getS3Settings() (*s3Settings, error) {
 	}, nil
 }
 
-func (s *BackupService) executeBackup(ctx context.Context, agentIP, volumeName, mountpoint string, s3Cfg *s3Settings, s3Bucket, s3Key string) error {
-	conn, err := s.pool.Get(agentIP)
-	if err != nil {
-		return err
+func (s *BackupService) executeBackup(ctx context.Context, serverID, volumeName, mountpoint string, s3Cfg *s3Settings, s3Bucket, s3Key string) error {
+	ch, ok := s.registry.Get(serverID)
+	if !ok {
+		return fmt.Errorf("no active channel for server %s", serverID)
 	}
-	client := agentpb.NewAgentBackupServiceClient(conn)
 
-	stream, err := client.BackupVolume(ctx, &agentpb.BackupVolumeRequest{
-		VolumeName: volumeName,
-		Mountpoint: mountpoint,
-		S3: &agentpb.S3Config{
-			Endpoint:  s3Cfg.Endpoint,
-			Bucket:    s3Bucket,
-			Key:       s3Key,
-			AccessKey: s3Cfg.AccessKey,
-			SecretKey: s3Cfg.SecretKey,
-			Region:    s3Cfg.Region,
-			UseSsl:    s3Cfg.UseSSL,
+	streamID := channel.NewRequestID()
+	signal := &agentpb.OpenDataStreamSignal{
+		StreamId:   streamID,
+		StreamType: agentpb.DataStreamType_DATA_STREAM_TYPE_BACKUP,
+		Params: &agentpb.OpenDataStreamSignal_BackupVolume{
+			BackupVolume: &agentpb.BackupVolumeRequest{
+				VolumeName: volumeName,
+				Mountpoint: mountpoint,
+				S3: &agentpb.S3Config{
+					Endpoint: s3Cfg.Endpoint, Bucket: s3Bucket, Key: s3Key,
+					AccessKey: s3Cfg.AccessKey, SecretKey: s3Cfg.SecretKey,
+					Region: s3Cfg.Region, UseSsl: s3Cfg.UseSSL,
+				},
+			},
 		},
-	})
-	if err != nil {
-		return fmt.Errorf("start backup stream: %w", err)
 	}
 
-	// Consume the stream until done.
-	for {
-		msg, recvErr := stream.Recv()
-		if recvErr != nil {
-			return fmt.Errorf("backup stream: %w", recvErr)
+	streamCh, err := ch.SignalOpenDataStream(ctx, signal)
+	if err != nil {
+		return fmt.Errorf("signal backup stream: %w", err)
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case stream, ok := <-streamCh:
+		if !ok {
+			return fmt.Errorf("backup stream channel closed")
 		}
-		if msg.GetDone() {
-			if msg.GetError() != "" {
-				return fmt.Errorf("agent backup error: %s", msg.GetError())
+		for {
+			msg, recvErr := stream.Recv()
+			if recvErr != nil {
+				return fmt.Errorf("backup stream: %w", recvErr)
 			}
-			return nil
+			if complete := msg.GetComplete(); complete != nil {
+				return nil
+			}
+			if errPayload := msg.GetError(); errPayload != nil {
+				return fmt.Errorf("agent backup error: %s", errPayload.GetMessage())
+			}
+			// Progress messages — log debug
+			if p := msg.GetProgress(); p != nil {
+				slog.Debug("backup progress", "volume", volumeName, "status", p.GetStatus())
+			}
 		}
-		slog.Debug("backup progress", "volume", volumeName, "status", msg.GetStatus(), "message", msg.GetMessage())
 	}
 }
 
-func (s *BackupService) executeRestore(ctx context.Context, agentIP, volumeName, mountpoint string, s3Cfg *s3Settings, s3Bucket, s3Key string) error {
-	conn, err := s.pool.Get(agentIP)
-	if err != nil {
-		return err
+func (s *BackupService) executeRestore(ctx context.Context, serverID, volumeName, mountpoint string, s3Cfg *s3Settings, s3Bucket, s3Key string) error {
+	ch, ok := s.registry.Get(serverID)
+	if !ok {
+		return fmt.Errorf("no active channel for server %s", serverID)
 	}
-	client := agentpb.NewAgentBackupServiceClient(conn)
 
-	stream, err := client.RestoreVolume(ctx, &agentpb.RestoreVolumeRequest{
-		VolumeName: volumeName,
-		Mountpoint: mountpoint,
-		S3: &agentpb.S3Config{
-			Endpoint:  s3Cfg.Endpoint,
-			Bucket:    s3Bucket,
-			Key:       s3Key,
-			AccessKey: s3Cfg.AccessKey,
-			SecretKey: s3Cfg.SecretKey,
-			Region:    s3Cfg.Region,
-			UseSsl:    s3Cfg.UseSSL,
+	streamID := channel.NewRequestID()
+	signal := &agentpb.OpenDataStreamSignal{
+		StreamId:   streamID,
+		StreamType: agentpb.DataStreamType_DATA_STREAM_TYPE_RESTORE,
+		Params: &agentpb.OpenDataStreamSignal_RestoreVolume{
+			RestoreVolume: &agentpb.RestoreVolumeRequest{
+				VolumeName: volumeName,
+				Mountpoint: mountpoint,
+				S3: &agentpb.S3Config{
+					Endpoint: s3Cfg.Endpoint, Bucket: s3Bucket, Key: s3Key,
+					AccessKey: s3Cfg.AccessKey, SecretKey: s3Cfg.SecretKey,
+					Region: s3Cfg.Region, UseSsl: s3Cfg.UseSSL,
+				},
+			},
 		},
-	})
-	if err != nil {
-		return fmt.Errorf("start restore stream: %w", err)
 	}
 
-	for {
-		msg, recvErr := stream.Recv()
-		if recvErr != nil {
-			return fmt.Errorf("restore stream: %w", recvErr)
+	streamCh, err := ch.SignalOpenDataStream(ctx, signal)
+	if err != nil {
+		return fmt.Errorf("signal restore stream: %w", err)
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case stream, ok := <-streamCh:
+		if !ok {
+			return fmt.Errorf("restore stream channel closed")
 		}
-		if msg.GetDone() {
-			if msg.GetError() != "" {
-				return fmt.Errorf("agent restore error: %s", msg.GetError())
+		for {
+			msg, recvErr := stream.Recv()
+			if recvErr != nil {
+				return fmt.Errorf("restore stream: %w", recvErr)
 			}
-			return nil
+			if complete := msg.GetComplete(); complete != nil {
+				return nil
+			}
+			if errPayload := msg.GetError(); errPayload != nil {
+				return fmt.Errorf("agent restore error: %s", errPayload.GetMessage())
+			}
+			if p := msg.GetProgress(); p != nil {
+				slog.Debug("restore progress", "volume", volumeName, "status", p.GetStatus())
+			}
 		}
-		slog.Debug("restore progress", "volume", volumeName, "status", msg.GetStatus())
 	}
 }
 

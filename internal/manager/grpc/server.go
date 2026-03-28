@@ -24,8 +24,9 @@ type Server struct {
 }
 
 // NewServer creates a configured gRPC server with TLS, interceptors and
-// all agent services registered.
-func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr string, bus *events.Bus) (*Server, error) {
+// all agent services registered. The registry parameter is the shared
+// channel registry that all manager services use to communicate with agents.
+func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr string, bus *events.Bus, registry *channel.Registry) (*Server, error) {
 	tlsCfg, err := ca.ServerTLSConfig()
 	if err != nil {
 		return nil, fmt.Errorf("server TLS config: %w", err)
@@ -55,8 +56,6 @@ func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr stri
 	agentpb.RegisterAgentTraefikServiceServer(gs, traefikHandler)
 
 	// Register reverse-tunnel services (agent connects to manager).
-	registry := channel.NewRegistry(app, bus)
-
 	cmdChannelHandler := NewCommandChannelHandler(registry)
 	agentpb.RegisterAgentCommandChannelServiceServer(gs, cmdChannelHandler)
 

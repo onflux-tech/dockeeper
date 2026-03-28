@@ -5,31 +5,27 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
-const agentLogsPort = "50052"
-
 // RegisterContainerLogRoutes adds SSE streaming log endpoints.
-func RegisterContainerLogRoutes(se *core.ServeEvent, app core.App, rbac *middleware.RBAC) {
+func RegisterContainerLogRoutes(se *core.ServeEvent, app core.App, registry *channel.Registry, rbac *middleware.RBAC) {
 	se.Router.GET("/api/dk/containers/{id}/logs/stream", func(e *core.RequestEvent) error {
-		return handleLogStream(e, app)
+		return handleLogStream(e, app, registry)
 	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 
 	se.Router.GET("/api/dk/containers/multi-logs", func(e *core.RequestEvent) error {
-		return handleMultiLogStream(e, app)
+		return handleMultiLogStream(e, app, registry)
 	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 }
 
@@ -39,7 +35,7 @@ type logEvent struct {
 	Message   string `json:"message"`
 }
 
-func handleLogStream(e *core.RequestEvent, app core.App) error {
+func handleLogStream(e *core.RequestEvent, app core.App, registry *channel.Registry) error {
 	containerID := e.Request.PathValue("id")
 	follow := e.Request.URL.Query().Get("follow") != "false"
 	tail := e.Request.URL.Query().Get("tail")
@@ -63,38 +59,47 @@ func handleLogStream(e *core.RequestEvent, app core.App) error {
 		return e.JSON(http.StatusServiceUnavailable, map[string]string{"error": "server is offline"})
 	}
 
-	agentAddr := net.JoinHostPort(server.GetString("ip_address"), agentLogsPort)
 	dockerContainerID := container.GetString("container_id")
 
-	// Dial agent gRPC.
-	conn, err := grpc.NewClient(agentAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		slog.Error("failed to dial agent for logs", "addr", agentAddr, "error", err)
-		return e.JSON(http.StatusBadGateway, map[string]string{"error": "cannot reach agent"})
+	// Get channel from registry.
+	ch, okCh := registry.Get(serverID)
+	if !okCh {
+		return e.JSON(http.StatusBadGateway, map[string]string{"error": "agent not connected"})
 	}
-	defer func() {
-		if closeErr := conn.Close(); closeErr != nil {
-			slog.Warn("failed to close log connection", "error", closeErr)
-		}
-	}()
-
-	client := agentpb.NewAgentLogsServiceClient(conn)
 
 	var tailLines uint32
 	if _, scanErr := fmt.Sscanf(tail, "%d", &tailLines); scanErr != nil {
 		tailLines = 100
 	}
 
-	stream, err := client.StreamLogs(e.Request.Context(), &agentpb.StreamLogsRequest{
-		ContainerId: dockerContainerID,
-		Follow:      follow,
-		TailLines:   tailLines,
-	})
+	streamID := channel.NewRequestID()
+	signal := &agentpb.OpenDataStreamSignal{
+		StreamId:   streamID,
+		StreamType: agentpb.DataStreamType_DATA_STREAM_TYPE_LOGS,
+		Params: &agentpb.OpenDataStreamSignal_StreamLogs{
+			StreamLogs: &agentpb.StreamLogsRequest{
+				ContainerId: dockerContainerID,
+				Follow:      follow,
+				TailLines:   tailLines,
+			},
+		},
+	}
+
+	streamCh, err := ch.SignalOpenDataStream(e.Request.Context(), signal)
 	if err != nil {
-		slog.Error("failed to open log stream", "error", err)
-		return e.JSON(http.StatusBadGateway, map[string]string{"error": "failed to stream logs"})
+		return e.JSON(http.StatusBadGateway, map[string]string{"error": "failed to signal log stream"})
+	}
+
+	// Wait for the agent to open the DataStream.
+	var stream agentpb.AgentDataStreamService_OpenDataStreamServer
+	select {
+	case <-e.Request.Context().Done():
+		return nil
+	case s, ok := <-streamCh:
+		if !ok {
+			return e.JSON(http.StatusBadGateway, map[string]string{"error": "log stream not available"})
+		}
+		stream = s
 	}
 
 	// Set SSE headers.
@@ -122,17 +127,17 @@ func handleLogStream(e *core.RequestEvent, app core.App) error {
 	keepalive := time.NewTicker(15 * time.Second)
 	defer keepalive.Stop()
 
-	// Channel receives log entries (or errors) from the gRPC stream.
+	// Channel receives DataStream messages (or errors) from the agent.
 	type recvResult struct {
-		entry *agentpb.StreamLogsResponse
+		entry *agentpb.OpenDataStreamRequest
 		err   error
 	}
-	ch := make(chan recvResult, 1)
+	recvCh := make(chan recvResult, 1)
 
 	go func() {
 		for {
 			entry, recvErr := stream.Recv()
-			ch <- recvResult{entry: entry, err: recvErr}
+			recvCh <- recvResult{entry: entry, err: recvErr}
 			if recvErr != nil {
 				return
 			}
@@ -148,7 +153,7 @@ func handleLogStream(e *core.RequestEvent, app core.App) error {
 			_, _ = fmt.Fprintf(w, ": keepalive\n\n")
 			flusher.Flush()
 
-		case res := <-ch:
+		case res := <-recvCh:
 			if res.err != nil {
 				if res.err == io.EOF {
 					_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
@@ -161,17 +166,24 @@ func handleLogStream(e *core.RequestEvent, app core.App) error {
 				return nil
 			}
 
-			ev := logEvent{
-				Stream:  res.entry.GetStream(),
-				Message: res.entry.GetMessage(),
-			}
-			if res.entry.GetTimestamp() != nil {
-				ev.Timestamp = res.entry.GetTimestamp().AsTime().Format("2006-01-02T15:04:05.000Z")
+			// Handle text messages (log lines).
+			if text := res.entry.GetText(); text != nil {
+				ev := logEvent{
+					Stream:    text.GetStream(),
+					Message:   text.GetLine(),
+					Timestamp: time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+				}
+				data, _ := json.Marshal(ev)
+				_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)
+				flusher.Flush()
 			}
 
-			data, _ := json.Marshal(ev)
-			_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)
-			flusher.Flush()
+			// Complete or error signals end the stream.
+			if res.entry.GetComplete() != nil || res.entry.GetError() != nil {
+				_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
+				flusher.Flush()
+				return nil
+			}
 		}
 	}
 }
@@ -187,7 +199,7 @@ type multiLogEvent struct {
 
 // handleMultiLogStream opens log streams for multiple containers and merges
 // them into a single SSE connection. Query: ids=a,b,c&tail=100&follow=true.
-func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
+func handleMultiLogStream(e *core.RequestEvent, app core.App, registry *channel.Registry) error {
 	idsParam := e.Request.URL.Query().Get("ids")
 	if idsParam == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "ids query parameter required"})
@@ -213,7 +225,7 @@ func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
 		recordID          string
 		name              string
 		dockerContainerID string
-		agentAddr         string
+		serverID          string
 	}
 	var containers []containerInfo
 
@@ -226,7 +238,8 @@ func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
 		if err != nil {
 			return e.JSON(http.StatusNotFound, map[string]string{"error": "container not found: " + id})
 		}
-		server, err := app.FindRecordById(constants.CollServers, container.GetString("server"))
+		srvID := container.GetString("server")
+		server, err := app.FindRecordById(constants.CollServers, srvID)
 		if err != nil {
 			return e.JSON(http.StatusNotFound, map[string]string{"error": "server not found for container: " + id})
 		}
@@ -237,7 +250,7 @@ func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
 			recordID:          id,
 			name:              container.GetString("name"),
 			dockerContainerID: container.GetString("container_id"),
-			agentAddr:         net.JoinHostPort(server.GetString("ip_address"), agentLogsPort),
+			serverID:          srvID,
 		})
 	}
 
@@ -264,47 +277,59 @@ func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
 	type mergedEntry struct {
 		containerID   string
 		containerName string
-		entry         *agentpb.StreamLogsResponse
+		entry         *agentpb.OpenDataStreamRequest
 		err           error
 	}
-	ch := make(chan mergedEntry, 16)
+	mergedCh := make(chan mergedEntry, 16)
 
-	// Track gRPC connections for cleanup.
-	var conns []*grpc.ClientConn
-	var connsMu sync.Mutex
-
-	// Open a log stream for each container.
+	// Open a DataStream for each container.
 	var wg sync.WaitGroup
 	for _, c := range containers {
 		wg.Add(1)
 		go func(ci containerInfo) {
 			defer wg.Done()
 
-			conn, err := grpc.NewClient(ci.agentAddr,
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-			)
-			if err != nil {
-				slog.Error("multi-log: dial failed", "container", ci.recordID, "error", err)
+			ch, okCh := registry.Get(ci.serverID)
+			if !okCh {
+				slog.Error("multi-log: agent not connected", "container", ci.recordID, "server", ci.serverID)
 				return
 			}
-			connsMu.Lock()
-			conns = append(conns, conn)
-			connsMu.Unlock()
 
-			client := agentpb.NewAgentLogsServiceClient(conn)
-			stream, err := client.StreamLogs(e.Request.Context(), &agentpb.StreamLogsRequest{
-				ContainerId: ci.dockerContainerID,
-				Follow:      follow,
-				TailLines:   tailLines,
-			})
+			streamID := channel.NewRequestID()
+			signal := &agentpb.OpenDataStreamSignal{
+				StreamId:   streamID,
+				StreamType: agentpb.DataStreamType_DATA_STREAM_TYPE_LOGS,
+				Params: &agentpb.OpenDataStreamSignal_StreamLogs{
+					StreamLogs: &agentpb.StreamLogsRequest{
+						ContainerId: ci.dockerContainerID,
+						Follow:      follow,
+						TailLines:   tailLines,
+					},
+				},
+			}
+
+			streamCh, err := ch.SignalOpenDataStream(e.Request.Context(), signal)
 			if err != nil {
-				slog.Error("multi-log: stream open failed", "container", ci.recordID, "error", err)
+				slog.Error("multi-log: signal failed", "container", ci.recordID, "error", err)
 				return
+			}
+
+			// Wait for agent to open the DataStream.
+			var stream agentpb.AgentDataStreamService_OpenDataStreamServer
+			select {
+			case <-e.Request.Context().Done():
+				return
+			case s, ok := <-streamCh:
+				if !ok {
+					slog.Error("multi-log: stream channel closed", "container", ci.recordID)
+					return
+				}
+				stream = s
 			}
 
 			for {
 				entry, recvErr := stream.Recv()
-				ch <- mergedEntry{
+				mergedCh <- mergedEntry{
 					containerID:   ci.recordID,
 					containerName: ci.name,
 					entry:         entry,
@@ -317,19 +342,10 @@ func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
 		}(c)
 	}
 
-	// Close all connections on exit.
-	defer func() {
-		connsMu.Lock()
-		for _, conn := range conns {
-			_ = conn.Close()
-		}
-		connsMu.Unlock()
-	}()
-
 	// Close merged channel when all goroutines finish.
 	go func() {
 		wg.Wait()
-		close(ch)
+		close(mergedCh)
 	}()
 
 	keepalive := time.NewTicker(15 * time.Second)
@@ -344,7 +360,7 @@ func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
 			_, _ = fmt.Fprintf(w, ": keepalive\n\n")
 			flusher.Flush()
 
-		case res, ok := <-ch:
+		case res, ok := <-mergedCh:
 			if !ok {
 				// All streams closed.
 				_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
@@ -359,19 +375,24 @@ func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
 				continue
 			}
 
-			ev := multiLogEvent{
-				ContainerID:   res.containerID,
-				ContainerName: res.containerName,
-				Stream:        res.entry.GetStream(),
-				Message:       res.entry.GetMessage(),
-			}
-			if res.entry.GetTimestamp() != nil {
-				ev.Timestamp = res.entry.GetTimestamp().AsTime().Format("2006-01-02T15:04:05.000Z")
+			// Handle text messages (log lines).
+			if text := res.entry.GetText(); text != nil {
+				ev := multiLogEvent{
+					ContainerID:   res.containerID,
+					ContainerName: res.containerName,
+					Stream:        text.GetStream(),
+					Message:       text.GetLine(),
+					Timestamp:     time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+				}
+				data, _ := json.Marshal(ev)
+				_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)
+				flusher.Flush()
 			}
 
-			data, _ := json.Marshal(ev)
-			_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)
-			flusher.Flush()
+			// Complete or error from one container: just continue, others may still be active.
+			if res.entry.GetComplete() != nil || res.entry.GetError() != nil {
+				continue
+			}
 		}
 	}
 }

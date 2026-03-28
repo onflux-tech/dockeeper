@@ -7,31 +7,30 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // ImageService handles image operations by resolving the target server
-// and dispatching commands to the agent via gRPC.
+// and dispatching commands to the agent via the reverse tunnel command channel.
 type ImageService struct {
-	app   core.App
-	audit *store.AuditStore
-	pool  *grpc_pool.Pool
+	app      core.App
+	audit    *store.AuditStore
+	registry *channel.Registry
 }
 
 // NewImageService creates an ImageService.
-func NewImageService(app core.App, audit *store.AuditStore, pool *grpc_pool.Pool) *ImageService {
-	return &ImageService{app: app, audit: audit, pool: pool}
+func NewImageService(app core.App, audit *store.AuditStore, registry *channel.Registry) *ImageService {
+	return &ImageService{app: app, audit: audit, registry: registry}
 }
 
 // ImageInfo holds the resolved image information needed for agent operations.
 type ImageInfo struct {
-	AgentAddr    string
-	DockerID     string
-	ServerID     string
-	ImageName    string
+	DockerID  string
+	ServerID  string
+	ImageName string
 }
 
 // ResolveImage looks up an image PocketBase record and returns agent info.
@@ -52,14 +51,13 @@ func (s *ImageService) ResolveImage(imageRecordID string) (*ImageInfo, error) {
 	}
 
 	return &ImageInfo{
-		AgentAddr: server.GetString("ip_address"),
 		DockerID:  img.GetString("image_id"),
 		ServerID:  serverID,
 		ImageName: img.GetString("tags"),
 	}, nil
 }
 
-// ResolveServer validates a server is online and returns its IP address.
+// ResolveServer validates a server is online and returns its ID.
 func (s *ImageService) ResolveServer(serverID string) (string, error) {
 	server, err := s.app.FindRecordById(constants.CollServers, serverID)
 	if err != nil {
@@ -68,29 +66,32 @@ func (s *ImageService) ResolveServer(serverID string) (string, error) {
 	if server.GetString("status") != "online" {
 		return "", ErrServerOffline
 	}
-	return server.GetString("ip_address"), nil
+	return serverID, nil
 }
 
-// RemoveImage removes an image on the agent via gRPC.
+// RemoveImage removes an image on the agent via the command channel.
 func (s *ImageService) RemoveImage(ctx context.Context, imageRecordID string, force bool, userID, ip string) (*agentpb.ImageRemoveResponse, error) {
 	info, err := s.ResolveImage(imageRecordID)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := s.pool.Get(info.AgentAddr)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(info.ServerID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", info.ServerID)
 	}
-	client := agentpb.NewAgentImageServiceClient(conn)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	resp, err := client.RemoveImage(cmdCtx, &agentpb.ImageRemoveRequest{
-		ImageId:       info.DockerID,
-		Force:         force,
-		PruneChildren: true,
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  2, // NORMAL
+		Command: &agentpb.ChannelCommand_RemoveImage{RemoveImage: &agentpb.ImageRemoveRequest{
+			ImageId:       info.DockerID,
+			Force:         force,
+			PruneChildren: true,
+		}},
 	})
 
 	details := map[string]any{
@@ -102,6 +103,17 @@ func (s *ImageService) RemoveImage(ctx context.Context, imageRecordID string, fo
 		details["error"] = err.Error()
 		s.audit.Log("image.remove.failed", userID, "image", imageRecordID, ip, details)
 		return nil, fmt.Errorf("remove image: %w", err)
+	}
+
+	if errResult := result.GetError(); errResult != nil {
+		details["error"] = errResult.GetMessage()
+		s.audit.Log("image.remove.failed", userID, "image", imageRecordID, ip, details)
+		return nil, fmt.Errorf("agent error: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetRemoveImage()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
 	}
 
 	details["success"] = resp.GetSuccess()
@@ -116,23 +128,26 @@ func (s *ImageService) RemoveImage(ctx context.Context, imageRecordID string, fo
 	return resp, nil
 }
 
-// PruneImages removes unused images on a server via gRPC.
+// PruneImages removes unused images on a server via the command channel.
 func (s *ImageService) PruneImages(ctx context.Context, serverID string, all bool, userID, ip string) (*agentpb.ImagePruneResponse, error) {
-	agentIP, err := s.ResolveServer(serverID)
+	_, err := s.ResolveServer(serverID)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := s.pool.Get(agentIP)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(serverID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", serverID)
 	}
-	client := agentpb.NewAgentImageServiceClient(conn)
 
 	cmdCtx, cancel := context.WithTimeout(ctx, 2*commandTimeout)
 	defer cancel()
 
-	resp, err := client.PruneImages(cmdCtx, &agentpb.ImagePruneRequest{All: all})
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  2, // NORMAL
+		Command:   &agentpb.ChannelCommand_PruneImages{PruneImages: &agentpb.ImagePruneRequest{All: all}},
+	})
 
 	details := map[string]any{
 		"server_id": serverID,
@@ -142,6 +157,17 @@ func (s *ImageService) PruneImages(ctx context.Context, serverID string, all boo
 		details["error"] = err.Error()
 		s.audit.Log("image.prune.failed", userID, "image", "", ip, details)
 		return nil, fmt.Errorf("prune images: %w", err)
+	}
+
+	if errResult := result.GetError(); errResult != nil {
+		details["error"] = errResult.GetMessage()
+		s.audit.Log("image.prune.failed", userID, "image", "", ip, details)
+		return nil, fmt.Errorf("agent error: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetPruneImages()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
 	}
 
 	details["success"] = resp.GetSuccess()

@@ -11,18 +11,17 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/pocketbase/pocketbase/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // RegisterTerminalRoutes adds the WebSocket terminal proxy endpoint.
-func RegisterTerminalRoutes(se *core.ServeEvent, app core.App, termSvc *services.TerminalService, rbac *middleware.RBAC) {
+func RegisterTerminalRoutes(se *core.ServeEvent, app core.App, termSvc *services.TerminalService, registry *channel.Registry, rbac *middleware.RBAC) {
 	se.Router.GET("/api/dk/containers/{id}/terminal", func(e *core.RequestEvent) error {
-		return handleTerminal(e, app, termSvc, rbac)
+		return handleTerminal(e, app, termSvc, registry, rbac)
 	})
 }
 
@@ -33,7 +32,7 @@ type wsControl struct {
 	Cols uint32 `json:"cols,omitempty"`
 }
 
-func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.TerminalService, rbac *middleware.RBAC) error {
+func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.TerminalService, registry *channel.Registry, rbac *middleware.RBAC) error {
 	containerID := e.Request.PathValue("id")
 	if containerID == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "container ID is required"})
@@ -87,43 +86,41 @@ func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.Termin
 
 	ctx := e.Request.Context()
 
-	// Dial agent gRPC.
-	conn, err := grpc.NewClient(info.AgentAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		slog.Error("failed to dial agent for exec", "addr", info.AgentAddr, "error", err)
-		_ = ws.Close(websocket.StatusInternalError, "cannot reach agent")
-		return nil
-	}
-	defer func() {
-		if closeErr := conn.Close(); closeErr != nil {
-			slog.Warn("failed to close exec gRPC connection", "error", closeErr)
-		}
-	}()
-
-	client := agentpb.NewAgentExecServiceClient(conn)
-	stream, err := client.Exec(ctx)
-	if err != nil {
-		slog.Error("failed to open exec stream", "error", err)
-		_ = ws.Close(websocket.StatusInternalError, "failed to start exec")
+	// Get the agent channel from the registry.
+	ch, ok := registry.Get(info.ServerID)
+	if !ok {
+		_ = ws.Close(websocket.StatusInternalError, "agent not connected")
 		return nil
 	}
 
-	// Send ExecStart as the first gRPC message.
+	sessionID := info.SessionID
 	cmdParts := parseCommand(cmd)
-	if err := stream.Send(&agentpb.ExecRequest{
-		Input: &agentpb.ExecRequest_Start{
-			Start: &agentpb.ExecStart{
-				ContainerId: info.DockerContainerID,
-				Command:     cmdParts,
-				Tty:         tty,
-			},
-		},
-	}); err != nil {
-		slog.Error("failed to send exec start", "error", err)
-		_ = ws.Close(websocket.StatusInternalError, "exec start failed")
+
+	signal := &agentpb.OpenExecStreamSignal{
+		SessionId:   sessionID,
+		ContainerId: info.DockerContainerID,
+		Command:     cmdParts,
+		Tty:         tty,
+	}
+
+	streamCh, err := ch.SignalOpenExecStream(ctx, signal)
+	if err != nil {
+		_ = ws.Close(websocket.StatusInternalError, "failed to signal exec stream")
 		return nil
+	}
+
+	// Wait for the agent to open the ExecStream.
+	var stream agentpb.AgentExecStreamService_OpenExecStreamServer
+	select {
+	case <-ctx.Done():
+		_ = ws.Close(websocket.StatusInternalError, "timeout waiting for exec stream")
+		return nil
+	case s, ok := <-streamCh:
+		if !ok {
+			_ = ws.Close(websocket.StatusInternalError, "exec stream channel closed")
+			return nil
+		}
+		stream = s
 	}
 
 	slog.Info("terminal session started",
@@ -135,16 +132,16 @@ func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.Termin
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	// gRPC → WS (agent output → browser).
+	// ExecStream → WS (agent output → browser).
 	go func() {
 		defer wg.Done()
-		bridgeGRPCToWS(ctx, stream, ws)
+		bridgeExecStreamToWS(ctx, stream, ws)
 	}()
 
-	// WS → gRPC (browser input → agent).
+	// WS → ExecStream (browser input → agent).
 	go func() {
 		defer wg.Done()
-		bridgeWSToGRPC(ctx, ws, stream)
+		bridgeWSToExecStream(ctx, ws, stream, sessionID)
 	}()
 
 	wg.Wait()
@@ -157,10 +154,10 @@ func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.Termin
 	return nil
 }
 
-// bridgeGRPCToWS reads ExecResponse from the gRPC stream and writes to WebSocket.
-func bridgeGRPCToWS(ctx context.Context, stream agentpb.AgentExecService_ExecClient, ws *websocket.Conn) {
+// bridgeExecStreamToWS reads OpenExecStreamRequest from the agent and writes to WebSocket.
+func bridgeExecStreamToWS(ctx context.Context, stream agentpb.AgentExecStreamService_OpenExecStreamServer, ws *websocket.Conn) {
 	for {
-		resp, err := stream.Recv()
+		msg, err := stream.Recv()
 		if err != nil {
 			if err != io.EOF {
 				slog.Debug("exec stream recv ended", "error", err)
@@ -168,68 +165,62 @@ func bridgeGRPCToWS(ctx context.Context, stream agentpb.AgentExecService_ExecCli
 			return
 		}
 
-		// Send stdout/stderr as binary frames.
-		if data := resp.GetStdout(); len(data) > 0 {
-			if writeErr := ws.Write(ctx, websocket.MessageBinary, data); writeErr != nil {
-				return
-			}
-		}
-		if data := resp.GetStderr(); len(data) > 0 {
+		if data := msg.GetStdout(); len(data) > 0 {
 			if writeErr := ws.Write(ctx, websocket.MessageBinary, data); writeErr != nil {
 				return
 			}
 		}
 
-		// If exit_code is present, send as text JSON and close.
-		if resp.ExitCode != nil {
-			msg, _ := json.Marshal(map[string]any{
+		if exit := msg.GetExit(); exit != nil {
+			exitMsg, _ := json.Marshal(map[string]any{
 				"type":      "exit",
-				"exit_code": resp.GetExitCode(),
+				"exit_code": exit.GetExitCode(),
 			})
-			_ = ws.Write(ctx, websocket.MessageText, msg)
+			_ = ws.Write(ctx, websocket.MessageText, exitMsg)
 			return
 		}
 	}
 }
 
-// bridgeWSToGRPC reads WebSocket messages and sends to the gRPC stream.
-func bridgeWSToGRPC(ctx context.Context, ws *websocket.Conn, stream agentpb.AgentExecService_ExecClient) {
+// bridgeWSToExecStream reads WebSocket messages and sends to the ExecStream.
+func bridgeWSToExecStream(ctx context.Context, ws *websocket.Conn, stream agentpb.AgentExecStreamService_OpenExecStreamServer, sessionID string) {
 	for {
 		msgType, data, err := ws.Read(ctx)
 		if err != nil {
-			// Client disconnected or context cancelled.
-			_ = stream.CloseSend()
 			return
 		}
 
 		switch msgType {
 		case websocket.MessageBinary:
-			// Raw stdin data.
-			if sendErr := stream.Send(&agentpb.ExecRequest{
-				Input: &agentpb.ExecRequest_StdinData{
-					StdinData: data,
-				},
+			// Send stdin via the stream's Send (manager→agent direction = OpenExecStreamResponse).
+			if sendErr := stream.Send(&agentpb.OpenExecStreamResponse{
+				SessionId: sessionID,
+				Payload:   &agentpb.OpenExecStreamResponse_Stdin{Stdin: data},
 			}); sendErr != nil {
 				return
 			}
 
 		case websocket.MessageText:
-			// JSON control message (resize).
 			var ctrl wsControl
 			if jsonErr := json.Unmarshal(data, &ctrl); jsonErr != nil {
 				continue
 			}
 			if ctrl.Type == "resize" && ctrl.Rows > 0 && ctrl.Cols > 0 {
-				if sendErr := stream.Send(&agentpb.ExecRequest{
-					Input: &agentpb.ExecRequest_Resize{
-						Resize: &agentpb.ExecResize{
-							Rows: ctrl.Rows,
-							Cols: ctrl.Cols,
-						},
+				if sendErr := stream.Send(&agentpb.OpenExecStreamResponse{
+					SessionId: sessionID,
+					Payload: &agentpb.OpenExecStreamResponse_Resize{
+						Resize: &agentpb.ExecStreamResize{Rows: ctrl.Rows, Cols: ctrl.Cols},
 					},
 				}); sendErr != nil {
 					return
 				}
+			}
+			if ctrl.Type == "close" {
+				_ = stream.Send(&agentpb.OpenExecStreamResponse{
+					SessionId: sessionID,
+					Payload:   &agentpb.OpenExecStreamResponse_Close{Close: &agentpb.ExecStreamClose{}},
+				})
+				return
 			}
 		}
 	}

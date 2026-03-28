@@ -7,31 +7,30 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // VolumeService handles volume operations by resolving the target server
-// and dispatching commands to the agent via gRPC.
+// and dispatching commands to the agent via the reverse tunnel command channel.
 type VolumeService struct {
-	app   core.App
-	audit *store.AuditStore
-	pool  *grpc_pool.Pool
+	app      core.App
+	audit    *store.AuditStore
+	registry *channel.Registry
 }
 
 // NewVolumeService creates a VolumeService.
-func NewVolumeService(app core.App, audit *store.AuditStore, pool *grpc_pool.Pool) *VolumeService {
-	return &VolumeService{app: app, audit: audit, pool: pool}
+func NewVolumeService(app core.App, audit *store.AuditStore, registry *channel.Registry) *VolumeService {
+	return &VolumeService{app: app, audit: audit, registry: registry}
 }
 
 // VolumeInfo holds the resolved volume information needed for agent operations.
 type VolumeInfo struct {
-	AgentAddr string
-	Name      string
-	ServerID  string
-	InUse     bool
+	Name     string
+	ServerID string
+	InUse    bool
 }
 
 // ResolveVolume looks up a volume PocketBase record and returns agent info.
@@ -52,33 +51,38 @@ func (s *VolumeService) ResolveVolume(volumeRecordID string) (*VolumeInfo, error
 	}
 
 	return &VolumeInfo{
-		AgentAddr: server.GetString("ip_address"),
-		Name:      vol.GetString("name"),
-		ServerID:  serverID,
-		InUse:     vol.GetBool("in_use"),
+		Name:     vol.GetString("name"),
+		ServerID: serverID,
+		InUse:    vol.GetBool("in_use"),
 	}, nil
 }
 
-// CreateVolume creates a volume on an agent via gRPC.
+// CreateVolume creates a volume on an agent via the reverse tunnel command channel.
 func (s *VolumeService) CreateVolume(
 	ctx context.Context, serverID, name, driver, userID, ip string,
 ) (*agentpb.CreateVolumeResponse, error) {
-	agentIP, err := s.resolveServer(serverID)
+	serverID, err := s.resolveServer(serverID)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := s.volumeClient(agentIP)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(serverID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", serverID)
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	resp, err := client.CreateVolume(cmdCtx, &agentpb.CreateVolumeRequest{
-		Name:   name,
-		Driver: driver,
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  2, // NORMAL
+		Command: &agentpb.ChannelCommand_CreateVolume{
+			CreateVolume: &agentpb.CreateVolumeRequest{
+				Name:   name,
+				Driver: driver,
+			},
+		},
 	})
 
 	details := map[string]any{
@@ -92,6 +96,17 @@ func (s *VolumeService) CreateVolume(
 		return nil, fmt.Errorf("create volume: %w", err)
 	}
 
+	if errResult := result.GetError(); errResult != nil {
+		details["error"] = errResult.GetMessage()
+		s.audit.Log("volume.create.failed", userID, "volume", "", ip, details)
+		return nil, fmt.Errorf("agent error: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetCreateVolume()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
+	}
+
 	if resp.GetSuccess() {
 		s.upsertCreatedVolume(serverID, resp.GetName(), driver)
 	}
@@ -101,24 +116,30 @@ func (s *VolumeService) CreateVolume(
 	return resp, nil
 }
 
-// RemoveVolume removes a volume on the agent via gRPC.
+// RemoveVolume removes a volume on the agent via the reverse tunnel command channel.
 func (s *VolumeService) RemoveVolume(ctx context.Context, volumeRecordID string, force bool, userID, ip string) (*agentpb.RemoveVolumeResponse, error) {
 	info, err := s.ResolveVolume(volumeRecordID)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := s.volumeClient(info.AgentAddr)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(info.ServerID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", info.ServerID)
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	resp, err := client.RemoveVolume(cmdCtx, &agentpb.RemoveVolumeRequest{
-		Name:  info.Name,
-		Force: force,
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  2, // NORMAL
+		Command: &agentpb.ChannelCommand_RemoveVolume{
+			RemoveVolume: &agentpb.RemoveVolumeRequest{
+				Name:  info.Name,
+				Force: force,
+			},
+		},
 	})
 
 	details := map[string]any{
@@ -130,6 +151,17 @@ func (s *VolumeService) RemoveVolume(ctx context.Context, volumeRecordID string,
 		details["error"] = err.Error()
 		s.audit.Log("volume.remove.failed", userID, "volume", volumeRecordID, ip, details)
 		return nil, fmt.Errorf("remove volume: %w", err)
+	}
+
+	if errResult := result.GetError(); errResult != nil {
+		details["error"] = errResult.GetMessage()
+		s.audit.Log("volume.remove.failed", userID, "volume", volumeRecordID, ip, details)
+		return nil, fmt.Errorf("agent error: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetRemoveVolume()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
 	}
 
 	if resp.GetSuccess() {
@@ -145,26 +177,41 @@ func (s *VolumeService) RemoveVolume(ctx context.Context, volumeRecordID string,
 	return resp, nil
 }
 
-// InspectVolume inspects a volume on the agent via gRPC.
+// InspectVolume inspects a volume on the agent via the reverse tunnel command channel.
 func (s *VolumeService) InspectVolume(ctx context.Context, volumeRecordID string) (*agentpb.InspectVolumeResponse, error) {
 	info, err := s.ResolveVolume(volumeRecordID)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := s.volumeClient(info.AgentAddr)
-	if err != nil {
-		return nil, err
+	ch, ok := s.registry.Get(info.ServerID)
+	if !ok {
+		return nil, fmt.Errorf("no active channel for server %s", info.ServerID)
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	resp, err := client.InspectVolume(cmdCtx, &agentpb.InspectVolumeRequest{
-		Name: info.Name,
+	result, err := ch.SendCommand(cmdCtx, &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  3, // LOW
+		Command: &agentpb.ChannelCommand_InspectVolume{
+			InspectVolume: &agentpb.InspectVolumeRequest{
+				Name: info.Name,
+			},
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("inspect volume: %w", err)
+	}
+
+	if errResult := result.GetError(); errResult != nil {
+		return nil, fmt.Errorf("agent error: %s", errResult.GetMessage())
+	}
+
+	resp := result.GetInspectVolume()
+	if resp == nil {
+		return nil, fmt.Errorf("unexpected result type from agent")
 	}
 
 	return resp, nil
@@ -178,15 +225,7 @@ func (s *VolumeService) resolveServer(serverID string) (string, error) {
 	if server.GetString("status") != "online" {
 		return "", ErrServerOffline
 	}
-	return server.GetString("ip_address"), nil
-}
-
-func (s *VolumeService) volumeClient(agentIP string) (agentpb.AgentVolumeServiceClient, error) {
-	conn, err := s.pool.Get(agentIP)
-	if err != nil {
-		return nil, err
-	}
-	return agentpb.NewAgentVolumeServiceClient(conn), nil
+	return serverID, nil
 }
 
 func (s *VolumeService) upsertCreatedVolume(serverID, name, driver string) {

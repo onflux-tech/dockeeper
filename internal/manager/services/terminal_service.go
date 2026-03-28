@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -10,12 +9,9 @@ import (
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
-const agentExecPort = "50052"
-
 // SessionInfo holds the details needed to establish a WS↔gRPC bridge.
 type SessionInfo struct {
 	SessionID         string
-	AgentAddr         string
 	DockerContainerID string
 	ServerID          string
 }
@@ -57,7 +53,6 @@ func (s *TerminalService) OpenSession(containerID, userID, command, ip string) (
 		return nil, ErrServerOffline
 	}
 
-	agentAddr := net.JoinHostPort(server.GetString("ip_address"), agentExecPort)
 	dockerContainerID := container.GetString("container_id")
 
 	// 4. Create terminal session record.
@@ -76,7 +71,6 @@ func (s *TerminalService) OpenSession(containerID, userID, command, ip string) (
 
 	return &SessionInfo{
 		SessionID:         sessionID,
-		AgentAddr:         agentAddr,
 		DockerContainerID: dockerContainerID,
 		ServerID:          serverID,
 	}, nil

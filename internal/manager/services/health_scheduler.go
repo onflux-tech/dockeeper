@@ -3,14 +3,15 @@ package services
 import (
 	"container/heap"
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/events"
-	"github.com/onflux-tech/dockeeper/internal/manager/grpc_pool"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
 	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
@@ -38,27 +39,24 @@ func (h *checkHeap) Pop() any            { old := *h; n := len(old); item := old
 type HealthScheduler struct {
 	app        core.App
 	store      *store.HealthStore
-	pool       *grpc_pool.Pool
+	registry   *channel.Registry
 	bus        *events.Bus
 	heap       checkHeap
 	heapMu     sync.Mutex
 	restarts   map[string][]time.Time // checkID → recent restart times
 	restartsMu sync.Mutex
-	agentSem   map[string]chan struct{} // serverIP → semaphore (max 5 concurrent)
-	semMu      sync.Mutex
 	cancel     context.CancelFunc
 	done       chan struct{}
 }
 
 // NewHealthScheduler creates a new HealthScheduler.
-func NewHealthScheduler(app core.App, healthStore *store.HealthStore, pool *grpc_pool.Pool, bus *events.Bus) *HealthScheduler {
+func NewHealthScheduler(app core.App, healthStore *store.HealthStore, registry *channel.Registry, bus *events.Bus) *HealthScheduler {
 	return &HealthScheduler{
 		app:      app,
 		store:    healthStore,
-		pool:     pool,
+		registry: registry,
 		bus:      bus,
 		restarts: make(map[string][]time.Time),
-		agentSem: make(map[string]chan struct{}),
 		done:     make(chan struct{}),
 	}
 }
@@ -227,40 +225,15 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 		return
 	}
 
-	// Get server IP for gRPC.
-	serverRec, err := s.app.FindRecordById(constants.CollServers, serverID)
-	if err != nil {
-		slog.Warn("health check: server not found", "check_id", checkID)
+	// Get channel for the agent.
+	ch, ok := s.registry.Get(serverID)
+	if !ok {
+		slog.Warn("health check: no active channel for server", "check_id", checkID, "server_id", serverID)
+		s.handleFailure(ctx, rec, checkID, 0, 0, "no active channel for server")
 		s.reschedule(checkID, rec.GetInt("interval_seconds"))
 		return
 	}
 
-	agentIP := serverRec.GetString("ip_address")
-	if agentIP == "" {
-		slog.Warn("health check: server has no IP", "check_id", checkID)
-		s.reschedule(checkID, rec.GetInt("interval_seconds"))
-		return
-	}
-
-	// Per-agent semaphore (max 5 concurrent checks).
-	sem := s.getAgentSemaphore(agentIP)
-	select {
-	case sem <- struct{}{}:
-		defer func() { <-sem }()
-	case <-ctx.Done():
-		return
-	}
-
-	// Execute via gRPC.
-	conn, err := s.pool.Get(agentIP)
-	if err != nil {
-		slog.Warn("health check: gRPC connection failed", "check_id", checkID, "error", err)
-		s.handleFailure(ctx, rec, checkID, 0, 0, "gRPC connection: "+err.Error())
-		s.reschedule(checkID, rec.GetInt("interval_seconds"))
-		return
-	}
-
-	client := agentpb.NewAgentHealthServiceClient(conn)
 	timeoutSec := rec.GetInt("timeout_seconds")
 	if timeoutSec <= 0 {
 		timeoutSec = 5
@@ -269,18 +242,36 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 	grpcCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSec+5)*time.Second)
 	defer cancel()
 
-	resp, err := client.ExecuteHealthCheck(grpcCtx, &agentpb.ExecuteHealthCheckRequest{
-		ContainerId:    containerRec.GetString("container_id"),
-		UrlPath:        rec.GetString("url_path"),
-		Port:           int32(rec.GetInt("port")),
-		TimeoutMs:      int32(timeoutSec * 1000),
-		ExpectedStatus: int32(rec.GetInt("expected_status")),
-	})
+	cmd := &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  3, // LOW
+		Command: &agentpb.ChannelCommand_HealthCheck{
+			HealthCheck: &agentpb.ExecuteHealthCheckRequest{
+				ContainerId:    containerRec.GetString("container_id"),
+				UrlPath:        rec.GetString("url_path"),
+				Port:           int32(rec.GetInt("port")),
+				TimeoutMs:      int32(timeoutSec * 1000),
+				ExpectedStatus: int32(rec.GetInt("expected_status")),
+			},
+		},
+	}
 
+	result, err := ch.SendCommand(grpcCtx, cmd)
 	now := time.Now().UTC()
 
 	if err != nil {
-		s.handleFailure(ctx, rec, checkID, 0, 0, "gRPC error: "+err.Error())
+		s.handleFailure(ctx, rec, checkID, 0, 0, fmt.Sprintf("channel command error: %s", err.Error()))
+		s.reschedule(checkID, rec.GetInt("interval_seconds"))
+		return
+	}
+
+	resp := result.GetHealthCheck()
+	if resp == nil {
+		if cmdErr := result.GetError(); cmdErr != nil {
+			s.handleFailure(ctx, rec, checkID, 0, 0, fmt.Sprintf("agent error: %s", cmdErr.GetMessage()))
+		} else {
+			s.handleFailure(ctx, rec, checkID, 0, 0, "unexpected command result type")
+		}
 		s.reschedule(checkID, rec.GetInt("interval_seconds"))
 		return
 	}
@@ -423,17 +414,10 @@ func (s *HealthScheduler) tryRestart(ctx context.Context, rec *core.Record, chec
 		return
 	}
 
-	// Restart via gRPC.
-	serverRec, err := s.app.FindRecordById(constants.CollServers, rec.GetString("server"))
-	if err != nil {
-		slog.Warn("health check: cannot restart, server not found", "check_id", checkID)
-		return
-	}
-
-	agentIP := serverRec.GetString("ip_address")
-	conn, err := s.pool.Get(agentIP)
-	if err != nil {
-		slog.Warn("health check: cannot restart, gRPC failed", "check_id", checkID, "error", err)
+	// Restart via channel command.
+	ch, ok := s.registry.Get(rec.GetString("server"))
+	if !ok {
+		slog.Warn("health check: cannot restart, no active channel", "check_id", checkID, "server_id", rec.GetString("server"))
 		return
 	}
 
@@ -443,16 +427,22 @@ func (s *HealthScheduler) tryRestart(ctx context.Context, rec *core.Record, chec
 		return
 	}
 
-	cmdClient := agentpb.NewAgentCommandsServiceClient(conn)
 	grpcCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	_, err = cmdClient.ExecuteCommand(grpcCtx, &agentpb.ExecuteCommandRequest{
-		ServerId:    rec.GetString("server"),
-		ContainerId: containerRec.GetString("container_id"),
-		Type:        agentpb.CommandType_COMMAND_TYPE_RESTART,
-	})
+	cmd := &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  1, // HIGH
+		Command: &agentpb.ChannelCommand_ExecuteCommand{
+			ExecuteCommand: &agentpb.ExecuteCommandRequest{
+				ServerId:    rec.GetString("server"),
+				ContainerId: containerRec.GetString("container_id"),
+				Type:        agentpb.CommandType_COMMAND_TYPE_RESTART,
+			},
+		},
+	}
 
+	_, err = ch.SendCommand(grpcCtx, cmd)
 	if err != nil {
 		slog.Warn("health check: restart failed", "check_id", checkID, "error", err)
 		return
@@ -493,14 +483,3 @@ func (s *HealthScheduler) reschedule(checkID string, intervalSeconds int) {
 	})
 }
 
-func (s *HealthScheduler) getAgentSemaphore(agentIP string) chan struct{} {
-	s.semMu.Lock()
-	defer s.semMu.Unlock()
-
-	sem, ok := s.agentSem[agentIP]
-	if !ok {
-		sem = make(chan struct{}, 5) // max 5 concurrent per agent
-		s.agentSem[agentIP] = sem
-	}
-	return sem
-}
