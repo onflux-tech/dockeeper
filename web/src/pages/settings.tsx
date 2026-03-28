@@ -749,9 +749,9 @@ function BlackoutTab() {
 		createMut.mutate(
 			{
 				name,
-				server,
-				start_time: startTime,
-				end_time: endTime,
+				server_ids: server ? [server] : [],
+				start_time: startTime ? new Date(startTime).toISOString() : "",
+				end_time: endTime ? new Date(endTime).toISOString() : "",
 				recurring: false,
 				enabled: true,
 			},
