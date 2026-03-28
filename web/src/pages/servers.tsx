@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink, Pencil } from "lucide-react";
+import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink, Pencil, Copy, Check, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { CascadeDeleteDialog } from "@/components/cascade-delete-dialog";
@@ -29,7 +30,7 @@ import { TagBadge } from "@/components/tag-badge";
 import { TagFilterSelect } from "@/components/tag-filter-select";
 import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
-import { useDeleteServer } from "@/hooks/use-servers";
+import { useDeleteServer, useQuickInstallCommand } from "@/hooks/use-servers";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useTags } from "@/hooks/use-tags";
 import { relativeTime } from "@/lib/format";
@@ -103,8 +104,23 @@ export default function ServersPage() {
 
 	const [deleteTarget, setDeleteTarget] = useState<ServerRecord | null>(null);
 	const [editTarget, setEditTarget] = useState<ServerRecord | null>(null);
+	const [copied, setCopied] = useState(false);
+	const [popoverOpen, setPopoverOpen] = useState(false);
 	const servers = serversResult?.items ?? [];
 	const totalServers = serversResult?.totalItems ?? 0;
+
+	const { data: quickInstall } = useQuickInstallCommand();
+
+	function copyCommand() {
+		if (!quickInstall?.command) return;
+		navigator.clipboard.writeText(quickInstall.command).then(() => {
+			setCopied(true);
+			setTimeout(() => {
+				setCopied(false);
+				setPopoverOpen(false);
+			}, 600);
+		});
+	}
 
 	// Derive sort state from URL
 	const rawSort = filters.sort;
@@ -134,10 +150,49 @@ export default function ServersPage() {
 						</Badge>
 					)}
 				</div>
-				<Button size="sm" onClick={() => navigate("/servers/create")}>
-					<Plus className="mr-2 h-4 w-4" />
-					Add Server
-				</Button>
+				<div className="flex items-center gap-2">
+					{quickInstall?.command && (
+						<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+							<PopoverTrigger asChild>
+								<Button variant="outline" size="sm">
+									<Terminal className="mr-2 h-4 w-4" />
+									Quick Install
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent align="end" className="w-[640px]">
+								<div className="flex flex-col gap-3">
+									<div>
+										<p className="text-sm font-medium">Quick Agent Install</p>
+										<p className="text-xs text-muted-foreground">
+											Run this command on any server to install the agent
+										</p>
+									</div>
+									<div className="flex items-center gap-2">
+										<code className="min-w-0 flex-1 truncate rounded bg-muted border px-3 py-2 text-xs font-mono select-all">
+											{quickInstall.command}
+										</code>
+										<Button
+											variant="outline"
+											size="icon"
+											className="shrink-0 h-8 w-8"
+											onClick={copyCommand}
+										>
+											{copied ? (
+												<Check className="h-3.5 w-3.5 text-success" />
+											) : (
+												<Copy className="h-3.5 w-3.5" />
+											)}
+										</Button>
+									</div>
+								</div>
+							</PopoverContent>
+						</Popover>
+					)}
+					<Button size="sm" onClick={() => navigate("/servers/create")}>
+						<Plus className="mr-2 h-4 w-4" />
+						Add Server
+					</Button>
+				</div>
 			</div>
 
 			<div className="flex items-center gap-3">

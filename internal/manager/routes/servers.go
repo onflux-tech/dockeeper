@@ -24,6 +24,10 @@ func RegisterAgentPublicRoutes(se *core.ServeEvent, app core.App) {
 		return handleAgentDownload(e)
 	})
 
+	se.Router.GET("/api/dk/agent/install/quick", func(e *core.RequestEvent) error {
+		return handlePublicQuickInstallScript(e, app)
+	})
+
 	se.Router.GET("/api/dk/agent/install/{id}", func(e *core.RequestEvent) error {
 		return handlePublicInstallScript(e, app)
 	})
@@ -51,6 +55,11 @@ func RegisterServerRoutes(se *core.ServeEvent, app core.App, auditStore *store.A
 
 	servers.DELETE("/{id}", func(e *core.RequestEvent) error {
 		return handleDeleteServer(e, cascadeSvc)
+	}).BindFunc(rbac.RequireCapability(constants.CapServersManage))
+
+	// Quick install command (returns pre-built curl one-liner with global token).
+	servers.GET("/quick-install", func(e *core.RequestEvent) error {
+		return handleQuickInstallCommand(e, app)
 	}).BindFunc(rbac.RequireCapability(constants.CapServersManage))
 
 	// Global enrollment token management.
@@ -299,6 +308,80 @@ func resolveManagerHTTPURL(e *core.RequestEvent) string {
 		}
 	}
 	return scheme + "://" + e.Request.Host
+}
+
+// handlePublicQuickInstallScript serves the install script authenticated via global enrollment token.
+func handlePublicQuickInstallScript(e *core.RequestEvent, app core.App) error {
+	token := e.Request.URL.Query().Get("token")
+	if token == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "token is required"})
+	}
+
+	// Validate against the global enrollment token.
+	records, err := app.FindRecordsByFilter(
+		constants.CollSettings,
+		"key = 'enrollment_token'", "", 1, 0,
+	)
+	if err != nil || len(records) == 0 {
+		return e.JSON(http.StatusForbidden, map[string]string{"error": "invalid token"})
+	}
+
+	storedToken := strings.Trim(records[0].GetString("value"), "\"")
+	if storedToken != token {
+		return e.JSON(http.StatusForbidden, map[string]string{"error": "invalid token"})
+	}
+
+	// Derive manager addresses.
+	host := e.Request.Host
+	if idx := strings.Index(host, ":"); idx != -1 {
+		host = host[:idx]
+	}
+	grpcAddr := host + ":50051"
+	managerHTTPURL := resolveManagerHTTPURL(e)
+
+	script := generateBinaryScript(grpcAddr, token, managerHTTPURL)
+
+	e.Response.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, writeErr := e.Response.Write([]byte(script))
+	return writeErr
+}
+
+// handleQuickInstallCommand returns the pre-built curl one-liner using the global enrollment token.
+func handleQuickInstallCommand(e *core.RequestEvent, app core.App) error {
+	// Get or auto-generate the global token.
+	records, err := app.FindRecordsByFilter(
+		constants.CollSettings,
+		"key = 'enrollment_token'", "", 1, 0,
+	)
+
+	var token string
+	if err != nil || len(records) == 0 {
+		// Auto-generate a token.
+		generated, genErr := generateToken(32)
+		if genErr != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to generate token"})
+		}
+		col, colErr := app.FindCachedCollectionByNameOrId(constants.CollSettings)
+		if colErr != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]string{"error": colErr.Error()})
+		}
+		record := core.NewRecord(col)
+		record.Set("key", "enrollment_token")
+		record.Set("value", generated)
+		if saveErr := app.Save(record); saveErr != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]string{"error": saveErr.Error()})
+		}
+		token = generated
+	} else {
+		token = strings.Trim(records[0].GetString("value"), "\"")
+	}
+
+	managerHTTPURL := resolveManagerHTTPURL(e)
+	command := fmt.Sprintf("curl -sSL '%s/api/dk/agent/install/quick?token=%s' | sudo bash", managerHTTPURL, token)
+
+	return e.JSON(http.StatusOK, map[string]string{
+		"command": command,
+	})
 }
 
 func handleDeleteServer(e *core.RequestEvent, cascadeSvc *services.CascadeService) error {

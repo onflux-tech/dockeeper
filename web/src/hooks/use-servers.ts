@@ -97,3 +97,13 @@ export function useUpdateServer() {
 		},
 	});
 }
+
+export function useQuickInstallCommand() {
+	return useQuery<{ command: string }>({
+		queryKey: ["quick-install-command"],
+		queryFn: () =>
+			fetchJson("/api/dk/servers/quick-install", {
+				headers: authHeaders(),
+			}),
+	});
+}
