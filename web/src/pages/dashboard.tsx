@@ -29,6 +29,7 @@ import {
 import { StatsOverview } from "@/components/dashboard/stats-overview";
 import { ServerCard, ServerCardSkeleton } from "@/components/dashboard/server-card";
 import type { SparklinePoint } from "@/components/dashboard/sparkline-chart";
+import { useTags } from "@/hooks/use-tags";
 import type { ServerMetricsRawRecord, ServerRecord } from "@/types/pocketbase";
 
 import "react-grid-layout/css/styles.css";
@@ -40,10 +41,13 @@ const LS_SERVER_ORDER_KEY = "dk-server-card-order";
 
 // Widget defs for the bottom RGL grid
 const WIDGET_DEFS = [
-	{ id: "health-status", label: "Health Status", minW: 3, minH: 3 },
-	{ id: "recent-events", label: "Recent Events", minW: 3, minH: 3 },
-	{ id: "alerts-summary", label: "Alerts Summary", minW: 3, minH: 3 },
+	{ id: "health-status", label: "Health Status", minW: 2, minH: 3 },
+	{ id: "recent-events", label: "Recent Events", minW: 2, minH: 3 },
+	{ id: "alerts-summary", label: "Alerts Summary", minW: 2, minH: 3 },
 ] as const;
+
+// Column counts per breakpoint (must match the RGL cols prop).
+const COLS: Record<string, number> = { lg: 12, md: 9, sm: 6, xs: 4 };
 
 const widgetMap = new Map<string, (typeof WIDGET_DEFS)[number]>(WIDGET_DEFS.map((d) => [d.id, d]));
 
@@ -125,6 +129,15 @@ export default function DashboardPage() {
 	useRealtime("servers");
 	useRealtime("server_metrics_raw");
 
+	const { data: tagsData } = useTags("server");
+	const allTags = tagsData?.items ?? [];
+	const tagsByServer = new Map<string, { id: string; name: string; color: string }[]>();
+	for (const tag of allTags) {
+		const existing = tagsByServer.get(tag.resource_id) ?? [];
+		existing.push({ id: tag.id, name: tag.name, color: tag.color });
+		tagsByServer.set(tag.resource_id, existing);
+	}
+
 	const servers = serversResult?.items ?? [];
 	const containers = containersResult?.items ?? [];
 	const metrics = metricsResult?.items ?? [];
@@ -139,27 +152,38 @@ export default function DashboardPage() {
 	);
 
 	// Build layout items for bottom widgets (filter out server-cards and stats-overview)
-	const layoutItems: LayoutItem[] = useMemo(() => {
-		if (!layoutData?.widgets) return [];
-		return layoutData.widgets
-			.filter((w) => w.id !== "stats-overview" && w.id !== "server-cards")
-			.map((w) => {
+	// Generate a layout per breakpoint so 3 widgets always fit in one row.
+	const responsiveLayouts = useMemo(() => {
+		if (!layoutData?.widgets) return {};
+		const filtered = layoutData.widgets.filter(
+			(w) => w.id !== "stats-overview" && w.id !== "server-cards",
+		);
+
+		const result: Record<string, LayoutItem[]> = {};
+		for (const [bp, cols] of Object.entries(COLS)) {
+			const perWidget = Math.floor(cols / Math.max(filtered.length, 1));
+			result[bp] = filtered.map((w, idx) => {
 				const def = widgetMap.get(w.id);
 				const minH = def?.minH ?? 3;
-				const minW = def?.minW ?? 3;
+				const minW = def?.minW ?? 2;
+				const widgetW = bp === "lg" ? Math.max(w.w, minW) : Math.max(perWidget, minW);
 				return {
 					i: w.id,
-					x: w.x,
-					y: w.y,
-					w: Math.max(w.w, minW),
+					x: bp === "lg" ? w.x : idx * perWidget,
+					y: bp === "lg" ? w.y : 0,
+					w: widgetW,
 					h: Math.max(w.h, minH),
 					minW,
 					minH,
-					maxW: 12,
+					maxW: cols,
 					static: !editing,
 				};
 			});
+		}
+		return result;
 	}, [layoutData, editing]);
+
+	const layoutItems = responsiveLayouts.lg ?? [];
 
 	const handleLayoutChange = useCallback(
 		(newLayout: Layout) => {
@@ -238,6 +262,7 @@ export default function DashboardPage() {
 						isLoading={isLoading}
 						editing={editing}
 						onOrderChange={() => setServerOrderVersion((v) => v + 1)}
+						tagsByServer={tagsByServer}
 					/>
 
 					{/* Bottom widgets — RGL grid with resize */}
@@ -245,9 +270,9 @@ export default function DashboardPage() {
 						<ResponsiveGridLayout
 							className={editing ? "layout dashboard-editing" : "layout"}
 							width={width}
-							layouts={{ lg: layoutItems }}
+							layouts={responsiveLayouts}
 							breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-							cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+							cols={COLS}
 							rowHeight={40}
 							margin={[16, 16] as const}
 							containerPadding={[0, 0] as const}
@@ -289,12 +314,14 @@ function ServerCardGrid({
 	isLoading,
 	editing,
 	onOrderChange,
+	tagsByServer,
 }: {
 	servers: ServerRecord[];
 	metrics: ServerMetricsRawRecord[];
 	isLoading: boolean;
 	editing: boolean;
 	onOrderChange: () => void;
+	tagsByServer: Map<string, { id: string; name: string; color: string }[]>;
 }) {
 	const dragItem = useRef<string | null>(null);
 	const dragOverItem = useRef<string | null>(null);
@@ -382,6 +409,7 @@ function ServerCardGrid({
 							cpuData={buildSparkline(metrics, server.id, "cpu_percent")}
 							memData={buildSparkline(metrics, server.id, "mem_percent")}
 							editing={editing}
+							tags={tagsByServer.get(server.id)}
 						/>
 					</div>
 				))}

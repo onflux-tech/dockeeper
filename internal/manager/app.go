@@ -178,6 +178,14 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// Events API route.
 		routes.RegisterEventRoutes(se, app, rbac)
 
+		// Batch operations runner + tags system.
+		batchStore := store.NewBatchStore(app)
+		batchRunner := services.NewBatchJobRunner(app, containerSvc, eventBus, batchStore)
+		tagStore := store.NewTagStore(app)
+		tagSvc := services.NewTagService(app, tagStore)
+		routes.RegisterBatchRoutes(se, batchRunner, batchStore, tagSvc, rbac)
+		routes.RegisterTagRoutes(se, tagSvc, rbac)
+
 		// Update orchestrator + registry adapter + cron.
 		registryAdapter := services.NewRegistryAdapter(encKey)
 		loadRegistryCredentials(app, registryAdapter)

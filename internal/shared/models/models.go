@@ -311,3 +311,30 @@ type TraefikRoute struct {
 	Created     types.DateTime `json:"created"`
 	Updated     types.DateTime `json:"updated"`
 }
+
+// BatchJob represents a batch operation across multiple containers/servers.
+type BatchJob struct {
+	ID          string         `json:"id"`
+	Action      string         `json:"action"`
+	Items       types.JSONRaw  `json:"items"`
+	Status      string         `json:"status"` // pending | running | completed | cancelled
+	Total       int            `json:"total"`
+	Succeeded   int            `json:"succeeded"`
+	Failed      int            `json:"failed"`
+	Cancelled   int            `json:"cancelled"`
+	CreatedBy   string         `json:"created_by"`
+	StartedAt   types.DateTime `json:"started_at"`
+	CompletedAt types.DateTime `json:"completed_at"`
+	Created     types.DateTime `json:"created"`
+	Updated     types.DateTime `json:"updated"`
+}
+
+// Tag represents a tag assigned to a container or server.
+type Tag struct {
+	ID           string         `json:"id"`
+	Name         string         `json:"name"`
+	Color        string         `json:"color"`
+	ResourceType string         `json:"resource_type"` // container | server
+	ResourceID   string         `json:"resource_id"`
+	Created      types.DateTime `json:"created"`
+}

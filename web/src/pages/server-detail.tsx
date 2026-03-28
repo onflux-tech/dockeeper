@@ -21,6 +21,7 @@ import { MetricsCharts } from "@/components/server/metrics-charts";
 import { ContainerTable } from "@/components/server/container-table";
 import { EditServerDialog } from "@/components/server/edit-server-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { TagSelector } from "@/components/tag-selector";
 import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 
 const timeRangeLabels: Record<TimeRange, string> = {
@@ -85,6 +86,9 @@ export default function ServerDetailPage() {
 							{server?.name || server?.hostname || "Server"}
 						</h1>
 						{server && <Badge variant={statusVariant}>{server.status}</Badge>}
+						{id && server && (
+							<TagSelector resourceType="server" resourceId={id} />
+						)}
 						{server && (
 							<Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
 								<Pencil className="mr-1.5 h-3.5 w-3.5" />

@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -63,12 +64,25 @@ func RegisterServerRoutes(se *core.ServeEvent, app core.App, auditStore *store.A
 }
 
 func handleListServers(e *core.RequestEvent, app core.App) error {
-	records, err := app.FindRecordsByFilter(
-		constants.CollServers,
-		"",
-		"-created",
-		500, 0,
-	)
+	tag := e.Request.URL.Query().Get("tag")
+	filter := ""
+	var params []dbx.Params
+	if tag != "" {
+		filter = "tags ~ {:tag}"
+		params = append(params, dbx.Params{"tag": tag})
+	}
+
+	var records []*core.Record
+	var err error
+	if len(params) > 0 {
+		records, err = app.FindRecordsByFilter(
+			constants.CollServers, filter, "-created", 500, 0, params[0],
+		)
+	} else {
+		records, err = app.FindRecordsByFilter(
+			constants.CollServers, "", "-created", 500, 0,
+		)
+	}
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}

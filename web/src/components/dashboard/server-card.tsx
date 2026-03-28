@@ -3,6 +3,7 @@ import { Cpu, MemoryStick, ChevronRight, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TagBadge } from "@/components/tag-badge";
 import { SparklineChart, type SparklinePoint } from "@/components/dashboard/sparkline-chart";
 import { relativeTime } from "@/lib/format";
 import type { ServerRecord } from "@/types/pocketbase";
@@ -12,6 +13,7 @@ interface ServerCardProps {
 	cpuData: SparklinePoint[];
 	memData: SparklinePoint[];
 	editing?: boolean;
+	tags?: { id: string; name: string; color: string }[];
 }
 
 const statusStyles: Record<
@@ -23,7 +25,7 @@ const statusStyles: Record<
 	error: { variant: "destructive", label: "Error" },
 };
 
-export function ServerCard({ server, cpuData, memData, editing }: ServerCardProps) {
+export function ServerCard({ server, cpuData, memData, editing, tags }: ServerCardProps) {
 	const style = statusStyles[server.status] ?? statusStyles.offline;
 
 	const content = (
@@ -67,9 +69,18 @@ export function ServerCard({ server, cpuData, memData, editing }: ServerCardProp
 					</div>
 				</div>
 
-				<span className="text-[11px] text-muted-foreground">
-					Last seen {relativeTime(server.last_seen)}
-				</span>
+				<div className="flex items-center justify-between">
+					<span className="text-[11px] text-muted-foreground">
+						Last seen {relativeTime(server.last_seen)}
+					</span>
+					{tags && tags.length > 0 && (
+						<div className="flex flex-wrap justify-end gap-1">
+							{tags.map((tag) => (
+								<TagBadge key={tag.id} name={tag.name} color={tag.color} />
+							))}
+						</div>
+					)}
+				</div>
 			</CardContent>
 		</Card>
 	);

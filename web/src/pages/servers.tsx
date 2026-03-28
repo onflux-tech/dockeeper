@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,15 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { CascadeDeleteDialog } from "@/components/cascade-delete-dialog";
 import { EditServerDialog } from "@/components/server/edit-server-dialog";
+import { TagBadge } from "@/components/tag-badge";
+import { TagFilterSelect } from "@/components/tag-filter-select";
 import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useDeleteServer } from "@/hooks/use-servers";
 import { useRealtime } from "@/hooks/use-realtime";
+import { useTags } from "@/hooks/use-tags";
 import { relativeTime } from "@/lib/format";
+import { containsFilter, andFilters } from "@/lib/pocketbase-filters";
 import type { ServerRecord } from "@/types/pocketbase";
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
@@ -49,10 +53,44 @@ export default function ServersPage() {
 		defaultSort: "name",
 		searchFields: ["name", "hostname", "ip_address"],
 	});
-	const { data: serversResult, isLoading } = useCollection("servers", pbOptions);
+
+	// Tag filter (needs contains ~ instead of eq =).
+	const [searchParams, setSearchParams] = useSearchParams();
+	const tagValue = searchParams.get("tag") ?? "all";
+
+	function setTagFilter(value: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				if (value === "all") {
+					next.delete("tag");
+				} else {
+					next.set("tag", value);
+				}
+				next.delete("page");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	const tagFilter = tagValue !== "all" ? containsFilter("tags", tagValue) : "";
+	const mergedFilter = andFilters([pbOptions.filter, tagFilter]);
+	const finalOptions = { ...pbOptions, filter: mergedFilter };
+
+	const { data: serversResult, isLoading } = useCollection("servers", finalOptions);
 	const deleteServer = useDeleteServer();
 	const navigate = useNavigate();
 	useRealtime("servers");
+
+	const { data: tagsData } = useTags("server");
+	const allTags = tagsData?.items ?? [];
+	const tagsByServer = new Map<string, typeof allTags>();
+	for (const tag of allTags) {
+		const existing = tagsByServer.get(tag.resource_id) ?? [];
+		existing.push(tag);
+		tagsByServer.set(tag.resource_id, existing);
+	}
 
 	const [deleteTarget, setDeleteTarget] = useState<ServerRecord | null>(null);
 	const [editTarget, setEditTarget] = useState<ServerRecord | null>(null);
@@ -77,15 +115,22 @@ export default function ServersPage() {
 				</Button>
 			</div>
 
-			<div className="relative w-72">
-				<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-				<Input
-					placeholder="Search servers…"
-					className="pl-8"
-					value={filters.search}
-					onChange={(e) => {
-						setSearch(e.target.value);
-					}}
+			<div className="flex items-center gap-2">
+				<div className="relative w-72">
+					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search servers…"
+						className="pl-8"
+						value={filters.search}
+						onChange={(e) => {
+							setSearch(e.target.value);
+						}}
+					/>
+				</div>
+				<TagFilterSelect
+					resourceType="server"
+					value={tagValue}
+					onValueChange={setTagFilter}
 				/>
 			</div>
 
@@ -98,6 +143,7 @@ export default function ServersPage() {
 							<TableHead>IP Address</TableHead>
 							<TableHead>OS / Arch</TableHead>
 							<TableHead>Agent</TableHead>
+							<TableHead>Tags</TableHead>
 							<TableHead>Status</TableHead>
 							<TableHead>Last Seen</TableHead>
 							<TableHead className="w-10" />
@@ -107,7 +153,7 @@ export default function ServersPage() {
 						{isLoading ? (
 							Array.from({ length: 5 }).map((_, i) => (
 								<TableRow key={i}>
-									{Array.from({ length: 8 }).map((_, j) => (
+									{Array.from({ length: 9 }).map((_, j) => (
 										<TableCell key={j}>
 											<Skeleton className="h-4 w-full" />
 										</TableCell>
@@ -116,7 +162,7 @@ export default function ServersPage() {
 							))
 						) : servers.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+								<TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
 									{filters.search
 										? "No servers match your search."
 										: 'No servers yet. Click "Add Server" to get started.'}
@@ -144,6 +190,17 @@ export default function ServersPage() {
 									</TableCell>
 									<TableCell className="text-xs text-muted-foreground">
 										{server.agent_version || "—"}
+									</TableCell>
+									<TableCell>
+										{(tagsByServer.get(server.id)?.length ?? 0) > 0 ? (
+											<div className="flex flex-wrap gap-1">
+												{tagsByServer.get(server.id)!.map((tag) => (
+													<TagBadge key={tag.id} name={tag.name} color={tag.color} />
+												))}
+											</div>
+										) : (
+											<span className="text-xs text-muted-foreground">—</span>
+										)}
 									</TableCell>
 									<TableCell>
 										<Badge variant={statusVariant(server.status)}>{server.status}</Badge>

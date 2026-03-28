@@ -48,6 +48,7 @@ import { ContainerMetrics } from "@/components/container/container-metrics";
 import { LogViewer } from "@/components/container/log-viewer";
 import { ResourceEditor } from "@/components/container/resource-editor";
 import { EnvEditor } from "@/components/container/env-editor";
+import { TagSelector } from "@/components/tag-selector";
 
 const statusVariantMap: Record<string, "default" | "secondary" | "destructive"> = {
 	running: "default",
@@ -101,6 +102,11 @@ export default function ContainerDetailPage() {
 								<ArrowUpCircle className="h-3 w-3" />
 								Update Available
 							</Badge>
+						)}
+
+						{/* Tags */}
+						{id && container && (
+							<TagSelector resourceType="container" resourceId={id} />
 						)}
 
 						{/* Actions */}

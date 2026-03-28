@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router";
 import { Box, Plus } from "lucide-react";
 import { Link } from "react-router";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -7,7 +8,9 @@ import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ContainerTable, type SortKey, type SortDir } from "@/components/server/container-table";
 import { ServerFilterSelect } from "@/components/server-filter-select";
+import { TagFilterSelect } from "@/components/tag-filter-select";
 import { Button } from "@/components/ui/button";
+import { containsFilter, andFilters } from "@/lib/pocketbase-filters";
 
 const SORT_MAP: Record<SortKey, string> = {
 	name: "name",
@@ -24,7 +27,31 @@ export default function ContainersPage() {
 			customFilters: { status: "status", server: "server" },
 		});
 
-	const { data: containersResult, isLoading } = useCollection("containers", pbOptions);
+	// Tag filter managed separately (needs `~` contains, not `=` eq).
+	const [searchParams, setSearchParams] = useSearchParams();
+	const tagValue = searchParams.get("tag") ?? "all";
+
+	function setTagFilter(value: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				if (value === "all") {
+					next.delete("tag");
+				} else {
+					next.set("tag", value);
+				}
+				next.delete("page");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	const tagFilter = tagValue !== "all" ? containsFilter("tags", tagValue) : "";
+	const mergedFilter = andFilters([pbOptions.filter, tagFilter]);
+	const finalOptions = { ...pbOptions, filter: mergedFilter };
+
+	const { data: containersResult, isLoading } = useCollection("containers", finalOptions);
 
 	useRealtime("containers");
 
@@ -77,10 +104,17 @@ export default function ContainersPage() {
 				sortDir={sortDir}
 				onSortChange={handleSortChange}
 				toolbarSlot={
-					<ServerFilterSelect
-						value={filters.custom.server ?? "all"}
-						onValueChange={(v) => setCustom("server", v)}
-					/>
+					<>
+						<ServerFilterSelect
+							value={filters.custom.server ?? "all"}
+							onValueChange={(v) => setCustom("server", v)}
+						/>
+						<TagFilterSelect
+							resourceType="container"
+							value={tagValue}
+							onValueChange={setTagFilter}
+						/>
+					</>
 				}
 			/>
 

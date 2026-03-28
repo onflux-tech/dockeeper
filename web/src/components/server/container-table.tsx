@@ -54,12 +54,15 @@ import {
 	CascadeDeleteDialog,
 	type ContainerCascadeOptions,
 } from "@/components/cascade-delete-dialog";
+import { BatchProgressDialog } from "@/components/batch-progress-dialog";
+import { TagBadge } from "@/components/tag-badge";
 import {
 	useContainerActions,
 	useRemoveContainerWithCascade,
-	executeBulkAction,
 	executeBulkRemoveWithCascade,
 } from "@/hooks/use-container-actions";
+import { useBatchSubmit } from "@/hooks/use-batch";
+import { useTags } from "@/hooks/use-tags";
 import { relativeTime } from "@/lib/format";
 import type { ContainerRecord } from "@/types/pocketbase";
 
@@ -127,6 +130,24 @@ export function ContainerTable({
 
 	const actions = useContainerActions();
 	const removeCascade = useRemoveContainerWithCascade();
+	const batchSubmit = useBatchSubmit();
+	const [batchJobId, setBatchJobId] = useState<string | null>(null);
+	const [batchAction, setBatchAction] = useState("");
+	const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+
+	const { data: tagsData } = useTags("container");
+	const allTags = tagsData?.items ?? [];
+
+	// Build a map of resource_id → tags for quick lookup.
+	const tagsByContainer = new Map<string, typeof allTags>();
+	for (const tag of allTags) {
+		const existing = tagsByContainer.get(tag.resource_id) ?? [];
+		existing.push(tag);
+		tagsByContainer.set(tag.resource_id, existing);
+	}
+
+	// Container name map for batch progress dialog.
+	const containerNameMap = new Map(containers.map((c) => [c.id, c.name]));
 
 	// ── Data is pre-sorted and pre-filtered by parent ───────────────────
 	const processed = containers;
@@ -164,7 +185,7 @@ export function ContainerTable({
 		}
 	}
 
-	// ── Bulk action ──────────────────────────────────────────────────────
+	// ── Bulk action via batch API ───────────────────────────────────────
 	async function handleBulk(action: "start" | "stop" | "restart" | "remove") {
 		const ids = [...selected];
 		if (action === "remove") {
@@ -172,13 +193,19 @@ export function ContainerTable({
 			return;
 		}
 		setBulkLoading(true);
-		const { succeeded, failed } = await executeBulkAction(ids, action);
-		setBulkLoading(false);
-		setSelected(new Set());
-		if (failed === 0) {
-			toast.success(`Bulk ${action}: ${succeeded} containers`);
-		} else {
-			toast.warning(`Bulk ${action}: ${succeeded} succeeded, ${failed} failed`);
+		try {
+			const result = await batchSubmit.mutateAsync({
+				action,
+				container_ids: ids,
+			});
+			setBatchJobId(result.job_id);
+			setBatchAction(action);
+			setBatchDialogOpen(true);
+			setSelected(new Set());
+		} catch {
+			toast.error(`Failed to submit batch ${action}`);
+		} finally {
+			setBulkLoading(false);
 		}
 	}
 
@@ -218,7 +245,7 @@ export function ContainerTable({
 					<Table>
 						<TableHeader>
 							<TableRow>
-								{Array.from({ length: 6 }).map((_, i) => (
+								{Array.from({ length: 7 }).map((_, i) => (
 									<TableHead key={i}>
 										<Skeleton className="h-4 w-16" />
 									</TableHead>
@@ -228,7 +255,7 @@ export function ContainerTable({
 						<TableBody>
 							{Array.from({ length: 5 }).map((_, i) => (
 								<TableRow key={i}>
-									{Array.from({ length: 6 }).map((_, j) => (
+									{Array.from({ length: 7 }).map((_, j) => (
 										<TableCell key={j}>
 											<Skeleton className="h-4 w-full" />
 										</TableCell>
@@ -242,7 +269,7 @@ export function ContainerTable({
 		);
 	}
 
-	const colCount = (showServer ? 7 : 6) + 1; // +1 for checkbox
+	const colCount = (showServer ? 8 : 7) + 1; // +1 for checkbox
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -350,6 +377,7 @@ export function ContainerTable({
 								dir={sortDir}
 								onToggle={toggleSort}
 							/>
+							<TableHead>Tags</TableHead>
 							{showServer && <TableHead>Server</TableHead>}
 							<SortableHead
 								label="Created"
@@ -379,8 +407,8 @@ export function ContainerTable({
 											onCheckedChange={() => toggleOne(c.id)}
 										/>
 									</TableCell>
-									<TableCell className="max-w-[200px] truncate text-sm font-medium">
-										<Link to={`/containers/${c.id}`} className="hover:underline">
+									<TableCell className="max-w-[250px] text-sm font-medium">
+										<Link to={`/containers/${c.id}`} className="truncate hover:underline">
 											{c.name}
 										</Link>
 									</TableCell>
@@ -389,6 +417,17 @@ export function ContainerTable({
 									</TableCell>
 									<TableCell>
 										<Badge variant={statusColors[c.status] ?? "secondary"}>{c.status}</Badge>
+									</TableCell>
+									<TableCell>
+										{(tagsByContainer.get(c.id)?.length ?? 0) > 0 ? (
+											<div className="flex flex-wrap gap-1">
+												{tagsByContainer.get(c.id)!.map((tag) => (
+													<TagBadge key={tag.id} name={tag.name} color={tag.color} />
+												))}
+											</div>
+										) : (
+											<span className="text-xs text-muted-foreground">—</span>
+										)}
 									</TableCell>
 									{showServer && (
 										<TableCell className="text-sm text-muted-foreground">{c.server}</TableCell>
@@ -453,6 +492,18 @@ export function ContainerTable({
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			{/* Batch progress dialog */}
+			<BatchProgressDialog
+				jobId={batchJobId}
+				action={batchAction}
+				open={batchDialogOpen}
+				onOpenChange={(open) => {
+					setBatchDialogOpen(open);
+					if (!open) setBatchJobId(null);
+				}}
+				containerNames={containerNameMap}
+			/>
 		</div>
 	);
 }

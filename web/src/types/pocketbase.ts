@@ -301,6 +301,35 @@ export interface HealthCheckLogRecord extends BaseRecord {
 	checked_at: string;
 }
 
+export interface BatchJobRecord extends BaseRecord {
+	action: string;
+	items: BatchItemRecord[];
+	status: "pending" | "running" | "completed" | "cancelled";
+	total: number;
+	succeeded: number;
+	failed: number;
+	cancelled: number;
+	created_by: string;
+	started_at: string;
+	completed_at: string;
+}
+
+export interface BatchItemRecord {
+	container_id: string;
+	server_id: string;
+	status: "pending" | "running" | "success" | "failed" | "cancelled";
+	error?: string;
+	started_at?: string;
+	completed_at?: string;
+}
+
+export interface TagRecord extends BaseRecord {
+	name: string;
+	color: string;
+	resource_type: "container" | "server";
+	resource_id: string;
+}
+
 // ── Collection name → record type map ───────────────────────────────────────
 
 export interface Collections {
@@ -329,6 +358,8 @@ export interface Collections {
 	blackout_windows: BlackoutWindowRecord;
 	health_checks: HealthCheckRecord;
 	health_check_logs: HealthCheckLogRecord;
+	batch_jobs: BatchJobRecord;
+	tags: TagRecord;
 }
 
 /** All valid collection names. */

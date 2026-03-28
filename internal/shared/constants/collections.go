@@ -35,4 +35,6 @@ const (
 	CollBlackoutWindows     = "blackout_windows"
 	CollHealthChecks        = "health_checks"
 	CollHealthCheckLogs     = "health_check_logs"
+	CollBatchJobs           = "batch_jobs"
+	CollTags                = "tags"
 )

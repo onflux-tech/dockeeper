@@ -27,6 +27,10 @@ const (
 	CapEventsView          = "events.view"
 	CapHealthView          = "health.view"
 	CapHealthManage        = "health.manage"
+	CapBatchView           = "batch.view"
+	CapBatchManage         = "batch.manage"
+	CapTagsView            = "tags.view"
+	CapTagsManage          = "tags.manage"
 )
 
 // AllCapabilities is the complete set of capabilities for Sprint 13.
@@ -44,4 +48,6 @@ var AllCapabilities = []string{
 	CapAuditView, CapTraefikView,
 	CapEventsView,
 	CapHealthView, CapHealthManage,
+	CapBatchView, CapBatchManage,
+	CapTagsView, CapTagsManage,
 }
