@@ -580,3 +580,261 @@ message ExecuteHealthCheckResponse {
   string error = 3;
   bool success = 4;
 }
+
+// ══════════════════════════════════════════════════════
+// Reverse Tunnel — Agent→Manager channels (zero inbound ports)
+// ══════════════════════════════════════════════════════
+
+// ── Command Channel (persistent control plane) ──────
+
+// Persistent bidirectional stream for command dispatch.
+// Agent connects on startup and keeps the stream alive.
+// Manager sends commands, agent sends results. Multiplexed by request_id.
+service AgentCommandChannelService {
+  rpc OpenChannel(stream OpenChannelRequest) returns (stream OpenChannelResponse);
+}
+
+// Agent → Manager messages on the command channel.
+message OpenChannelRequest {
+  oneof payload {
+    ChannelInit init = 1;
+    ChannelHeartbeat heartbeat = 2;
+    ChannelCommandResult command_result = 3;
+  }
+}
+
+// Manager → Agent messages on the command channel.
+message OpenChannelResponse {
+  oneof payload {
+    ChannelHeartbeat heartbeat = 1;
+    ChannelCommand command = 2;
+    OpenDataStreamSignal open_data_stream = 3;
+    OpenExecStreamSignal open_exec_stream = 4;
+  }
+}
+
+// First message the agent sends to identify itself.
+message ChannelInit {
+  string server_id = 1;
+}
+
+// Keepalive ping/pong (15s interval).
+message ChannelHeartbeat {
+  int64 timestamp_ms = 1;
+}
+
+// Manager dispatches a command to the agent. Uses request_id for multiplexing.
+message ChannelCommand {
+  string request_id = 1;
+
+  // Priority: 0 = CRITICAL (exec), 1 = HIGH (container ops), 2 = NORMAL (data), 3 = LOW (health)
+  int32 priority = 2;
+
+  oneof command {
+    // Container commands
+    ExecuteCommandRequest execute_command = 10;
+
+    // Image commands (unary)
+    ImageRemoveRequest remove_image = 20;
+    ImagePruneRequest prune_images = 21;
+
+    // Compose (unary — config only)
+    ComposeConfigRequest compose_config = 30;
+
+    // Network commands
+    CreateNetworkRequest create_network = 40;
+    RemoveNetworkRequest remove_network = 41;
+    NetworkConnectRequest connect_container = 42;
+    NetworkDisconnectRequest disconnect_container = 43;
+
+    // Volume commands
+    CreateVolumeRequest create_volume = 50;
+    RemoveVolumeRequest remove_volume = 51;
+    InspectVolumeRequest inspect_volume = 52;
+
+    // Health check
+    ExecuteHealthCheckRequest health_check = 60;
+
+    // Update check (unary)
+    CheckImageDigestRequest check_image_digest = 70;
+  }
+}
+
+// Agent sends the result of a command back to the manager.
+message ChannelCommandResult {
+  string request_id = 1;
+
+  oneof result {
+    ExecuteCommandResponse execute_command = 10;
+    ImageRemoveResponse remove_image = 20;
+    ImagePruneResponse prune_images = 21;
+    ComposeConfigResponse compose_config = 30;
+    CreateNetworkResponse create_network = 40;
+    RemoveNetworkResponse remove_network = 41;
+    NetworkConnectResponse connect_container = 42;
+    NetworkDisconnectResponse disconnect_container = 43;
+    CreateVolumeResponse create_volume = 50;
+    RemoveVolumeResponse remove_volume = 51;
+    InspectVolumeResponse inspect_volume = 52;
+    ExecuteHealthCheckResponse health_check = 60;
+    CheckImageDigestResponse check_image_digest = 70;
+    ChannelCommandError error = 99;
+  }
+}
+
+// Generic error for when command execution fails.
+message ChannelCommandError {
+  int32 code = 1;
+  string message = 2;
+}
+
+// Signal the agent to open a DataStream for a streaming operation.
+message OpenDataStreamSignal {
+  string stream_id = 1;
+  DataStreamType stream_type = 2;
+
+  oneof params {
+    StreamLogsRequest stream_logs = 10;
+    ImagePullRequest pull_image = 11;
+    ComposeRequest compose_up = 12;
+    ComposeRequest compose_down = 13;
+    ComposeRequest compose_pull = 14;
+    BackupVolumeRequest backup_volume = 15;
+    RestoreVolumeRequest restore_volume = 16;
+    ExecuteContainerUpdateRequest container_update = 17;
+    DataStreamUpdateBinaryParams update_binary = 18;
+  }
+}
+
+enum DataStreamType {
+  DATA_STREAM_TYPE_UNSPECIFIED = 0;
+  DATA_STREAM_TYPE_LOGS = 1;
+  DATA_STREAM_TYPE_IMAGE_PULL = 2;
+  DATA_STREAM_TYPE_COMPOSE_UP = 3;
+  DATA_STREAM_TYPE_COMPOSE_DOWN = 4;
+  DATA_STREAM_TYPE_COMPOSE_PULL = 5;
+  DATA_STREAM_TYPE_BACKUP = 6;
+  DATA_STREAM_TYPE_RESTORE = 7;
+  DATA_STREAM_TYPE_CONTAINER_UPDATE = 8;
+  DATA_STREAM_TYPE_AGENT_UPDATE = 9;
+}
+
+// Parameters for agent binary update via DataStream.
+message DataStreamUpdateBinaryParams {
+  string version = 1;
+  string checksum = 2; // Expected SHA256
+}
+
+// Signal the agent to open an ExecStream for a terminal session.
+message OpenExecStreamSignal {
+  string session_id = 1;
+  string container_id = 2;
+  repeated string command = 3;
+  bool tty = 4;
+}
+
+// ── Data Stream (on-demand streaming) ────────────────
+
+// On-demand streaming for logs, image pull, compose, backup, and updates.
+// Agent opens a DataStream when instructed via OpenDataStreamSignal.
+service AgentDataStreamService {
+  rpc OpenDataStream(stream OpenDataStreamRequest) returns (stream OpenDataStreamResponse);
+}
+
+// Agent → Manager data (logs lines, progress, binary chunks).
+message OpenDataStreamRequest {
+  string stream_id = 1;
+
+  oneof payload {
+    bytes data = 2;                          // Raw binary (update chunks)
+    DataStreamText text = 3;                 // Text line (logs, compose output)
+    DataStreamProgress progress = 4;         // Progress update (pull, backup)
+    DataStreamComplete complete = 5;         // Stream finished
+    DataStreamError error = 6;               // Stream errored
+  }
+}
+
+// Manager → Agent control on a data stream.
+message OpenDataStreamResponse {
+  string stream_id = 1;
+
+  oneof payload {
+    DataStreamCancel cancel = 2;             // Manager requests cancellation
+  }
+}
+
+// Text payload for log lines, compose output, etc.
+message DataStreamText {
+  string line = 1;
+  string stream = 2; // "stdout", "stderr"
+}
+
+// Progress payload for image pull, backup, etc.
+message DataStreamProgress {
+  string status = 1;
+  string message = 2;
+  string id = 3;             // Layer ID for image pull
+  int64 current = 4;
+  int64 total = 5;
+}
+
+// Signal that the data stream completed successfully.
+message DataStreamComplete {
+  string summary = 1;
+  int32 exit_code = 2;       // For compose operations
+}
+
+// Signal that the data stream errored.
+message DataStreamError {
+  int32 code = 1;
+  string message = 2;
+}
+
+// Manager requests the agent to cancel the data stream.
+message DataStreamCancel {
+  string reason = 1;
+}
+
+// ── Exec Stream (per-session terminal) ───────────────
+
+// Per-session bidirectional terminal I/O.
+// Agent opens when instructed via OpenExecStreamSignal.
+// Supports detach/reattach on agent reconnect (session_id matching).
+service AgentExecStreamService {
+  rpc OpenExecStream(stream OpenExecStreamRequest) returns (stream OpenExecStreamResponse);
+}
+
+// Agent → Manager (terminal stdout, exit).
+message OpenExecStreamRequest {
+  string session_id = 1;
+
+  oneof payload {
+    bytes stdout = 2;
+    ExecStreamExit exit = 3;
+  }
+}
+
+// Manager → Agent (terminal stdin, resize, close).
+message OpenExecStreamResponse {
+  string session_id = 1;
+
+  oneof payload {
+    bytes stdin = 2;
+    ExecStreamResize resize = 3;
+    ExecStreamClose close = 4;
+  }
+}
+
+// Terminal window resize.
+message ExecStreamResize {
+  uint32 cols = 1;
+  uint32 rows = 2;
+}
+
+// Request to close the exec session.
+message ExecStreamClose {}
+
+// Agent reports exec process exited.
+message ExecStreamExit {
+  int32 exit_code = 1;
+}

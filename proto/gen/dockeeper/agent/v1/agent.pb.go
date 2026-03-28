@@ -101,6 +101,76 @@ func (CommandType) EnumDescriptor() ([]byte, []int) {
 	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{0}
 }
 
+type DataStreamType int32
+
+const (
+	DataStreamType_DATA_STREAM_TYPE_UNSPECIFIED      DataStreamType = 0
+	DataStreamType_DATA_STREAM_TYPE_LOGS             DataStreamType = 1
+	DataStreamType_DATA_STREAM_TYPE_IMAGE_PULL       DataStreamType = 2
+	DataStreamType_DATA_STREAM_TYPE_COMPOSE_UP       DataStreamType = 3
+	DataStreamType_DATA_STREAM_TYPE_COMPOSE_DOWN     DataStreamType = 4
+	DataStreamType_DATA_STREAM_TYPE_COMPOSE_PULL     DataStreamType = 5
+	DataStreamType_DATA_STREAM_TYPE_BACKUP           DataStreamType = 6
+	DataStreamType_DATA_STREAM_TYPE_RESTORE          DataStreamType = 7
+	DataStreamType_DATA_STREAM_TYPE_CONTAINER_UPDATE DataStreamType = 8
+	DataStreamType_DATA_STREAM_TYPE_AGENT_UPDATE     DataStreamType = 9
+)
+
+// Enum value maps for DataStreamType.
+var (
+	DataStreamType_name = map[int32]string{
+		0: "DATA_STREAM_TYPE_UNSPECIFIED",
+		1: "DATA_STREAM_TYPE_LOGS",
+		2: "DATA_STREAM_TYPE_IMAGE_PULL",
+		3: "DATA_STREAM_TYPE_COMPOSE_UP",
+		4: "DATA_STREAM_TYPE_COMPOSE_DOWN",
+		5: "DATA_STREAM_TYPE_COMPOSE_PULL",
+		6: "DATA_STREAM_TYPE_BACKUP",
+		7: "DATA_STREAM_TYPE_RESTORE",
+		8: "DATA_STREAM_TYPE_CONTAINER_UPDATE",
+		9: "DATA_STREAM_TYPE_AGENT_UPDATE",
+	}
+	DataStreamType_value = map[string]int32{
+		"DATA_STREAM_TYPE_UNSPECIFIED":      0,
+		"DATA_STREAM_TYPE_LOGS":             1,
+		"DATA_STREAM_TYPE_IMAGE_PULL":       2,
+		"DATA_STREAM_TYPE_COMPOSE_UP":       3,
+		"DATA_STREAM_TYPE_COMPOSE_DOWN":     4,
+		"DATA_STREAM_TYPE_COMPOSE_PULL":     5,
+		"DATA_STREAM_TYPE_BACKUP":           6,
+		"DATA_STREAM_TYPE_RESTORE":          7,
+		"DATA_STREAM_TYPE_CONTAINER_UPDATE": 8,
+		"DATA_STREAM_TYPE_AGENT_UPDATE":     9,
+	}
+)
+
+func (x DataStreamType) Enum() *DataStreamType {
+	p := new(DataStreamType)
+	*p = x
+	return p
+}
+
+func (x DataStreamType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DataStreamType) Descriptor() protoreflect.EnumDescriptor {
+	return file_dockeeper_agent_v1_agent_proto_enumTypes[1].Descriptor()
+}
+
+func (DataStreamType) Type() protoreflect.EnumType {
+	return &file_dockeeper_agent_v1_agent_proto_enumTypes[1]
+}
+
+func (x DataStreamType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DataStreamType.Descriptor instead.
+func (DataStreamType) EnumDescriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{1}
+}
+
 type ServerInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Hostname      string                 `protobuf:"bytes,1,opt,name=hostname,proto3" json:"hostname,omitempty"`
@@ -4591,6 +4661,2090 @@ func (x *ExecuteHealthCheckResponse) GetSuccess() bool {
 	return false
 }
 
+// Agent → Manager messages on the command channel.
+type OpenChannelRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*OpenChannelRequest_Init
+	//	*OpenChannelRequest_Heartbeat
+	//	*OpenChannelRequest_CommandResult
+	Payload       isOpenChannelRequest_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenChannelRequest) Reset() {
+	*x = OpenChannelRequest{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenChannelRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenChannelRequest) ProtoMessage() {}
+
+func (x *OpenChannelRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenChannelRequest.ProtoReflect.Descriptor instead.
+func (*OpenChannelRequest) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *OpenChannelRequest) GetPayload() isOpenChannelRequest_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *OpenChannelRequest) GetInit() *ChannelInit {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenChannelRequest_Init); ok {
+			return x.Init
+		}
+	}
+	return nil
+}
+
+func (x *OpenChannelRequest) GetHeartbeat() *ChannelHeartbeat {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenChannelRequest_Heartbeat); ok {
+			return x.Heartbeat
+		}
+	}
+	return nil
+}
+
+func (x *OpenChannelRequest) GetCommandResult() *ChannelCommandResult {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenChannelRequest_CommandResult); ok {
+			return x.CommandResult
+		}
+	}
+	return nil
+}
+
+type isOpenChannelRequest_Payload interface {
+	isOpenChannelRequest_Payload()
+}
+
+type OpenChannelRequest_Init struct {
+	Init *ChannelInit `protobuf:"bytes,1,opt,name=init,proto3,oneof"`
+}
+
+type OpenChannelRequest_Heartbeat struct {
+	Heartbeat *ChannelHeartbeat `protobuf:"bytes,2,opt,name=heartbeat,proto3,oneof"`
+}
+
+type OpenChannelRequest_CommandResult struct {
+	CommandResult *ChannelCommandResult `protobuf:"bytes,3,opt,name=command_result,json=commandResult,proto3,oneof"`
+}
+
+func (*OpenChannelRequest_Init) isOpenChannelRequest_Payload() {}
+
+func (*OpenChannelRequest_Heartbeat) isOpenChannelRequest_Payload() {}
+
+func (*OpenChannelRequest_CommandResult) isOpenChannelRequest_Payload() {}
+
+// Manager → Agent messages on the command channel.
+type OpenChannelResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*OpenChannelResponse_Heartbeat
+	//	*OpenChannelResponse_Command
+	//	*OpenChannelResponse_OpenDataStream
+	//	*OpenChannelResponse_OpenExecStream
+	Payload       isOpenChannelResponse_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenChannelResponse) Reset() {
+	*x = OpenChannelResponse{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenChannelResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenChannelResponse) ProtoMessage() {}
+
+func (x *OpenChannelResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenChannelResponse.ProtoReflect.Descriptor instead.
+func (*OpenChannelResponse) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *OpenChannelResponse) GetPayload() isOpenChannelResponse_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *OpenChannelResponse) GetHeartbeat() *ChannelHeartbeat {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenChannelResponse_Heartbeat); ok {
+			return x.Heartbeat
+		}
+	}
+	return nil
+}
+
+func (x *OpenChannelResponse) GetCommand() *ChannelCommand {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenChannelResponse_Command); ok {
+			return x.Command
+		}
+	}
+	return nil
+}
+
+func (x *OpenChannelResponse) GetOpenDataStream() *OpenDataStreamSignal {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenChannelResponse_OpenDataStream); ok {
+			return x.OpenDataStream
+		}
+	}
+	return nil
+}
+
+func (x *OpenChannelResponse) GetOpenExecStream() *OpenExecStreamSignal {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenChannelResponse_OpenExecStream); ok {
+			return x.OpenExecStream
+		}
+	}
+	return nil
+}
+
+type isOpenChannelResponse_Payload interface {
+	isOpenChannelResponse_Payload()
+}
+
+type OpenChannelResponse_Heartbeat struct {
+	Heartbeat *ChannelHeartbeat `protobuf:"bytes,1,opt,name=heartbeat,proto3,oneof"`
+}
+
+type OpenChannelResponse_Command struct {
+	Command *ChannelCommand `protobuf:"bytes,2,opt,name=command,proto3,oneof"`
+}
+
+type OpenChannelResponse_OpenDataStream struct {
+	OpenDataStream *OpenDataStreamSignal `protobuf:"bytes,3,opt,name=open_data_stream,json=openDataStream,proto3,oneof"`
+}
+
+type OpenChannelResponse_OpenExecStream struct {
+	OpenExecStream *OpenExecStreamSignal `protobuf:"bytes,4,opt,name=open_exec_stream,json=openExecStream,proto3,oneof"`
+}
+
+func (*OpenChannelResponse_Heartbeat) isOpenChannelResponse_Payload() {}
+
+func (*OpenChannelResponse_Command) isOpenChannelResponse_Payload() {}
+
+func (*OpenChannelResponse_OpenDataStream) isOpenChannelResponse_Payload() {}
+
+func (*OpenChannelResponse_OpenExecStream) isOpenChannelResponse_Payload() {}
+
+// First message the agent sends to identify itself.
+type ChannelInit struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelInit) Reset() {
+	*x = ChannelInit{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelInit) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelInit) ProtoMessage() {}
+
+func (x *ChannelInit) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelInit.ProtoReflect.Descriptor instead.
+func (*ChannelInit) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *ChannelInit) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+// Keepalive ping/pong (15s interval).
+type ChannelHeartbeat struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TimestampMs   int64                  `protobuf:"varint,1,opt,name=timestamp_ms,json=timestampMs,proto3" json:"timestamp_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelHeartbeat) Reset() {
+	*x = ChannelHeartbeat{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelHeartbeat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelHeartbeat) ProtoMessage() {}
+
+func (x *ChannelHeartbeat) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelHeartbeat.ProtoReflect.Descriptor instead.
+func (*ChannelHeartbeat) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *ChannelHeartbeat) GetTimestampMs() int64 {
+	if x != nil {
+		return x.TimestampMs
+	}
+	return 0
+}
+
+// Manager dispatches a command to the agent. Uses request_id for multiplexing.
+type ChannelCommand struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	RequestId string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// Priority: 0 = CRITICAL (exec), 1 = HIGH (container ops), 2 = NORMAL (data), 3 = LOW (health)
+	Priority int32 `protobuf:"varint,2,opt,name=priority,proto3" json:"priority,omitempty"`
+	// Types that are valid to be assigned to Command:
+	//
+	//	*ChannelCommand_ExecuteCommand
+	//	*ChannelCommand_RemoveImage
+	//	*ChannelCommand_PruneImages
+	//	*ChannelCommand_ComposeConfig
+	//	*ChannelCommand_CreateNetwork
+	//	*ChannelCommand_RemoveNetwork
+	//	*ChannelCommand_ConnectContainer
+	//	*ChannelCommand_DisconnectContainer
+	//	*ChannelCommand_CreateVolume
+	//	*ChannelCommand_RemoveVolume
+	//	*ChannelCommand_InspectVolume
+	//	*ChannelCommand_HealthCheck
+	//	*ChannelCommand_CheckImageDigest
+	Command       isChannelCommand_Command `protobuf_oneof:"command"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelCommand) Reset() {
+	*x = ChannelCommand{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelCommand) ProtoMessage() {}
+
+func (x *ChannelCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelCommand.ProtoReflect.Descriptor instead.
+func (*ChannelCommand) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *ChannelCommand) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ChannelCommand) GetPriority() int32 {
+	if x != nil {
+		return x.Priority
+	}
+	return 0
+}
+
+func (x *ChannelCommand) GetCommand() isChannelCommand_Command {
+	if x != nil {
+		return x.Command
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetExecuteCommand() *ExecuteCommandRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_ExecuteCommand); ok {
+			return x.ExecuteCommand
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetRemoveImage() *ImageRemoveRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_RemoveImage); ok {
+			return x.RemoveImage
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetPruneImages() *ImagePruneRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_PruneImages); ok {
+			return x.PruneImages
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetComposeConfig() *ComposeConfigRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_ComposeConfig); ok {
+			return x.ComposeConfig
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetCreateNetwork() *CreateNetworkRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_CreateNetwork); ok {
+			return x.CreateNetwork
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetRemoveNetwork() *RemoveNetworkRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_RemoveNetwork); ok {
+			return x.RemoveNetwork
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetConnectContainer() *NetworkConnectRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_ConnectContainer); ok {
+			return x.ConnectContainer
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetDisconnectContainer() *NetworkDisconnectRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_DisconnectContainer); ok {
+			return x.DisconnectContainer
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetCreateVolume() *CreateVolumeRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_CreateVolume); ok {
+			return x.CreateVolume
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetRemoveVolume() *RemoveVolumeRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_RemoveVolume); ok {
+			return x.RemoveVolume
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetInspectVolume() *InspectVolumeRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_InspectVolume); ok {
+			return x.InspectVolume
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetHealthCheck() *ExecuteHealthCheckRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_HealthCheck); ok {
+			return x.HealthCheck
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommand) GetCheckImageDigest() *CheckImageDigestRequest {
+	if x != nil {
+		if x, ok := x.Command.(*ChannelCommand_CheckImageDigest); ok {
+			return x.CheckImageDigest
+		}
+	}
+	return nil
+}
+
+type isChannelCommand_Command interface {
+	isChannelCommand_Command()
+}
+
+type ChannelCommand_ExecuteCommand struct {
+	// Container commands
+	ExecuteCommand *ExecuteCommandRequest `protobuf:"bytes,10,opt,name=execute_command,json=executeCommand,proto3,oneof"`
+}
+
+type ChannelCommand_RemoveImage struct {
+	// Image commands (unary)
+	RemoveImage *ImageRemoveRequest `protobuf:"bytes,20,opt,name=remove_image,json=removeImage,proto3,oneof"`
+}
+
+type ChannelCommand_PruneImages struct {
+	PruneImages *ImagePruneRequest `protobuf:"bytes,21,opt,name=prune_images,json=pruneImages,proto3,oneof"`
+}
+
+type ChannelCommand_ComposeConfig struct {
+	// Compose (unary — config only)
+	ComposeConfig *ComposeConfigRequest `protobuf:"bytes,30,opt,name=compose_config,json=composeConfig,proto3,oneof"`
+}
+
+type ChannelCommand_CreateNetwork struct {
+	// Network commands
+	CreateNetwork *CreateNetworkRequest `protobuf:"bytes,40,opt,name=create_network,json=createNetwork,proto3,oneof"`
+}
+
+type ChannelCommand_RemoveNetwork struct {
+	RemoveNetwork *RemoveNetworkRequest `protobuf:"bytes,41,opt,name=remove_network,json=removeNetwork,proto3,oneof"`
+}
+
+type ChannelCommand_ConnectContainer struct {
+	ConnectContainer *NetworkConnectRequest `protobuf:"bytes,42,opt,name=connect_container,json=connectContainer,proto3,oneof"`
+}
+
+type ChannelCommand_DisconnectContainer struct {
+	DisconnectContainer *NetworkDisconnectRequest `protobuf:"bytes,43,opt,name=disconnect_container,json=disconnectContainer,proto3,oneof"`
+}
+
+type ChannelCommand_CreateVolume struct {
+	// Volume commands
+	CreateVolume *CreateVolumeRequest `protobuf:"bytes,50,opt,name=create_volume,json=createVolume,proto3,oneof"`
+}
+
+type ChannelCommand_RemoveVolume struct {
+	RemoveVolume *RemoveVolumeRequest `protobuf:"bytes,51,opt,name=remove_volume,json=removeVolume,proto3,oneof"`
+}
+
+type ChannelCommand_InspectVolume struct {
+	InspectVolume *InspectVolumeRequest `protobuf:"bytes,52,opt,name=inspect_volume,json=inspectVolume,proto3,oneof"`
+}
+
+type ChannelCommand_HealthCheck struct {
+	// Health check
+	HealthCheck *ExecuteHealthCheckRequest `protobuf:"bytes,60,opt,name=health_check,json=healthCheck,proto3,oneof"`
+}
+
+type ChannelCommand_CheckImageDigest struct {
+	// Update check (unary)
+	CheckImageDigest *CheckImageDigestRequest `protobuf:"bytes,70,opt,name=check_image_digest,json=checkImageDigest,proto3,oneof"`
+}
+
+func (*ChannelCommand_ExecuteCommand) isChannelCommand_Command() {}
+
+func (*ChannelCommand_RemoveImage) isChannelCommand_Command() {}
+
+func (*ChannelCommand_PruneImages) isChannelCommand_Command() {}
+
+func (*ChannelCommand_ComposeConfig) isChannelCommand_Command() {}
+
+func (*ChannelCommand_CreateNetwork) isChannelCommand_Command() {}
+
+func (*ChannelCommand_RemoveNetwork) isChannelCommand_Command() {}
+
+func (*ChannelCommand_ConnectContainer) isChannelCommand_Command() {}
+
+func (*ChannelCommand_DisconnectContainer) isChannelCommand_Command() {}
+
+func (*ChannelCommand_CreateVolume) isChannelCommand_Command() {}
+
+func (*ChannelCommand_RemoveVolume) isChannelCommand_Command() {}
+
+func (*ChannelCommand_InspectVolume) isChannelCommand_Command() {}
+
+func (*ChannelCommand_HealthCheck) isChannelCommand_Command() {}
+
+func (*ChannelCommand_CheckImageDigest) isChannelCommand_Command() {}
+
+// Agent sends the result of a command back to the manager.
+type ChannelCommandResult struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	RequestId string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*ChannelCommandResult_ExecuteCommand
+	//	*ChannelCommandResult_RemoveImage
+	//	*ChannelCommandResult_PruneImages
+	//	*ChannelCommandResult_ComposeConfig
+	//	*ChannelCommandResult_CreateNetwork
+	//	*ChannelCommandResult_RemoveNetwork
+	//	*ChannelCommandResult_ConnectContainer
+	//	*ChannelCommandResult_DisconnectContainer
+	//	*ChannelCommandResult_CreateVolume
+	//	*ChannelCommandResult_RemoveVolume
+	//	*ChannelCommandResult_InspectVolume
+	//	*ChannelCommandResult_HealthCheck
+	//	*ChannelCommandResult_CheckImageDigest
+	//	*ChannelCommandResult_Error
+	Result        isChannelCommandResult_Result `protobuf_oneof:"result"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelCommandResult) Reset() {
+	*x = ChannelCommandResult{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelCommandResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelCommandResult) ProtoMessage() {}
+
+func (x *ChannelCommandResult) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelCommandResult.ProtoReflect.Descriptor instead.
+func (*ChannelCommandResult) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *ChannelCommandResult) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ChannelCommandResult) GetResult() isChannelCommandResult_Result {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetExecuteCommand() *ExecuteCommandResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_ExecuteCommand); ok {
+			return x.ExecuteCommand
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetRemoveImage() *ImageRemoveResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_RemoveImage); ok {
+			return x.RemoveImage
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetPruneImages() *ImagePruneResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_PruneImages); ok {
+			return x.PruneImages
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetComposeConfig() *ComposeConfigResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_ComposeConfig); ok {
+			return x.ComposeConfig
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetCreateNetwork() *CreateNetworkResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_CreateNetwork); ok {
+			return x.CreateNetwork
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetRemoveNetwork() *RemoveNetworkResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_RemoveNetwork); ok {
+			return x.RemoveNetwork
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetConnectContainer() *NetworkConnectResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_ConnectContainer); ok {
+			return x.ConnectContainer
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetDisconnectContainer() *NetworkDisconnectResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_DisconnectContainer); ok {
+			return x.DisconnectContainer
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetCreateVolume() *CreateVolumeResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_CreateVolume); ok {
+			return x.CreateVolume
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetRemoveVolume() *RemoveVolumeResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_RemoveVolume); ok {
+			return x.RemoveVolume
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetInspectVolume() *InspectVolumeResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_InspectVolume); ok {
+			return x.InspectVolume
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetHealthCheck() *ExecuteHealthCheckResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_HealthCheck); ok {
+			return x.HealthCheck
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetCheckImageDigest() *CheckImageDigestResponse {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_CheckImageDigest); ok {
+			return x.CheckImageDigest
+		}
+	}
+	return nil
+}
+
+func (x *ChannelCommandResult) GetError() *ChannelCommandError {
+	if x != nil {
+		if x, ok := x.Result.(*ChannelCommandResult_Error); ok {
+			return x.Error
+		}
+	}
+	return nil
+}
+
+type isChannelCommandResult_Result interface {
+	isChannelCommandResult_Result()
+}
+
+type ChannelCommandResult_ExecuteCommand struct {
+	ExecuteCommand *ExecuteCommandResponse `protobuf:"bytes,10,opt,name=execute_command,json=executeCommand,proto3,oneof"`
+}
+
+type ChannelCommandResult_RemoveImage struct {
+	RemoveImage *ImageRemoveResponse `protobuf:"bytes,20,opt,name=remove_image,json=removeImage,proto3,oneof"`
+}
+
+type ChannelCommandResult_PruneImages struct {
+	PruneImages *ImagePruneResponse `protobuf:"bytes,21,opt,name=prune_images,json=pruneImages,proto3,oneof"`
+}
+
+type ChannelCommandResult_ComposeConfig struct {
+	ComposeConfig *ComposeConfigResponse `protobuf:"bytes,30,opt,name=compose_config,json=composeConfig,proto3,oneof"`
+}
+
+type ChannelCommandResult_CreateNetwork struct {
+	CreateNetwork *CreateNetworkResponse `protobuf:"bytes,40,opt,name=create_network,json=createNetwork,proto3,oneof"`
+}
+
+type ChannelCommandResult_RemoveNetwork struct {
+	RemoveNetwork *RemoveNetworkResponse `protobuf:"bytes,41,opt,name=remove_network,json=removeNetwork,proto3,oneof"`
+}
+
+type ChannelCommandResult_ConnectContainer struct {
+	ConnectContainer *NetworkConnectResponse `protobuf:"bytes,42,opt,name=connect_container,json=connectContainer,proto3,oneof"`
+}
+
+type ChannelCommandResult_DisconnectContainer struct {
+	DisconnectContainer *NetworkDisconnectResponse `protobuf:"bytes,43,opt,name=disconnect_container,json=disconnectContainer,proto3,oneof"`
+}
+
+type ChannelCommandResult_CreateVolume struct {
+	CreateVolume *CreateVolumeResponse `protobuf:"bytes,50,opt,name=create_volume,json=createVolume,proto3,oneof"`
+}
+
+type ChannelCommandResult_RemoveVolume struct {
+	RemoveVolume *RemoveVolumeResponse `protobuf:"bytes,51,opt,name=remove_volume,json=removeVolume,proto3,oneof"`
+}
+
+type ChannelCommandResult_InspectVolume struct {
+	InspectVolume *InspectVolumeResponse `protobuf:"bytes,52,opt,name=inspect_volume,json=inspectVolume,proto3,oneof"`
+}
+
+type ChannelCommandResult_HealthCheck struct {
+	HealthCheck *ExecuteHealthCheckResponse `protobuf:"bytes,60,opt,name=health_check,json=healthCheck,proto3,oneof"`
+}
+
+type ChannelCommandResult_CheckImageDigest struct {
+	CheckImageDigest *CheckImageDigestResponse `protobuf:"bytes,70,opt,name=check_image_digest,json=checkImageDigest,proto3,oneof"`
+}
+
+type ChannelCommandResult_Error struct {
+	Error *ChannelCommandError `protobuf:"bytes,99,opt,name=error,proto3,oneof"`
+}
+
+func (*ChannelCommandResult_ExecuteCommand) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_RemoveImage) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_PruneImages) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_ComposeConfig) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_CreateNetwork) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_RemoveNetwork) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_ConnectContainer) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_DisconnectContainer) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_CreateVolume) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_RemoveVolume) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_InspectVolume) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_HealthCheck) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_CheckImageDigest) isChannelCommandResult_Result() {}
+
+func (*ChannelCommandResult_Error) isChannelCommandResult_Result() {}
+
+// Generic error for when command execution fails.
+type ChannelCommandError struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelCommandError) Reset() {
+	*x = ChannelCommandError{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[75]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelCommandError) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelCommandError) ProtoMessage() {}
+
+func (x *ChannelCommandError) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[75]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelCommandError.ProtoReflect.Descriptor instead.
+func (*ChannelCommandError) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{75}
+}
+
+func (x *ChannelCommandError) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *ChannelCommandError) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+// Signal the agent to open a DataStream for a streaming operation.
+type OpenDataStreamSignal struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	StreamId   string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	StreamType DataStreamType         `protobuf:"varint,2,opt,name=stream_type,json=streamType,proto3,enum=dockeeper.agent.v1.DataStreamType" json:"stream_type,omitempty"`
+	// Types that are valid to be assigned to Params:
+	//
+	//	*OpenDataStreamSignal_StreamLogs
+	//	*OpenDataStreamSignal_PullImage
+	//	*OpenDataStreamSignal_ComposeUp
+	//	*OpenDataStreamSignal_ComposeDown
+	//	*OpenDataStreamSignal_ComposePull
+	//	*OpenDataStreamSignal_BackupVolume
+	//	*OpenDataStreamSignal_RestoreVolume
+	//	*OpenDataStreamSignal_ContainerUpdate
+	//	*OpenDataStreamSignal_UpdateBinary
+	Params        isOpenDataStreamSignal_Params `protobuf_oneof:"params"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenDataStreamSignal) Reset() {
+	*x = OpenDataStreamSignal{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenDataStreamSignal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenDataStreamSignal) ProtoMessage() {}
+
+func (x *OpenDataStreamSignal) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenDataStreamSignal.ProtoReflect.Descriptor instead.
+func (*OpenDataStreamSignal) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *OpenDataStreamSignal) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+func (x *OpenDataStreamSignal) GetStreamType() DataStreamType {
+	if x != nil {
+		return x.StreamType
+	}
+	return DataStreamType_DATA_STREAM_TYPE_UNSPECIFIED
+}
+
+func (x *OpenDataStreamSignal) GetParams() isOpenDataStreamSignal_Params {
+	if x != nil {
+		return x.Params
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetStreamLogs() *StreamLogsRequest {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_StreamLogs); ok {
+			return x.StreamLogs
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetPullImage() *ImagePullRequest {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_PullImage); ok {
+			return x.PullImage
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetComposeUp() *ComposeRequest {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_ComposeUp); ok {
+			return x.ComposeUp
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetComposeDown() *ComposeRequest {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_ComposeDown); ok {
+			return x.ComposeDown
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetComposePull() *ComposeRequest {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_ComposePull); ok {
+			return x.ComposePull
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetBackupVolume() *BackupVolumeRequest {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_BackupVolume); ok {
+			return x.BackupVolume
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetRestoreVolume() *RestoreVolumeRequest {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_RestoreVolume); ok {
+			return x.RestoreVolume
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetContainerUpdate() *ExecuteContainerUpdateRequest {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_ContainerUpdate); ok {
+			return x.ContainerUpdate
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamSignal) GetUpdateBinary() *DataStreamUpdateBinaryParams {
+	if x != nil {
+		if x, ok := x.Params.(*OpenDataStreamSignal_UpdateBinary); ok {
+			return x.UpdateBinary
+		}
+	}
+	return nil
+}
+
+type isOpenDataStreamSignal_Params interface {
+	isOpenDataStreamSignal_Params()
+}
+
+type OpenDataStreamSignal_StreamLogs struct {
+	StreamLogs *StreamLogsRequest `protobuf:"bytes,10,opt,name=stream_logs,json=streamLogs,proto3,oneof"`
+}
+
+type OpenDataStreamSignal_PullImage struct {
+	PullImage *ImagePullRequest `protobuf:"bytes,11,opt,name=pull_image,json=pullImage,proto3,oneof"`
+}
+
+type OpenDataStreamSignal_ComposeUp struct {
+	ComposeUp *ComposeRequest `protobuf:"bytes,12,opt,name=compose_up,json=composeUp,proto3,oneof"`
+}
+
+type OpenDataStreamSignal_ComposeDown struct {
+	ComposeDown *ComposeRequest `protobuf:"bytes,13,opt,name=compose_down,json=composeDown,proto3,oneof"`
+}
+
+type OpenDataStreamSignal_ComposePull struct {
+	ComposePull *ComposeRequest `protobuf:"bytes,14,opt,name=compose_pull,json=composePull,proto3,oneof"`
+}
+
+type OpenDataStreamSignal_BackupVolume struct {
+	BackupVolume *BackupVolumeRequest `protobuf:"bytes,15,opt,name=backup_volume,json=backupVolume,proto3,oneof"`
+}
+
+type OpenDataStreamSignal_RestoreVolume struct {
+	RestoreVolume *RestoreVolumeRequest `protobuf:"bytes,16,opt,name=restore_volume,json=restoreVolume,proto3,oneof"`
+}
+
+type OpenDataStreamSignal_ContainerUpdate struct {
+	ContainerUpdate *ExecuteContainerUpdateRequest `protobuf:"bytes,17,opt,name=container_update,json=containerUpdate,proto3,oneof"`
+}
+
+type OpenDataStreamSignal_UpdateBinary struct {
+	UpdateBinary *DataStreamUpdateBinaryParams `protobuf:"bytes,18,opt,name=update_binary,json=updateBinary,proto3,oneof"`
+}
+
+func (*OpenDataStreamSignal_StreamLogs) isOpenDataStreamSignal_Params() {}
+
+func (*OpenDataStreamSignal_PullImage) isOpenDataStreamSignal_Params() {}
+
+func (*OpenDataStreamSignal_ComposeUp) isOpenDataStreamSignal_Params() {}
+
+func (*OpenDataStreamSignal_ComposeDown) isOpenDataStreamSignal_Params() {}
+
+func (*OpenDataStreamSignal_ComposePull) isOpenDataStreamSignal_Params() {}
+
+func (*OpenDataStreamSignal_BackupVolume) isOpenDataStreamSignal_Params() {}
+
+func (*OpenDataStreamSignal_RestoreVolume) isOpenDataStreamSignal_Params() {}
+
+func (*OpenDataStreamSignal_ContainerUpdate) isOpenDataStreamSignal_Params() {}
+
+func (*OpenDataStreamSignal_UpdateBinary) isOpenDataStreamSignal_Params() {}
+
+// Parameters for agent binary update via DataStream.
+type DataStreamUpdateBinaryParams struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Checksum      string                 `protobuf:"bytes,2,opt,name=checksum,proto3" json:"checksum,omitempty"` // Expected SHA256
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DataStreamUpdateBinaryParams) Reset() {
+	*x = DataStreamUpdateBinaryParams{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[77]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DataStreamUpdateBinaryParams) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataStreamUpdateBinaryParams) ProtoMessage() {}
+
+func (x *DataStreamUpdateBinaryParams) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[77]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataStreamUpdateBinaryParams.ProtoReflect.Descriptor instead.
+func (*DataStreamUpdateBinaryParams) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{77}
+}
+
+func (x *DataStreamUpdateBinaryParams) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *DataStreamUpdateBinaryParams) GetChecksum() string {
+	if x != nil {
+		return x.Checksum
+	}
+	return ""
+}
+
+// Signal the agent to open an ExecStream for a terminal session.
+type OpenExecStreamSignal struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ContainerId   string                 `protobuf:"bytes,2,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	Command       []string               `protobuf:"bytes,3,rep,name=command,proto3" json:"command,omitempty"`
+	Tty           bool                   `protobuf:"varint,4,opt,name=tty,proto3" json:"tty,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenExecStreamSignal) Reset() {
+	*x = OpenExecStreamSignal{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenExecStreamSignal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenExecStreamSignal) ProtoMessage() {}
+
+func (x *OpenExecStreamSignal) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenExecStreamSignal.ProtoReflect.Descriptor instead.
+func (*OpenExecStreamSignal) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{78}
+}
+
+func (x *OpenExecStreamSignal) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *OpenExecStreamSignal) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
+func (x *OpenExecStreamSignal) GetCommand() []string {
+	if x != nil {
+		return x.Command
+	}
+	return nil
+}
+
+func (x *OpenExecStreamSignal) GetTty() bool {
+	if x != nil {
+		return x.Tty
+	}
+	return false
+}
+
+// Agent → Manager data (logs lines, progress, binary chunks).
+type OpenDataStreamRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	StreamId string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*OpenDataStreamRequest_Data
+	//	*OpenDataStreamRequest_Text
+	//	*OpenDataStreamRequest_Progress
+	//	*OpenDataStreamRequest_Complete
+	//	*OpenDataStreamRequest_Error
+	Payload       isOpenDataStreamRequest_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenDataStreamRequest) Reset() {
+	*x = OpenDataStreamRequest{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[79]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenDataStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenDataStreamRequest) ProtoMessage() {}
+
+func (x *OpenDataStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[79]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenDataStreamRequest.ProtoReflect.Descriptor instead.
+func (*OpenDataStreamRequest) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{79}
+}
+
+func (x *OpenDataStreamRequest) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+func (x *OpenDataStreamRequest) GetPayload() isOpenDataStreamRequest_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *OpenDataStreamRequest) GetData() []byte {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenDataStreamRequest_Data); ok {
+			return x.Data
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamRequest) GetText() *DataStreamText {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenDataStreamRequest_Text); ok {
+			return x.Text
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamRequest) GetProgress() *DataStreamProgress {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenDataStreamRequest_Progress); ok {
+			return x.Progress
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamRequest) GetComplete() *DataStreamComplete {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenDataStreamRequest_Complete); ok {
+			return x.Complete
+		}
+	}
+	return nil
+}
+
+func (x *OpenDataStreamRequest) GetError() *DataStreamError {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenDataStreamRequest_Error); ok {
+			return x.Error
+		}
+	}
+	return nil
+}
+
+type isOpenDataStreamRequest_Payload interface {
+	isOpenDataStreamRequest_Payload()
+}
+
+type OpenDataStreamRequest_Data struct {
+	Data []byte `protobuf:"bytes,2,opt,name=data,proto3,oneof"` // Raw binary (update chunks)
+}
+
+type OpenDataStreamRequest_Text struct {
+	Text *DataStreamText `protobuf:"bytes,3,opt,name=text,proto3,oneof"` // Text line (logs, compose output)
+}
+
+type OpenDataStreamRequest_Progress struct {
+	Progress *DataStreamProgress `protobuf:"bytes,4,opt,name=progress,proto3,oneof"` // Progress update (pull, backup)
+}
+
+type OpenDataStreamRequest_Complete struct {
+	Complete *DataStreamComplete `protobuf:"bytes,5,opt,name=complete,proto3,oneof"` // Stream finished
+}
+
+type OpenDataStreamRequest_Error struct {
+	Error *DataStreamError `protobuf:"bytes,6,opt,name=error,proto3,oneof"` // Stream errored
+}
+
+func (*OpenDataStreamRequest_Data) isOpenDataStreamRequest_Payload() {}
+
+func (*OpenDataStreamRequest_Text) isOpenDataStreamRequest_Payload() {}
+
+func (*OpenDataStreamRequest_Progress) isOpenDataStreamRequest_Payload() {}
+
+func (*OpenDataStreamRequest_Complete) isOpenDataStreamRequest_Payload() {}
+
+func (*OpenDataStreamRequest_Error) isOpenDataStreamRequest_Payload() {}
+
+// Manager → Agent control on a data stream.
+type OpenDataStreamResponse struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	StreamId string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*OpenDataStreamResponse_Cancel
+	Payload       isOpenDataStreamResponse_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenDataStreamResponse) Reset() {
+	*x = OpenDataStreamResponse{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[80]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenDataStreamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenDataStreamResponse) ProtoMessage() {}
+
+func (x *OpenDataStreamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[80]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenDataStreamResponse.ProtoReflect.Descriptor instead.
+func (*OpenDataStreamResponse) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{80}
+}
+
+func (x *OpenDataStreamResponse) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+func (x *OpenDataStreamResponse) GetPayload() isOpenDataStreamResponse_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *OpenDataStreamResponse) GetCancel() *DataStreamCancel {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenDataStreamResponse_Cancel); ok {
+			return x.Cancel
+		}
+	}
+	return nil
+}
+
+type isOpenDataStreamResponse_Payload interface {
+	isOpenDataStreamResponse_Payload()
+}
+
+type OpenDataStreamResponse_Cancel struct {
+	Cancel *DataStreamCancel `protobuf:"bytes,2,opt,name=cancel,proto3,oneof"` // Manager requests cancellation
+}
+
+func (*OpenDataStreamResponse_Cancel) isOpenDataStreamResponse_Payload() {}
+
+// Text payload for log lines, compose output, etc.
+type DataStreamText struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Line          string                 `protobuf:"bytes,1,opt,name=line,proto3" json:"line,omitempty"`
+	Stream        string                 `protobuf:"bytes,2,opt,name=stream,proto3" json:"stream,omitempty"` // "stdout", "stderr"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DataStreamText) Reset() {
+	*x = DataStreamText{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[81]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DataStreamText) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataStreamText) ProtoMessage() {}
+
+func (x *DataStreamText) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[81]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataStreamText.ProtoReflect.Descriptor instead.
+func (*DataStreamText) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{81}
+}
+
+func (x *DataStreamText) GetLine() string {
+	if x != nil {
+		return x.Line
+	}
+	return ""
+}
+
+func (x *DataStreamText) GetStream() string {
+	if x != nil {
+		return x.Stream
+	}
+	return ""
+}
+
+// Progress payload for image pull, backup, etc.
+type DataStreamProgress struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Id            string                 `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"` // Layer ID for image pull
+	Current       int64                  `protobuf:"varint,4,opt,name=current,proto3" json:"current,omitempty"`
+	Total         int64                  `protobuf:"varint,5,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DataStreamProgress) Reset() {
+	*x = DataStreamProgress{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[82]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DataStreamProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataStreamProgress) ProtoMessage() {}
+
+func (x *DataStreamProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[82]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataStreamProgress.ProtoReflect.Descriptor instead.
+func (*DataStreamProgress) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{82}
+}
+
+func (x *DataStreamProgress) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *DataStreamProgress) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *DataStreamProgress) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DataStreamProgress) GetCurrent() int64 {
+	if x != nil {
+		return x.Current
+	}
+	return 0
+}
+
+func (x *DataStreamProgress) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+// Signal that the data stream completed successfully.
+type DataStreamComplete struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Summary       string                 `protobuf:"bytes,1,opt,name=summary,proto3" json:"summary,omitempty"`
+	ExitCode      int32                  `protobuf:"varint,2,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"` // For compose operations
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DataStreamComplete) Reset() {
+	*x = DataStreamComplete{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[83]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DataStreamComplete) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataStreamComplete) ProtoMessage() {}
+
+func (x *DataStreamComplete) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[83]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataStreamComplete.ProtoReflect.Descriptor instead.
+func (*DataStreamComplete) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{83}
+}
+
+func (x *DataStreamComplete) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *DataStreamComplete) GetExitCode() int32 {
+	if x != nil {
+		return x.ExitCode
+	}
+	return 0
+}
+
+// Signal that the data stream errored.
+type DataStreamError struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DataStreamError) Reset() {
+	*x = DataStreamError{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[84]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DataStreamError) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataStreamError) ProtoMessage() {}
+
+func (x *DataStreamError) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[84]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataStreamError.ProtoReflect.Descriptor instead.
+func (*DataStreamError) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{84}
+}
+
+func (x *DataStreamError) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *DataStreamError) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+// Manager requests the agent to cancel the data stream.
+type DataStreamCancel struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reason        string                 `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DataStreamCancel) Reset() {
+	*x = DataStreamCancel{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[85]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DataStreamCancel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataStreamCancel) ProtoMessage() {}
+
+func (x *DataStreamCancel) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[85]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataStreamCancel.ProtoReflect.Descriptor instead.
+func (*DataStreamCancel) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{85}
+}
+
+func (x *DataStreamCancel) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// Agent → Manager (terminal stdout, exit).
+type OpenExecStreamRequest struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	SessionId string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*OpenExecStreamRequest_Stdout
+	//	*OpenExecStreamRequest_Exit
+	Payload       isOpenExecStreamRequest_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenExecStreamRequest) Reset() {
+	*x = OpenExecStreamRequest{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[86]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenExecStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenExecStreamRequest) ProtoMessage() {}
+
+func (x *OpenExecStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[86]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenExecStreamRequest.ProtoReflect.Descriptor instead.
+func (*OpenExecStreamRequest) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{86}
+}
+
+func (x *OpenExecStreamRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *OpenExecStreamRequest) GetPayload() isOpenExecStreamRequest_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *OpenExecStreamRequest) GetStdout() []byte {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenExecStreamRequest_Stdout); ok {
+			return x.Stdout
+		}
+	}
+	return nil
+}
+
+func (x *OpenExecStreamRequest) GetExit() *ExecStreamExit {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenExecStreamRequest_Exit); ok {
+			return x.Exit
+		}
+	}
+	return nil
+}
+
+type isOpenExecStreamRequest_Payload interface {
+	isOpenExecStreamRequest_Payload()
+}
+
+type OpenExecStreamRequest_Stdout struct {
+	Stdout []byte `protobuf:"bytes,2,opt,name=stdout,proto3,oneof"`
+}
+
+type OpenExecStreamRequest_Exit struct {
+	Exit *ExecStreamExit `protobuf:"bytes,3,opt,name=exit,proto3,oneof"`
+}
+
+func (*OpenExecStreamRequest_Stdout) isOpenExecStreamRequest_Payload() {}
+
+func (*OpenExecStreamRequest_Exit) isOpenExecStreamRequest_Payload() {}
+
+// Manager → Agent (terminal stdin, resize, close).
+type OpenExecStreamResponse struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	SessionId string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*OpenExecStreamResponse_Stdin
+	//	*OpenExecStreamResponse_Resize
+	//	*OpenExecStreamResponse_Close
+	Payload       isOpenExecStreamResponse_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenExecStreamResponse) Reset() {
+	*x = OpenExecStreamResponse{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[87]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenExecStreamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenExecStreamResponse) ProtoMessage() {}
+
+func (x *OpenExecStreamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[87]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenExecStreamResponse.ProtoReflect.Descriptor instead.
+func (*OpenExecStreamResponse) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{87}
+}
+
+func (x *OpenExecStreamResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *OpenExecStreamResponse) GetPayload() isOpenExecStreamResponse_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *OpenExecStreamResponse) GetStdin() []byte {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenExecStreamResponse_Stdin); ok {
+			return x.Stdin
+		}
+	}
+	return nil
+}
+
+func (x *OpenExecStreamResponse) GetResize() *ExecStreamResize {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenExecStreamResponse_Resize); ok {
+			return x.Resize
+		}
+	}
+	return nil
+}
+
+func (x *OpenExecStreamResponse) GetClose() *ExecStreamClose {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenExecStreamResponse_Close); ok {
+			return x.Close
+		}
+	}
+	return nil
+}
+
+type isOpenExecStreamResponse_Payload interface {
+	isOpenExecStreamResponse_Payload()
+}
+
+type OpenExecStreamResponse_Stdin struct {
+	Stdin []byte `protobuf:"bytes,2,opt,name=stdin,proto3,oneof"`
+}
+
+type OpenExecStreamResponse_Resize struct {
+	Resize *ExecStreamResize `protobuf:"bytes,3,opt,name=resize,proto3,oneof"`
+}
+
+type OpenExecStreamResponse_Close struct {
+	Close *ExecStreamClose `protobuf:"bytes,4,opt,name=close,proto3,oneof"`
+}
+
+func (*OpenExecStreamResponse_Stdin) isOpenExecStreamResponse_Payload() {}
+
+func (*OpenExecStreamResponse_Resize) isOpenExecStreamResponse_Payload() {}
+
+func (*OpenExecStreamResponse_Close) isOpenExecStreamResponse_Payload() {}
+
+// Terminal window resize.
+type ExecStreamResize struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cols          uint32                 `protobuf:"varint,1,opt,name=cols,proto3" json:"cols,omitempty"`
+	Rows          uint32                 `protobuf:"varint,2,opt,name=rows,proto3" json:"rows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecStreamResize) Reset() {
+	*x = ExecStreamResize{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[88]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecStreamResize) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecStreamResize) ProtoMessage() {}
+
+func (x *ExecStreamResize) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[88]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecStreamResize.ProtoReflect.Descriptor instead.
+func (*ExecStreamResize) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{88}
+}
+
+func (x *ExecStreamResize) GetCols() uint32 {
+	if x != nil {
+		return x.Cols
+	}
+	return 0
+}
+
+func (x *ExecStreamResize) GetRows() uint32 {
+	if x != nil {
+		return x.Rows
+	}
+	return 0
+}
+
+// Request to close the exec session.
+type ExecStreamClose struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecStreamClose) Reset() {
+	*x = ExecStreamClose{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[89]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecStreamClose) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecStreamClose) ProtoMessage() {}
+
+func (x *ExecStreamClose) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[89]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecStreamClose.ProtoReflect.Descriptor instead.
+func (*ExecStreamClose) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{89}
+}
+
+// Agent reports exec process exited.
+type ExecStreamExit struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExitCode      int32                  `protobuf:"varint,1,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecStreamExit) Reset() {
+	*x = ExecStreamExit{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[90]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecStreamExit) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecStreamExit) ProtoMessage() {}
+
+func (x *ExecStreamExit) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[90]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecStreamExit.ProtoReflect.Descriptor instead.
+func (*ExecStreamExit) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{90}
+}
+
+func (x *ExecStreamExit) GetExitCode() int32 {
+	if x != nil {
+		return x.ExitCode
+	}
+	return 0
+}
+
 var File_dockeeper_agent_v1_agent_proto protoreflect.FileDescriptor
 
 const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
@@ -4981,7 +7135,138 @@ const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
 	"statusCode\x12(\n" +
 	"\x10response_time_ms\x18\x02 \x01(\x03R\x0eresponseTimeMs\x12\x14\n" +
 	"\x05error\x18\x03 \x01(\tR\x05error\x12\x18\n" +
-	"\asuccess\x18\x04 \x01(\bR\asuccess*\xf2\x02\n" +
+	"\asuccess\x18\x04 \x01(\bR\asuccess\"\xef\x01\n" +
+	"\x12OpenChannelRequest\x125\n" +
+	"\x04init\x18\x01 \x01(\v2\x1f.dockeeper.agent.v1.ChannelInitH\x00R\x04init\x12D\n" +
+	"\theartbeat\x18\x02 \x01(\v2$.dockeeper.agent.v1.ChannelHeartbeatH\x00R\theartbeat\x12Q\n" +
+	"\x0ecommand_result\x18\x03 \x01(\v2(.dockeeper.agent.v1.ChannelCommandResultH\x00R\rcommandResultB\t\n" +
+	"\apayload\"\xd2\x02\n" +
+	"\x13OpenChannelResponse\x12D\n" +
+	"\theartbeat\x18\x01 \x01(\v2$.dockeeper.agent.v1.ChannelHeartbeatH\x00R\theartbeat\x12>\n" +
+	"\acommand\x18\x02 \x01(\v2\".dockeeper.agent.v1.ChannelCommandH\x00R\acommand\x12T\n" +
+	"\x10open_data_stream\x18\x03 \x01(\v2(.dockeeper.agent.v1.OpenDataStreamSignalH\x00R\x0eopenDataStream\x12T\n" +
+	"\x10open_exec_stream\x18\x04 \x01(\v2(.dockeeper.agent.v1.OpenExecStreamSignalH\x00R\x0eopenExecStreamB\t\n" +
+	"\apayload\"*\n" +
+	"\vChannelInit\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\"5\n" +
+	"\x10ChannelHeartbeat\x12!\n" +
+	"\ftimestamp_ms\x18\x01 \x01(\x03R\vtimestampMs\"\x9f\t\n" +
+	"\x0eChannelCommand\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x1a\n" +
+	"\bpriority\x18\x02 \x01(\x05R\bpriority\x12T\n" +
+	"\x0fexecute_command\x18\n" +
+	" \x01(\v2).dockeeper.agent.v1.ExecuteCommandRequestH\x00R\x0eexecuteCommand\x12K\n" +
+	"\fremove_image\x18\x14 \x01(\v2&.dockeeper.agent.v1.ImageRemoveRequestH\x00R\vremoveImage\x12J\n" +
+	"\fprune_images\x18\x15 \x01(\v2%.dockeeper.agent.v1.ImagePruneRequestH\x00R\vpruneImages\x12Q\n" +
+	"\x0ecompose_config\x18\x1e \x01(\v2(.dockeeper.agent.v1.ComposeConfigRequestH\x00R\rcomposeConfig\x12Q\n" +
+	"\x0ecreate_network\x18( \x01(\v2(.dockeeper.agent.v1.CreateNetworkRequestH\x00R\rcreateNetwork\x12Q\n" +
+	"\x0eremove_network\x18) \x01(\v2(.dockeeper.agent.v1.RemoveNetworkRequestH\x00R\rremoveNetwork\x12X\n" +
+	"\x11connect_container\x18* \x01(\v2).dockeeper.agent.v1.NetworkConnectRequestH\x00R\x10connectContainer\x12a\n" +
+	"\x14disconnect_container\x18+ \x01(\v2,.dockeeper.agent.v1.NetworkDisconnectRequestH\x00R\x13disconnectContainer\x12N\n" +
+	"\rcreate_volume\x182 \x01(\v2'.dockeeper.agent.v1.CreateVolumeRequestH\x00R\fcreateVolume\x12N\n" +
+	"\rremove_volume\x183 \x01(\v2'.dockeeper.agent.v1.RemoveVolumeRequestH\x00R\fremoveVolume\x12Q\n" +
+	"\x0einspect_volume\x184 \x01(\v2(.dockeeper.agent.v1.InspectVolumeRequestH\x00R\rinspectVolume\x12R\n" +
+	"\fhealth_check\x18< \x01(\v2-.dockeeper.agent.v1.ExecuteHealthCheckRequestH\x00R\vhealthCheck\x12[\n" +
+	"\x12check_image_digest\x18F \x01(\v2+.dockeeper.agent.v1.CheckImageDigestRequestH\x00R\x10checkImageDigestB\t\n" +
+	"\acommand\"\xd6\t\n" +
+	"\x14ChannelCommandResult\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12U\n" +
+	"\x0fexecute_command\x18\n" +
+	" \x01(\v2*.dockeeper.agent.v1.ExecuteCommandResponseH\x00R\x0eexecuteCommand\x12L\n" +
+	"\fremove_image\x18\x14 \x01(\v2'.dockeeper.agent.v1.ImageRemoveResponseH\x00R\vremoveImage\x12K\n" +
+	"\fprune_images\x18\x15 \x01(\v2&.dockeeper.agent.v1.ImagePruneResponseH\x00R\vpruneImages\x12R\n" +
+	"\x0ecompose_config\x18\x1e \x01(\v2).dockeeper.agent.v1.ComposeConfigResponseH\x00R\rcomposeConfig\x12R\n" +
+	"\x0ecreate_network\x18( \x01(\v2).dockeeper.agent.v1.CreateNetworkResponseH\x00R\rcreateNetwork\x12R\n" +
+	"\x0eremove_network\x18) \x01(\v2).dockeeper.agent.v1.RemoveNetworkResponseH\x00R\rremoveNetwork\x12Y\n" +
+	"\x11connect_container\x18* \x01(\v2*.dockeeper.agent.v1.NetworkConnectResponseH\x00R\x10connectContainer\x12b\n" +
+	"\x14disconnect_container\x18+ \x01(\v2-.dockeeper.agent.v1.NetworkDisconnectResponseH\x00R\x13disconnectContainer\x12O\n" +
+	"\rcreate_volume\x182 \x01(\v2(.dockeeper.agent.v1.CreateVolumeResponseH\x00R\fcreateVolume\x12O\n" +
+	"\rremove_volume\x183 \x01(\v2(.dockeeper.agent.v1.RemoveVolumeResponseH\x00R\fremoveVolume\x12R\n" +
+	"\x0einspect_volume\x184 \x01(\v2).dockeeper.agent.v1.InspectVolumeResponseH\x00R\rinspectVolume\x12S\n" +
+	"\fhealth_check\x18< \x01(\v2..dockeeper.agent.v1.ExecuteHealthCheckResponseH\x00R\vhealthCheck\x12\\\n" +
+	"\x12check_image_digest\x18F \x01(\v2,.dockeeper.agent.v1.CheckImageDigestResponseH\x00R\x10checkImageDigest\x12?\n" +
+	"\x05error\x18c \x01(\v2'.dockeeper.agent.v1.ChannelCommandErrorH\x00R\x05errorB\b\n" +
+	"\x06result\"C\n" +
+	"\x13ChannelCommandError\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xc6\x06\n" +
+	"\x14OpenDataStreamSignal\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\x12C\n" +
+	"\vstream_type\x18\x02 \x01(\x0e2\".dockeeper.agent.v1.DataStreamTypeR\n" +
+	"streamType\x12H\n" +
+	"\vstream_logs\x18\n" +
+	" \x01(\v2%.dockeeper.agent.v1.StreamLogsRequestH\x00R\n" +
+	"streamLogs\x12E\n" +
+	"\n" +
+	"pull_image\x18\v \x01(\v2$.dockeeper.agent.v1.ImagePullRequestH\x00R\tpullImage\x12C\n" +
+	"\n" +
+	"compose_up\x18\f \x01(\v2\".dockeeper.agent.v1.ComposeRequestH\x00R\tcomposeUp\x12G\n" +
+	"\fcompose_down\x18\r \x01(\v2\".dockeeper.agent.v1.ComposeRequestH\x00R\vcomposeDown\x12G\n" +
+	"\fcompose_pull\x18\x0e \x01(\v2\".dockeeper.agent.v1.ComposeRequestH\x00R\vcomposePull\x12N\n" +
+	"\rbackup_volume\x18\x0f \x01(\v2'.dockeeper.agent.v1.BackupVolumeRequestH\x00R\fbackupVolume\x12Q\n" +
+	"\x0erestore_volume\x18\x10 \x01(\v2(.dockeeper.agent.v1.RestoreVolumeRequestH\x00R\rrestoreVolume\x12^\n" +
+	"\x10container_update\x18\x11 \x01(\v21.dockeeper.agent.v1.ExecuteContainerUpdateRequestH\x00R\x0fcontainerUpdate\x12W\n" +
+	"\rupdate_binary\x18\x12 \x01(\v20.dockeeper.agent.v1.DataStreamUpdateBinaryParamsH\x00R\fupdateBinaryB\b\n" +
+	"\x06params\"T\n" +
+	"\x1cDataStreamUpdateBinaryParams\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x1a\n" +
+	"\bchecksum\x18\x02 \x01(\tR\bchecksum\"\x84\x01\n" +
+	"\x14OpenExecStreamSignal\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12!\n" +
+	"\fcontainer_id\x18\x02 \x01(\tR\vcontainerId\x12\x18\n" +
+	"\acommand\x18\x03 \x03(\tR\acommand\x12\x10\n" +
+	"\x03tty\x18\x04 \x01(\bR\x03tty\"\xd8\x02\n" +
+	"\x15OpenDataStreamRequest\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\x12\x14\n" +
+	"\x04data\x18\x02 \x01(\fH\x00R\x04data\x128\n" +
+	"\x04text\x18\x03 \x01(\v2\".dockeeper.agent.v1.DataStreamTextH\x00R\x04text\x12D\n" +
+	"\bprogress\x18\x04 \x01(\v2&.dockeeper.agent.v1.DataStreamProgressH\x00R\bprogress\x12D\n" +
+	"\bcomplete\x18\x05 \x01(\v2&.dockeeper.agent.v1.DataStreamCompleteH\x00R\bcomplete\x12;\n" +
+	"\x05error\x18\x06 \x01(\v2#.dockeeper.agent.v1.DataStreamErrorH\x00R\x05errorB\t\n" +
+	"\apayload\"\x80\x01\n" +
+	"\x16OpenDataStreamResponse\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\x12>\n" +
+	"\x06cancel\x18\x02 \x01(\v2$.dockeeper.agent.v1.DataStreamCancelH\x00R\x06cancelB\t\n" +
+	"\apayload\"<\n" +
+	"\x0eDataStreamText\x12\x12\n" +
+	"\x04line\x18\x01 \x01(\tR\x04line\x12\x16\n" +
+	"\x06stream\x18\x02 \x01(\tR\x06stream\"\x86\x01\n" +
+	"\x12DataStreamProgress\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x0e\n" +
+	"\x02id\x18\x03 \x01(\tR\x02id\x12\x18\n" +
+	"\acurrent\x18\x04 \x01(\x03R\acurrent\x12\x14\n" +
+	"\x05total\x18\x05 \x01(\x03R\x05total\"K\n" +
+	"\x12DataStreamComplete\x12\x18\n" +
+	"\asummary\x18\x01 \x01(\tR\asummary\x12\x1b\n" +
+	"\texit_code\x18\x02 \x01(\x05R\bexitCode\"?\n" +
+	"\x0fDataStreamError\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"*\n" +
+	"\x10DataStreamCancel\x12\x16\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\"\x95\x01\n" +
+	"\x15OpenExecStreamRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x18\n" +
+	"\x06stdout\x18\x02 \x01(\fH\x00R\x06stdout\x128\n" +
+	"\x04exit\x18\x03 \x01(\v2\".dockeeper.agent.v1.ExecStreamExitH\x00R\x04exitB\t\n" +
+	"\apayload\"\xd7\x01\n" +
+	"\x16OpenExecStreamResponse\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +
+	"\x05stdin\x18\x02 \x01(\fH\x00R\x05stdin\x12>\n" +
+	"\x06resize\x18\x03 \x01(\v2$.dockeeper.agent.v1.ExecStreamResizeH\x00R\x06resize\x12;\n" +
+	"\x05close\x18\x04 \x01(\v2#.dockeeper.agent.v1.ExecStreamCloseH\x00R\x05closeB\t\n" +
+	"\apayload\":\n" +
+	"\x10ExecStreamResize\x12\x12\n" +
+	"\x04cols\x18\x01 \x01(\rR\x04cols\x12\x12\n" +
+	"\x04rows\x18\x02 \x01(\rR\x04rows\"\x11\n" +
+	"\x0fExecStreamClose\"-\n" +
+	"\x0eExecStreamExit\x12\x1b\n" +
+	"\texit_code\x18\x01 \x01(\x05R\bexitCode*\xf2\x02\n" +
 	"\vCommandType\x12\x1c\n" +
 	"\x18COMMAND_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12COMMAND_TYPE_START\x10\x01\x12\x15\n" +
@@ -4996,7 +7281,18 @@ const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
 	"\x19COMMAND_TYPE_RECREATE_ENV\x10\n" +
 	"\x12\x1d\n" +
 	"\x19COMMAND_TYPE_UPDATE_IMAGE\x10\v\x12\x1a\n" +
-	"\x16COMMAND_TYPE_UNINSTALL\x10\f2\xc3\x01\n" +
+	"\x16COMMAND_TYPE_UNINSTALL\x10\f*\xda\x02\n" +
+	"\x0eDataStreamType\x12 \n" +
+	"\x1cDATA_STREAM_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15DATA_STREAM_TYPE_LOGS\x10\x01\x12\x1f\n" +
+	"\x1bDATA_STREAM_TYPE_IMAGE_PULL\x10\x02\x12\x1f\n" +
+	"\x1bDATA_STREAM_TYPE_COMPOSE_UP\x10\x03\x12!\n" +
+	"\x1dDATA_STREAM_TYPE_COMPOSE_DOWN\x10\x04\x12!\n" +
+	"\x1dDATA_STREAM_TYPE_COMPOSE_PULL\x10\x05\x12\x1b\n" +
+	"\x17DATA_STREAM_TYPE_BACKUP\x10\x06\x12\x1c\n" +
+	"\x18DATA_STREAM_TYPE_RESTORE\x10\a\x12%\n" +
+	"!DATA_STREAM_TYPE_CONTAINER_UPDATE\x10\b\x12!\n" +
+	"\x1dDATA_STREAM_TYPE_AGENT_UPDATE\x10\t2\xc3\x01\n" +
 	"\x16AgentEnrollmentService\x12O\n" +
 	"\x06Enroll\x12!.dockeeper.agent.v1.EnrollRequest\x1a\".dockeeper.agent.v1.EnrollResponse\x12X\n" +
 	"\tRenewCert\x12$.dockeeper.agent.v1.RenewCertRequest\x1a%.dockeeper.agent.v1.RenewCertResponse2\x81\x02\n" +
@@ -5043,7 +7339,13 @@ const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
 	"\x16ExecuteContainerUpdate\x121.dockeeper.agent.v1.ExecuteContainerUpdateRequest\x1a+.dockeeper.agent.v1.ContainerUpdateProgress0\x01\x12f\n" +
 	"\x11UpdateAgentBinary\x12%.dockeeper.agent.v1.UpdateBinaryChunk\x1a(.dockeeper.agent.v1.UpdateBinaryResponse(\x012\x89\x01\n" +
 	"\x12AgentHealthService\x12s\n" +
-	"\x12ExecuteHealthCheck\x12-.dockeeper.agent.v1.ExecuteHealthCheckRequest\x1a..dockeeper.agent.v1.ExecuteHealthCheckResponseBGZEgithub.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1;agentpbb\x06proto3"
+	"\x12ExecuteHealthCheck\x12-.dockeeper.agent.v1.ExecuteHealthCheckRequest\x1a..dockeeper.agent.v1.ExecuteHealthCheckResponse2\x80\x01\n" +
+	"\x1aAgentCommandChannelService\x12b\n" +
+	"\vOpenChannel\x12&.dockeeper.agent.v1.OpenChannelRequest\x1a'.dockeeper.agent.v1.OpenChannelResponse(\x010\x012\x85\x01\n" +
+	"\x16AgentDataStreamService\x12k\n" +
+	"\x0eOpenDataStream\x12).dockeeper.agent.v1.OpenDataStreamRequest\x1a*.dockeeper.agent.v1.OpenDataStreamResponse(\x010\x012\x85\x01\n" +
+	"\x16AgentExecStreamService\x12k\n" +
+	"\x0eOpenExecStream\x12).dockeeper.agent.v1.OpenExecStreamRequest\x1a*.dockeeper.agent.v1.OpenExecStreamResponse(\x010\x01BGZEgithub.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1;agentpbb\x06proto3"
 
 var (
 	file_dockeeper_agent_v1_agent_proto_rawDescOnce sync.Once
@@ -5057,179 +7359,260 @@ func file_dockeeper_agent_v1_agent_proto_rawDescGZIP() []byte {
 	return file_dockeeper_agent_v1_agent_proto_rawDescData
 }
 
-var file_dockeeper_agent_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_dockeeper_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 73)
+var file_dockeeper_agent_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_dockeeper_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 95)
 var file_dockeeper_agent_v1_agent_proto_goTypes = []any{
 	(CommandType)(0),                       // 0: dockeeper.agent.v1.CommandType
-	(*ServerInfo)(nil),                     // 1: dockeeper.agent.v1.ServerInfo
-	(*EnrollRequest)(nil),                  // 2: dockeeper.agent.v1.EnrollRequest
-	(*EnrollResponse)(nil),                 // 3: dockeeper.agent.v1.EnrollResponse
-	(*RenewCertRequest)(nil),               // 4: dockeeper.agent.v1.RenewCertRequest
-	(*RenewCertResponse)(nil),              // 5: dockeeper.agent.v1.RenewCertResponse
-	(*StreamMetricsRequest)(nil),           // 6: dockeeper.agent.v1.StreamMetricsRequest
-	(*StreamMetricsResponse)(nil),          // 7: dockeeper.agent.v1.StreamMetricsResponse
-	(*StreamContainerMetricsRequest)(nil),  // 8: dockeeper.agent.v1.StreamContainerMetricsRequest
-	(*StreamContainerMetricsResponse)(nil), // 9: dockeeper.agent.v1.StreamContainerMetricsResponse
-	(*ResourceLimits)(nil),                 // 10: dockeeper.agent.v1.ResourceLimits
-	(*ContainerInfo)(nil),                  // 11: dockeeper.agent.v1.ContainerInfo
-	(*ReportContainersRequest)(nil),        // 12: dockeeper.agent.v1.ReportContainersRequest
-	(*ReportContainersResponse)(nil),       // 13: dockeeper.agent.v1.ReportContainersResponse
-	(*ImageInfo)(nil),                      // 14: dockeeper.agent.v1.ImageInfo
-	(*ReportImagesRequest)(nil),            // 15: dockeeper.agent.v1.ReportImagesRequest
-	(*ReportImagesResponse)(nil),           // 16: dockeeper.agent.v1.ReportImagesResponse
-	(*NetworkInfo)(nil),                    // 17: dockeeper.agent.v1.NetworkInfo
-	(*ReportNetworksRequest)(nil),          // 18: dockeeper.agent.v1.ReportNetworksRequest
-	(*ReportNetworksResponse)(nil),         // 19: dockeeper.agent.v1.ReportNetworksResponse
-	(*VolumeInfo)(nil),                     // 20: dockeeper.agent.v1.VolumeInfo
-	(*ReportVolumesRequest)(nil),           // 21: dockeeper.agent.v1.ReportVolumesRequest
-	(*ReportVolumesResponse)(nil),          // 22: dockeeper.agent.v1.ReportVolumesResponse
-	(*ExecuteCommandRequest)(nil),          // 23: dockeeper.agent.v1.ExecuteCommandRequest
-	(*ExecuteCommandResponse)(nil),         // 24: dockeeper.agent.v1.ExecuteCommandResponse
-	(*ExecStart)(nil),                      // 25: dockeeper.agent.v1.ExecStart
-	(*ExecResize)(nil),                     // 26: dockeeper.agent.v1.ExecResize
-	(*ExecRequest)(nil),                    // 27: dockeeper.agent.v1.ExecRequest
-	(*ExecResponse)(nil),                   // 28: dockeeper.agent.v1.ExecResponse
-	(*StreamLogsRequest)(nil),              // 29: dockeeper.agent.v1.StreamLogsRequest
-	(*StreamLogsResponse)(nil),             // 30: dockeeper.agent.v1.StreamLogsResponse
-	(*ImagePullRequest)(nil),               // 31: dockeeper.agent.v1.ImagePullRequest
-	(*ImagePullProgress)(nil),              // 32: dockeeper.agent.v1.ImagePullProgress
-	(*ImageRemoveRequest)(nil),             // 33: dockeeper.agent.v1.ImageRemoveRequest
-	(*ImageRemoveResponse)(nil),            // 34: dockeeper.agent.v1.ImageRemoveResponse
-	(*ImagePruneRequest)(nil),              // 35: dockeeper.agent.v1.ImagePruneRequest
-	(*ImagePruneResponse)(nil),             // 36: dockeeper.agent.v1.ImagePruneResponse
-	(*ComposeRequest)(nil),                 // 37: dockeeper.agent.v1.ComposeRequest
-	(*ComposeOutput)(nil),                  // 38: dockeeper.agent.v1.ComposeOutput
-	(*ComposeConfigRequest)(nil),           // 39: dockeeper.agent.v1.ComposeConfigRequest
-	(*ComposeConfigResponse)(nil),          // 40: dockeeper.agent.v1.ComposeConfigResponse
-	(*CreateNetworkRequest)(nil),           // 41: dockeeper.agent.v1.CreateNetworkRequest
-	(*CreateNetworkResponse)(nil),          // 42: dockeeper.agent.v1.CreateNetworkResponse
-	(*RemoveNetworkRequest)(nil),           // 43: dockeeper.agent.v1.RemoveNetworkRequest
-	(*RemoveNetworkResponse)(nil),          // 44: dockeeper.agent.v1.RemoveNetworkResponse
-	(*NetworkConnectRequest)(nil),          // 45: dockeeper.agent.v1.NetworkConnectRequest
-	(*NetworkConnectResponse)(nil),         // 46: dockeeper.agent.v1.NetworkConnectResponse
-	(*NetworkDisconnectRequest)(nil),       // 47: dockeeper.agent.v1.NetworkDisconnectRequest
-	(*NetworkDisconnectResponse)(nil),      // 48: dockeeper.agent.v1.NetworkDisconnectResponse
-	(*CreateVolumeRequest)(nil),            // 49: dockeeper.agent.v1.CreateVolumeRequest
-	(*CreateVolumeResponse)(nil),           // 50: dockeeper.agent.v1.CreateVolumeResponse
-	(*RemoveVolumeRequest)(nil),            // 51: dockeeper.agent.v1.RemoveVolumeRequest
-	(*RemoveVolumeResponse)(nil),           // 52: dockeeper.agent.v1.RemoveVolumeResponse
-	(*InspectVolumeRequest)(nil),           // 53: dockeeper.agent.v1.InspectVolumeRequest
-	(*InspectVolumeResponse)(nil),          // 54: dockeeper.agent.v1.InspectVolumeResponse
-	(*S3Config)(nil),                       // 55: dockeeper.agent.v1.S3Config
-	(*BackupVolumeRequest)(nil),            // 56: dockeeper.agent.v1.BackupVolumeRequest
-	(*RestoreVolumeRequest)(nil),           // 57: dockeeper.agent.v1.RestoreVolumeRequest
-	(*BackupProgress)(nil),                 // 58: dockeeper.agent.v1.BackupProgress
-	(*TraefikRouteInfo)(nil),               // 59: dockeeper.agent.v1.TraefikRouteInfo
-	(*ReportTraefikRoutesRequest)(nil),     // 60: dockeeper.agent.v1.ReportTraefikRoutesRequest
-	(*ReportTraefikRoutesResponse)(nil),    // 61: dockeeper.agent.v1.ReportTraefikRoutesResponse
-	(*CheckImageDigestRequest)(nil),        // 62: dockeeper.agent.v1.CheckImageDigestRequest
-	(*CheckImageDigestResponse)(nil),       // 63: dockeeper.agent.v1.CheckImageDigestResponse
-	(*ExecuteContainerUpdateRequest)(nil),  // 64: dockeeper.agent.v1.ExecuteContainerUpdateRequest
-	(*ContainerUpdateProgress)(nil),        // 65: dockeeper.agent.v1.ContainerUpdateProgress
-	(*UpdateBinaryChunk)(nil),              // 66: dockeeper.agent.v1.UpdateBinaryChunk
-	(*UpdateBinaryResponse)(nil),           // 67: dockeeper.agent.v1.UpdateBinaryResponse
-	(*ExecuteHealthCheckRequest)(nil),      // 68: dockeeper.agent.v1.ExecuteHealthCheckRequest
-	(*ExecuteHealthCheckResponse)(nil),     // 69: dockeeper.agent.v1.ExecuteHealthCheckResponse
-	nil,                                    // 70: dockeeper.agent.v1.ExecuteCommandRequest.ParamsEntry
-	nil,                                    // 71: dockeeper.agent.v1.CreateNetworkRequest.LabelsEntry
-	nil,                                    // 72: dockeeper.agent.v1.CreateVolumeRequest.LabelsEntry
-	nil,                                    // 73: dockeeper.agent.v1.InspectVolumeResponse.LabelsEntry
-	(*timestamppb.Timestamp)(nil),          // 74: google.protobuf.Timestamp
+	(DataStreamType)(0),                    // 1: dockeeper.agent.v1.DataStreamType
+	(*ServerInfo)(nil),                     // 2: dockeeper.agent.v1.ServerInfo
+	(*EnrollRequest)(nil),                  // 3: dockeeper.agent.v1.EnrollRequest
+	(*EnrollResponse)(nil),                 // 4: dockeeper.agent.v1.EnrollResponse
+	(*RenewCertRequest)(nil),               // 5: dockeeper.agent.v1.RenewCertRequest
+	(*RenewCertResponse)(nil),              // 6: dockeeper.agent.v1.RenewCertResponse
+	(*StreamMetricsRequest)(nil),           // 7: dockeeper.agent.v1.StreamMetricsRequest
+	(*StreamMetricsResponse)(nil),          // 8: dockeeper.agent.v1.StreamMetricsResponse
+	(*StreamContainerMetricsRequest)(nil),  // 9: dockeeper.agent.v1.StreamContainerMetricsRequest
+	(*StreamContainerMetricsResponse)(nil), // 10: dockeeper.agent.v1.StreamContainerMetricsResponse
+	(*ResourceLimits)(nil),                 // 11: dockeeper.agent.v1.ResourceLimits
+	(*ContainerInfo)(nil),                  // 12: dockeeper.agent.v1.ContainerInfo
+	(*ReportContainersRequest)(nil),        // 13: dockeeper.agent.v1.ReportContainersRequest
+	(*ReportContainersResponse)(nil),       // 14: dockeeper.agent.v1.ReportContainersResponse
+	(*ImageInfo)(nil),                      // 15: dockeeper.agent.v1.ImageInfo
+	(*ReportImagesRequest)(nil),            // 16: dockeeper.agent.v1.ReportImagesRequest
+	(*ReportImagesResponse)(nil),           // 17: dockeeper.agent.v1.ReportImagesResponse
+	(*NetworkInfo)(nil),                    // 18: dockeeper.agent.v1.NetworkInfo
+	(*ReportNetworksRequest)(nil),          // 19: dockeeper.agent.v1.ReportNetworksRequest
+	(*ReportNetworksResponse)(nil),         // 20: dockeeper.agent.v1.ReportNetworksResponse
+	(*VolumeInfo)(nil),                     // 21: dockeeper.agent.v1.VolumeInfo
+	(*ReportVolumesRequest)(nil),           // 22: dockeeper.agent.v1.ReportVolumesRequest
+	(*ReportVolumesResponse)(nil),          // 23: dockeeper.agent.v1.ReportVolumesResponse
+	(*ExecuteCommandRequest)(nil),          // 24: dockeeper.agent.v1.ExecuteCommandRequest
+	(*ExecuteCommandResponse)(nil),         // 25: dockeeper.agent.v1.ExecuteCommandResponse
+	(*ExecStart)(nil),                      // 26: dockeeper.agent.v1.ExecStart
+	(*ExecResize)(nil),                     // 27: dockeeper.agent.v1.ExecResize
+	(*ExecRequest)(nil),                    // 28: dockeeper.agent.v1.ExecRequest
+	(*ExecResponse)(nil),                   // 29: dockeeper.agent.v1.ExecResponse
+	(*StreamLogsRequest)(nil),              // 30: dockeeper.agent.v1.StreamLogsRequest
+	(*StreamLogsResponse)(nil),             // 31: dockeeper.agent.v1.StreamLogsResponse
+	(*ImagePullRequest)(nil),               // 32: dockeeper.agent.v1.ImagePullRequest
+	(*ImagePullProgress)(nil),              // 33: dockeeper.agent.v1.ImagePullProgress
+	(*ImageRemoveRequest)(nil),             // 34: dockeeper.agent.v1.ImageRemoveRequest
+	(*ImageRemoveResponse)(nil),            // 35: dockeeper.agent.v1.ImageRemoveResponse
+	(*ImagePruneRequest)(nil),              // 36: dockeeper.agent.v1.ImagePruneRequest
+	(*ImagePruneResponse)(nil),             // 37: dockeeper.agent.v1.ImagePruneResponse
+	(*ComposeRequest)(nil),                 // 38: dockeeper.agent.v1.ComposeRequest
+	(*ComposeOutput)(nil),                  // 39: dockeeper.agent.v1.ComposeOutput
+	(*ComposeConfigRequest)(nil),           // 40: dockeeper.agent.v1.ComposeConfigRequest
+	(*ComposeConfigResponse)(nil),          // 41: dockeeper.agent.v1.ComposeConfigResponse
+	(*CreateNetworkRequest)(nil),           // 42: dockeeper.agent.v1.CreateNetworkRequest
+	(*CreateNetworkResponse)(nil),          // 43: dockeeper.agent.v1.CreateNetworkResponse
+	(*RemoveNetworkRequest)(nil),           // 44: dockeeper.agent.v1.RemoveNetworkRequest
+	(*RemoveNetworkResponse)(nil),          // 45: dockeeper.agent.v1.RemoveNetworkResponse
+	(*NetworkConnectRequest)(nil),          // 46: dockeeper.agent.v1.NetworkConnectRequest
+	(*NetworkConnectResponse)(nil),         // 47: dockeeper.agent.v1.NetworkConnectResponse
+	(*NetworkDisconnectRequest)(nil),       // 48: dockeeper.agent.v1.NetworkDisconnectRequest
+	(*NetworkDisconnectResponse)(nil),      // 49: dockeeper.agent.v1.NetworkDisconnectResponse
+	(*CreateVolumeRequest)(nil),            // 50: dockeeper.agent.v1.CreateVolumeRequest
+	(*CreateVolumeResponse)(nil),           // 51: dockeeper.agent.v1.CreateVolumeResponse
+	(*RemoveVolumeRequest)(nil),            // 52: dockeeper.agent.v1.RemoveVolumeRequest
+	(*RemoveVolumeResponse)(nil),           // 53: dockeeper.agent.v1.RemoveVolumeResponse
+	(*InspectVolumeRequest)(nil),           // 54: dockeeper.agent.v1.InspectVolumeRequest
+	(*InspectVolumeResponse)(nil),          // 55: dockeeper.agent.v1.InspectVolumeResponse
+	(*S3Config)(nil),                       // 56: dockeeper.agent.v1.S3Config
+	(*BackupVolumeRequest)(nil),            // 57: dockeeper.agent.v1.BackupVolumeRequest
+	(*RestoreVolumeRequest)(nil),           // 58: dockeeper.agent.v1.RestoreVolumeRequest
+	(*BackupProgress)(nil),                 // 59: dockeeper.agent.v1.BackupProgress
+	(*TraefikRouteInfo)(nil),               // 60: dockeeper.agent.v1.TraefikRouteInfo
+	(*ReportTraefikRoutesRequest)(nil),     // 61: dockeeper.agent.v1.ReportTraefikRoutesRequest
+	(*ReportTraefikRoutesResponse)(nil),    // 62: dockeeper.agent.v1.ReportTraefikRoutesResponse
+	(*CheckImageDigestRequest)(nil),        // 63: dockeeper.agent.v1.CheckImageDigestRequest
+	(*CheckImageDigestResponse)(nil),       // 64: dockeeper.agent.v1.CheckImageDigestResponse
+	(*ExecuteContainerUpdateRequest)(nil),  // 65: dockeeper.agent.v1.ExecuteContainerUpdateRequest
+	(*ContainerUpdateProgress)(nil),        // 66: dockeeper.agent.v1.ContainerUpdateProgress
+	(*UpdateBinaryChunk)(nil),              // 67: dockeeper.agent.v1.UpdateBinaryChunk
+	(*UpdateBinaryResponse)(nil),           // 68: dockeeper.agent.v1.UpdateBinaryResponse
+	(*ExecuteHealthCheckRequest)(nil),      // 69: dockeeper.agent.v1.ExecuteHealthCheckRequest
+	(*ExecuteHealthCheckResponse)(nil),     // 70: dockeeper.agent.v1.ExecuteHealthCheckResponse
+	(*OpenChannelRequest)(nil),             // 71: dockeeper.agent.v1.OpenChannelRequest
+	(*OpenChannelResponse)(nil),            // 72: dockeeper.agent.v1.OpenChannelResponse
+	(*ChannelInit)(nil),                    // 73: dockeeper.agent.v1.ChannelInit
+	(*ChannelHeartbeat)(nil),               // 74: dockeeper.agent.v1.ChannelHeartbeat
+	(*ChannelCommand)(nil),                 // 75: dockeeper.agent.v1.ChannelCommand
+	(*ChannelCommandResult)(nil),           // 76: dockeeper.agent.v1.ChannelCommandResult
+	(*ChannelCommandError)(nil),            // 77: dockeeper.agent.v1.ChannelCommandError
+	(*OpenDataStreamSignal)(nil),           // 78: dockeeper.agent.v1.OpenDataStreamSignal
+	(*DataStreamUpdateBinaryParams)(nil),   // 79: dockeeper.agent.v1.DataStreamUpdateBinaryParams
+	(*OpenExecStreamSignal)(nil),           // 80: dockeeper.agent.v1.OpenExecStreamSignal
+	(*OpenDataStreamRequest)(nil),          // 81: dockeeper.agent.v1.OpenDataStreamRequest
+	(*OpenDataStreamResponse)(nil),         // 82: dockeeper.agent.v1.OpenDataStreamResponse
+	(*DataStreamText)(nil),                 // 83: dockeeper.agent.v1.DataStreamText
+	(*DataStreamProgress)(nil),             // 84: dockeeper.agent.v1.DataStreamProgress
+	(*DataStreamComplete)(nil),             // 85: dockeeper.agent.v1.DataStreamComplete
+	(*DataStreamError)(nil),                // 86: dockeeper.agent.v1.DataStreamError
+	(*DataStreamCancel)(nil),               // 87: dockeeper.agent.v1.DataStreamCancel
+	(*OpenExecStreamRequest)(nil),          // 88: dockeeper.agent.v1.OpenExecStreamRequest
+	(*OpenExecStreamResponse)(nil),         // 89: dockeeper.agent.v1.OpenExecStreamResponse
+	(*ExecStreamResize)(nil),               // 90: dockeeper.agent.v1.ExecStreamResize
+	(*ExecStreamClose)(nil),                // 91: dockeeper.agent.v1.ExecStreamClose
+	(*ExecStreamExit)(nil),                 // 92: dockeeper.agent.v1.ExecStreamExit
+	nil,                                    // 93: dockeeper.agent.v1.ExecuteCommandRequest.ParamsEntry
+	nil,                                    // 94: dockeeper.agent.v1.CreateNetworkRequest.LabelsEntry
+	nil,                                    // 95: dockeeper.agent.v1.CreateVolumeRequest.LabelsEntry
+	nil,                                    // 96: dockeeper.agent.v1.InspectVolumeResponse.LabelsEntry
+	(*timestamppb.Timestamp)(nil),          // 97: google.protobuf.Timestamp
 }
 var file_dockeeper_agent_v1_agent_proto_depIdxs = []int32{
-	1,  // 0: dockeeper.agent.v1.EnrollRequest.info:type_name -> dockeeper.agent.v1.ServerInfo
-	74, // 1: dockeeper.agent.v1.EnrollResponse.cert_expires_at:type_name -> google.protobuf.Timestamp
-	74, // 2: dockeeper.agent.v1.RenewCertResponse.expires_at:type_name -> google.protobuf.Timestamp
-	74, // 3: dockeeper.agent.v1.StreamMetricsRequest.timestamp:type_name -> google.protobuf.Timestamp
-	74, // 4: dockeeper.agent.v1.StreamContainerMetricsRequest.timestamp:type_name -> google.protobuf.Timestamp
-	10, // 5: dockeeper.agent.v1.ContainerInfo.resource_limits:type_name -> dockeeper.agent.v1.ResourceLimits
-	74, // 6: dockeeper.agent.v1.ContainerInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 7: dockeeper.agent.v1.ContainerInfo.started_at:type_name -> google.protobuf.Timestamp
-	11, // 8: dockeeper.agent.v1.ReportContainersRequest.containers:type_name -> dockeeper.agent.v1.ContainerInfo
-	74, // 9: dockeeper.agent.v1.ImageInfo.created_at:type_name -> google.protobuf.Timestamp
-	14, // 10: dockeeper.agent.v1.ReportImagesRequest.images:type_name -> dockeeper.agent.v1.ImageInfo
-	17, // 11: dockeeper.agent.v1.ReportNetworksRequest.networks:type_name -> dockeeper.agent.v1.NetworkInfo
-	20, // 12: dockeeper.agent.v1.ReportVolumesRequest.volumes:type_name -> dockeeper.agent.v1.VolumeInfo
-	0,  // 13: dockeeper.agent.v1.ExecuteCommandRequest.type:type_name -> dockeeper.agent.v1.CommandType
-	70, // 14: dockeeper.agent.v1.ExecuteCommandRequest.params:type_name -> dockeeper.agent.v1.ExecuteCommandRequest.ParamsEntry
-	25, // 15: dockeeper.agent.v1.ExecRequest.start:type_name -> dockeeper.agent.v1.ExecStart
-	26, // 16: dockeeper.agent.v1.ExecRequest.resize:type_name -> dockeeper.agent.v1.ExecResize
-	74, // 17: dockeeper.agent.v1.StreamLogsResponse.timestamp:type_name -> google.protobuf.Timestamp
-	71, // 18: dockeeper.agent.v1.CreateNetworkRequest.labels:type_name -> dockeeper.agent.v1.CreateNetworkRequest.LabelsEntry
-	72, // 19: dockeeper.agent.v1.CreateVolumeRequest.labels:type_name -> dockeeper.agent.v1.CreateVolumeRequest.LabelsEntry
-	73, // 20: dockeeper.agent.v1.InspectVolumeResponse.labels:type_name -> dockeeper.agent.v1.InspectVolumeResponse.LabelsEntry
-	55, // 21: dockeeper.agent.v1.BackupVolumeRequest.s3:type_name -> dockeeper.agent.v1.S3Config
-	55, // 22: dockeeper.agent.v1.RestoreVolumeRequest.s3:type_name -> dockeeper.agent.v1.S3Config
-	59, // 23: dockeeper.agent.v1.ReportTraefikRoutesRequest.routes:type_name -> dockeeper.agent.v1.TraefikRouteInfo
-	2,  // 24: dockeeper.agent.v1.AgentEnrollmentService.Enroll:input_type -> dockeeper.agent.v1.EnrollRequest
-	4,  // 25: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:input_type -> dockeeper.agent.v1.RenewCertRequest
-	6,  // 26: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:input_type -> dockeeper.agent.v1.StreamMetricsRequest
-	8,  // 27: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:input_type -> dockeeper.agent.v1.StreamContainerMetricsRequest
-	12, // 28: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:input_type -> dockeeper.agent.v1.ReportContainersRequest
-	15, // 29: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:input_type -> dockeeper.agent.v1.ReportImagesRequest
-	18, // 30: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:input_type -> dockeeper.agent.v1.ReportNetworksRequest
-	21, // 31: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:input_type -> dockeeper.agent.v1.ReportVolumesRequest
-	23, // 32: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:input_type -> dockeeper.agent.v1.ExecuteCommandRequest
-	27, // 33: dockeeper.agent.v1.AgentExecService.Exec:input_type -> dockeeper.agent.v1.ExecRequest
-	29, // 34: dockeeper.agent.v1.AgentLogsService.StreamLogs:input_type -> dockeeper.agent.v1.StreamLogsRequest
-	31, // 35: dockeeper.agent.v1.AgentImageService.PullImage:input_type -> dockeeper.agent.v1.ImagePullRequest
-	33, // 36: dockeeper.agent.v1.AgentImageService.RemoveImage:input_type -> dockeeper.agent.v1.ImageRemoveRequest
-	35, // 37: dockeeper.agent.v1.AgentImageService.PruneImages:input_type -> dockeeper.agent.v1.ImagePruneRequest
-	37, // 38: dockeeper.agent.v1.AgentComposeService.ComposeUp:input_type -> dockeeper.agent.v1.ComposeRequest
-	37, // 39: dockeeper.agent.v1.AgentComposeService.ComposeDown:input_type -> dockeeper.agent.v1.ComposeRequest
-	37, // 40: dockeeper.agent.v1.AgentComposeService.ComposePull:input_type -> dockeeper.agent.v1.ComposeRequest
-	39, // 41: dockeeper.agent.v1.AgentComposeService.ComposeConfig:input_type -> dockeeper.agent.v1.ComposeConfigRequest
-	41, // 42: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:input_type -> dockeeper.agent.v1.CreateNetworkRequest
-	43, // 43: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:input_type -> dockeeper.agent.v1.RemoveNetworkRequest
-	45, // 44: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:input_type -> dockeeper.agent.v1.NetworkConnectRequest
-	47, // 45: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:input_type -> dockeeper.agent.v1.NetworkDisconnectRequest
-	49, // 46: dockeeper.agent.v1.AgentVolumeService.CreateVolume:input_type -> dockeeper.agent.v1.CreateVolumeRequest
-	51, // 47: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:input_type -> dockeeper.agent.v1.RemoveVolumeRequest
-	53, // 48: dockeeper.agent.v1.AgentVolumeService.InspectVolume:input_type -> dockeeper.agent.v1.InspectVolumeRequest
-	56, // 49: dockeeper.agent.v1.AgentBackupService.BackupVolume:input_type -> dockeeper.agent.v1.BackupVolumeRequest
-	57, // 50: dockeeper.agent.v1.AgentBackupService.RestoreVolume:input_type -> dockeeper.agent.v1.RestoreVolumeRequest
-	60, // 51: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:input_type -> dockeeper.agent.v1.ReportTraefikRoutesRequest
-	62, // 52: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:input_type -> dockeeper.agent.v1.CheckImageDigestRequest
-	64, // 53: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:input_type -> dockeeper.agent.v1.ExecuteContainerUpdateRequest
-	66, // 54: dockeeper.agent.v1.AgentUpdateService.UpdateAgentBinary:input_type -> dockeeper.agent.v1.UpdateBinaryChunk
-	68, // 55: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:input_type -> dockeeper.agent.v1.ExecuteHealthCheckRequest
-	3,  // 56: dockeeper.agent.v1.AgentEnrollmentService.Enroll:output_type -> dockeeper.agent.v1.EnrollResponse
-	5,  // 57: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:output_type -> dockeeper.agent.v1.RenewCertResponse
-	7,  // 58: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:output_type -> dockeeper.agent.v1.StreamMetricsResponse
-	9,  // 59: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:output_type -> dockeeper.agent.v1.StreamContainerMetricsResponse
-	13, // 60: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:output_type -> dockeeper.agent.v1.ReportContainersResponse
-	16, // 61: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:output_type -> dockeeper.agent.v1.ReportImagesResponse
-	19, // 62: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:output_type -> dockeeper.agent.v1.ReportNetworksResponse
-	22, // 63: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:output_type -> dockeeper.agent.v1.ReportVolumesResponse
-	24, // 64: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:output_type -> dockeeper.agent.v1.ExecuteCommandResponse
-	28, // 65: dockeeper.agent.v1.AgentExecService.Exec:output_type -> dockeeper.agent.v1.ExecResponse
-	30, // 66: dockeeper.agent.v1.AgentLogsService.StreamLogs:output_type -> dockeeper.agent.v1.StreamLogsResponse
-	32, // 67: dockeeper.agent.v1.AgentImageService.PullImage:output_type -> dockeeper.agent.v1.ImagePullProgress
-	34, // 68: dockeeper.agent.v1.AgentImageService.RemoveImage:output_type -> dockeeper.agent.v1.ImageRemoveResponse
-	36, // 69: dockeeper.agent.v1.AgentImageService.PruneImages:output_type -> dockeeper.agent.v1.ImagePruneResponse
-	38, // 70: dockeeper.agent.v1.AgentComposeService.ComposeUp:output_type -> dockeeper.agent.v1.ComposeOutput
-	38, // 71: dockeeper.agent.v1.AgentComposeService.ComposeDown:output_type -> dockeeper.agent.v1.ComposeOutput
-	38, // 72: dockeeper.agent.v1.AgentComposeService.ComposePull:output_type -> dockeeper.agent.v1.ComposeOutput
-	40, // 73: dockeeper.agent.v1.AgentComposeService.ComposeConfig:output_type -> dockeeper.agent.v1.ComposeConfigResponse
-	42, // 74: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:output_type -> dockeeper.agent.v1.CreateNetworkResponse
-	44, // 75: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:output_type -> dockeeper.agent.v1.RemoveNetworkResponse
-	46, // 76: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:output_type -> dockeeper.agent.v1.NetworkConnectResponse
-	48, // 77: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:output_type -> dockeeper.agent.v1.NetworkDisconnectResponse
-	50, // 78: dockeeper.agent.v1.AgentVolumeService.CreateVolume:output_type -> dockeeper.agent.v1.CreateVolumeResponse
-	52, // 79: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:output_type -> dockeeper.agent.v1.RemoveVolumeResponse
-	54, // 80: dockeeper.agent.v1.AgentVolumeService.InspectVolume:output_type -> dockeeper.agent.v1.InspectVolumeResponse
-	58, // 81: dockeeper.agent.v1.AgentBackupService.BackupVolume:output_type -> dockeeper.agent.v1.BackupProgress
-	58, // 82: dockeeper.agent.v1.AgentBackupService.RestoreVolume:output_type -> dockeeper.agent.v1.BackupProgress
-	61, // 83: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:output_type -> dockeeper.agent.v1.ReportTraefikRoutesResponse
-	63, // 84: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:output_type -> dockeeper.agent.v1.CheckImageDigestResponse
-	65, // 85: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:output_type -> dockeeper.agent.v1.ContainerUpdateProgress
-	67, // 86: dockeeper.agent.v1.AgentUpdateService.UpdateAgentBinary:output_type -> dockeeper.agent.v1.UpdateBinaryResponse
-	69, // 87: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:output_type -> dockeeper.agent.v1.ExecuteHealthCheckResponse
-	56, // [56:88] is the sub-list for method output_type
-	24, // [24:56] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	2,   // 0: dockeeper.agent.v1.EnrollRequest.info:type_name -> dockeeper.agent.v1.ServerInfo
+	97,  // 1: dockeeper.agent.v1.EnrollResponse.cert_expires_at:type_name -> google.protobuf.Timestamp
+	97,  // 2: dockeeper.agent.v1.RenewCertResponse.expires_at:type_name -> google.protobuf.Timestamp
+	97,  // 3: dockeeper.agent.v1.StreamMetricsRequest.timestamp:type_name -> google.protobuf.Timestamp
+	97,  // 4: dockeeper.agent.v1.StreamContainerMetricsRequest.timestamp:type_name -> google.protobuf.Timestamp
+	11,  // 5: dockeeper.agent.v1.ContainerInfo.resource_limits:type_name -> dockeeper.agent.v1.ResourceLimits
+	97,  // 6: dockeeper.agent.v1.ContainerInfo.created_at:type_name -> google.protobuf.Timestamp
+	97,  // 7: dockeeper.agent.v1.ContainerInfo.started_at:type_name -> google.protobuf.Timestamp
+	12,  // 8: dockeeper.agent.v1.ReportContainersRequest.containers:type_name -> dockeeper.agent.v1.ContainerInfo
+	97,  // 9: dockeeper.agent.v1.ImageInfo.created_at:type_name -> google.protobuf.Timestamp
+	15,  // 10: dockeeper.agent.v1.ReportImagesRequest.images:type_name -> dockeeper.agent.v1.ImageInfo
+	18,  // 11: dockeeper.agent.v1.ReportNetworksRequest.networks:type_name -> dockeeper.agent.v1.NetworkInfo
+	21,  // 12: dockeeper.agent.v1.ReportVolumesRequest.volumes:type_name -> dockeeper.agent.v1.VolumeInfo
+	0,   // 13: dockeeper.agent.v1.ExecuteCommandRequest.type:type_name -> dockeeper.agent.v1.CommandType
+	93,  // 14: dockeeper.agent.v1.ExecuteCommandRequest.params:type_name -> dockeeper.agent.v1.ExecuteCommandRequest.ParamsEntry
+	26,  // 15: dockeeper.agent.v1.ExecRequest.start:type_name -> dockeeper.agent.v1.ExecStart
+	27,  // 16: dockeeper.agent.v1.ExecRequest.resize:type_name -> dockeeper.agent.v1.ExecResize
+	97,  // 17: dockeeper.agent.v1.StreamLogsResponse.timestamp:type_name -> google.protobuf.Timestamp
+	94,  // 18: dockeeper.agent.v1.CreateNetworkRequest.labels:type_name -> dockeeper.agent.v1.CreateNetworkRequest.LabelsEntry
+	95,  // 19: dockeeper.agent.v1.CreateVolumeRequest.labels:type_name -> dockeeper.agent.v1.CreateVolumeRequest.LabelsEntry
+	96,  // 20: dockeeper.agent.v1.InspectVolumeResponse.labels:type_name -> dockeeper.agent.v1.InspectVolumeResponse.LabelsEntry
+	56,  // 21: dockeeper.agent.v1.BackupVolumeRequest.s3:type_name -> dockeeper.agent.v1.S3Config
+	56,  // 22: dockeeper.agent.v1.RestoreVolumeRequest.s3:type_name -> dockeeper.agent.v1.S3Config
+	60,  // 23: dockeeper.agent.v1.ReportTraefikRoutesRequest.routes:type_name -> dockeeper.agent.v1.TraefikRouteInfo
+	73,  // 24: dockeeper.agent.v1.OpenChannelRequest.init:type_name -> dockeeper.agent.v1.ChannelInit
+	74,  // 25: dockeeper.agent.v1.OpenChannelRequest.heartbeat:type_name -> dockeeper.agent.v1.ChannelHeartbeat
+	76,  // 26: dockeeper.agent.v1.OpenChannelRequest.command_result:type_name -> dockeeper.agent.v1.ChannelCommandResult
+	74,  // 27: dockeeper.agent.v1.OpenChannelResponse.heartbeat:type_name -> dockeeper.agent.v1.ChannelHeartbeat
+	75,  // 28: dockeeper.agent.v1.OpenChannelResponse.command:type_name -> dockeeper.agent.v1.ChannelCommand
+	78,  // 29: dockeeper.agent.v1.OpenChannelResponse.open_data_stream:type_name -> dockeeper.agent.v1.OpenDataStreamSignal
+	80,  // 30: dockeeper.agent.v1.OpenChannelResponse.open_exec_stream:type_name -> dockeeper.agent.v1.OpenExecStreamSignal
+	24,  // 31: dockeeper.agent.v1.ChannelCommand.execute_command:type_name -> dockeeper.agent.v1.ExecuteCommandRequest
+	34,  // 32: dockeeper.agent.v1.ChannelCommand.remove_image:type_name -> dockeeper.agent.v1.ImageRemoveRequest
+	36,  // 33: dockeeper.agent.v1.ChannelCommand.prune_images:type_name -> dockeeper.agent.v1.ImagePruneRequest
+	40,  // 34: dockeeper.agent.v1.ChannelCommand.compose_config:type_name -> dockeeper.agent.v1.ComposeConfigRequest
+	42,  // 35: dockeeper.agent.v1.ChannelCommand.create_network:type_name -> dockeeper.agent.v1.CreateNetworkRequest
+	44,  // 36: dockeeper.agent.v1.ChannelCommand.remove_network:type_name -> dockeeper.agent.v1.RemoveNetworkRequest
+	46,  // 37: dockeeper.agent.v1.ChannelCommand.connect_container:type_name -> dockeeper.agent.v1.NetworkConnectRequest
+	48,  // 38: dockeeper.agent.v1.ChannelCommand.disconnect_container:type_name -> dockeeper.agent.v1.NetworkDisconnectRequest
+	50,  // 39: dockeeper.agent.v1.ChannelCommand.create_volume:type_name -> dockeeper.agent.v1.CreateVolumeRequest
+	52,  // 40: dockeeper.agent.v1.ChannelCommand.remove_volume:type_name -> dockeeper.agent.v1.RemoveVolumeRequest
+	54,  // 41: dockeeper.agent.v1.ChannelCommand.inspect_volume:type_name -> dockeeper.agent.v1.InspectVolumeRequest
+	69,  // 42: dockeeper.agent.v1.ChannelCommand.health_check:type_name -> dockeeper.agent.v1.ExecuteHealthCheckRequest
+	63,  // 43: dockeeper.agent.v1.ChannelCommand.check_image_digest:type_name -> dockeeper.agent.v1.CheckImageDigestRequest
+	25,  // 44: dockeeper.agent.v1.ChannelCommandResult.execute_command:type_name -> dockeeper.agent.v1.ExecuteCommandResponse
+	35,  // 45: dockeeper.agent.v1.ChannelCommandResult.remove_image:type_name -> dockeeper.agent.v1.ImageRemoveResponse
+	37,  // 46: dockeeper.agent.v1.ChannelCommandResult.prune_images:type_name -> dockeeper.agent.v1.ImagePruneResponse
+	41,  // 47: dockeeper.agent.v1.ChannelCommandResult.compose_config:type_name -> dockeeper.agent.v1.ComposeConfigResponse
+	43,  // 48: dockeeper.agent.v1.ChannelCommandResult.create_network:type_name -> dockeeper.agent.v1.CreateNetworkResponse
+	45,  // 49: dockeeper.agent.v1.ChannelCommandResult.remove_network:type_name -> dockeeper.agent.v1.RemoveNetworkResponse
+	47,  // 50: dockeeper.agent.v1.ChannelCommandResult.connect_container:type_name -> dockeeper.agent.v1.NetworkConnectResponse
+	49,  // 51: dockeeper.agent.v1.ChannelCommandResult.disconnect_container:type_name -> dockeeper.agent.v1.NetworkDisconnectResponse
+	51,  // 52: dockeeper.agent.v1.ChannelCommandResult.create_volume:type_name -> dockeeper.agent.v1.CreateVolumeResponse
+	53,  // 53: dockeeper.agent.v1.ChannelCommandResult.remove_volume:type_name -> dockeeper.agent.v1.RemoveVolumeResponse
+	55,  // 54: dockeeper.agent.v1.ChannelCommandResult.inspect_volume:type_name -> dockeeper.agent.v1.InspectVolumeResponse
+	70,  // 55: dockeeper.agent.v1.ChannelCommandResult.health_check:type_name -> dockeeper.agent.v1.ExecuteHealthCheckResponse
+	64,  // 56: dockeeper.agent.v1.ChannelCommandResult.check_image_digest:type_name -> dockeeper.agent.v1.CheckImageDigestResponse
+	77,  // 57: dockeeper.agent.v1.ChannelCommandResult.error:type_name -> dockeeper.agent.v1.ChannelCommandError
+	1,   // 58: dockeeper.agent.v1.OpenDataStreamSignal.stream_type:type_name -> dockeeper.agent.v1.DataStreamType
+	30,  // 59: dockeeper.agent.v1.OpenDataStreamSignal.stream_logs:type_name -> dockeeper.agent.v1.StreamLogsRequest
+	32,  // 60: dockeeper.agent.v1.OpenDataStreamSignal.pull_image:type_name -> dockeeper.agent.v1.ImagePullRequest
+	38,  // 61: dockeeper.agent.v1.OpenDataStreamSignal.compose_up:type_name -> dockeeper.agent.v1.ComposeRequest
+	38,  // 62: dockeeper.agent.v1.OpenDataStreamSignal.compose_down:type_name -> dockeeper.agent.v1.ComposeRequest
+	38,  // 63: dockeeper.agent.v1.OpenDataStreamSignal.compose_pull:type_name -> dockeeper.agent.v1.ComposeRequest
+	57,  // 64: dockeeper.agent.v1.OpenDataStreamSignal.backup_volume:type_name -> dockeeper.agent.v1.BackupVolumeRequest
+	58,  // 65: dockeeper.agent.v1.OpenDataStreamSignal.restore_volume:type_name -> dockeeper.agent.v1.RestoreVolumeRequest
+	65,  // 66: dockeeper.agent.v1.OpenDataStreamSignal.container_update:type_name -> dockeeper.agent.v1.ExecuteContainerUpdateRequest
+	79,  // 67: dockeeper.agent.v1.OpenDataStreamSignal.update_binary:type_name -> dockeeper.agent.v1.DataStreamUpdateBinaryParams
+	83,  // 68: dockeeper.agent.v1.OpenDataStreamRequest.text:type_name -> dockeeper.agent.v1.DataStreamText
+	84,  // 69: dockeeper.agent.v1.OpenDataStreamRequest.progress:type_name -> dockeeper.agent.v1.DataStreamProgress
+	85,  // 70: dockeeper.agent.v1.OpenDataStreamRequest.complete:type_name -> dockeeper.agent.v1.DataStreamComplete
+	86,  // 71: dockeeper.agent.v1.OpenDataStreamRequest.error:type_name -> dockeeper.agent.v1.DataStreamError
+	87,  // 72: dockeeper.agent.v1.OpenDataStreamResponse.cancel:type_name -> dockeeper.agent.v1.DataStreamCancel
+	92,  // 73: dockeeper.agent.v1.OpenExecStreamRequest.exit:type_name -> dockeeper.agent.v1.ExecStreamExit
+	90,  // 74: dockeeper.agent.v1.OpenExecStreamResponse.resize:type_name -> dockeeper.agent.v1.ExecStreamResize
+	91,  // 75: dockeeper.agent.v1.OpenExecStreamResponse.close:type_name -> dockeeper.agent.v1.ExecStreamClose
+	3,   // 76: dockeeper.agent.v1.AgentEnrollmentService.Enroll:input_type -> dockeeper.agent.v1.EnrollRequest
+	5,   // 77: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:input_type -> dockeeper.agent.v1.RenewCertRequest
+	7,   // 78: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:input_type -> dockeeper.agent.v1.StreamMetricsRequest
+	9,   // 79: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:input_type -> dockeeper.agent.v1.StreamContainerMetricsRequest
+	13,  // 80: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:input_type -> dockeeper.agent.v1.ReportContainersRequest
+	16,  // 81: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:input_type -> dockeeper.agent.v1.ReportImagesRequest
+	19,  // 82: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:input_type -> dockeeper.agent.v1.ReportNetworksRequest
+	22,  // 83: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:input_type -> dockeeper.agent.v1.ReportVolumesRequest
+	24,  // 84: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:input_type -> dockeeper.agent.v1.ExecuteCommandRequest
+	28,  // 85: dockeeper.agent.v1.AgentExecService.Exec:input_type -> dockeeper.agent.v1.ExecRequest
+	30,  // 86: dockeeper.agent.v1.AgentLogsService.StreamLogs:input_type -> dockeeper.agent.v1.StreamLogsRequest
+	32,  // 87: dockeeper.agent.v1.AgentImageService.PullImage:input_type -> dockeeper.agent.v1.ImagePullRequest
+	34,  // 88: dockeeper.agent.v1.AgentImageService.RemoveImage:input_type -> dockeeper.agent.v1.ImageRemoveRequest
+	36,  // 89: dockeeper.agent.v1.AgentImageService.PruneImages:input_type -> dockeeper.agent.v1.ImagePruneRequest
+	38,  // 90: dockeeper.agent.v1.AgentComposeService.ComposeUp:input_type -> dockeeper.agent.v1.ComposeRequest
+	38,  // 91: dockeeper.agent.v1.AgentComposeService.ComposeDown:input_type -> dockeeper.agent.v1.ComposeRequest
+	38,  // 92: dockeeper.agent.v1.AgentComposeService.ComposePull:input_type -> dockeeper.agent.v1.ComposeRequest
+	40,  // 93: dockeeper.agent.v1.AgentComposeService.ComposeConfig:input_type -> dockeeper.agent.v1.ComposeConfigRequest
+	42,  // 94: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:input_type -> dockeeper.agent.v1.CreateNetworkRequest
+	44,  // 95: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:input_type -> dockeeper.agent.v1.RemoveNetworkRequest
+	46,  // 96: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:input_type -> dockeeper.agent.v1.NetworkConnectRequest
+	48,  // 97: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:input_type -> dockeeper.agent.v1.NetworkDisconnectRequest
+	50,  // 98: dockeeper.agent.v1.AgentVolumeService.CreateVolume:input_type -> dockeeper.agent.v1.CreateVolumeRequest
+	52,  // 99: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:input_type -> dockeeper.agent.v1.RemoveVolumeRequest
+	54,  // 100: dockeeper.agent.v1.AgentVolumeService.InspectVolume:input_type -> dockeeper.agent.v1.InspectVolumeRequest
+	57,  // 101: dockeeper.agent.v1.AgentBackupService.BackupVolume:input_type -> dockeeper.agent.v1.BackupVolumeRequest
+	58,  // 102: dockeeper.agent.v1.AgentBackupService.RestoreVolume:input_type -> dockeeper.agent.v1.RestoreVolumeRequest
+	61,  // 103: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:input_type -> dockeeper.agent.v1.ReportTraefikRoutesRequest
+	63,  // 104: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:input_type -> dockeeper.agent.v1.CheckImageDigestRequest
+	65,  // 105: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:input_type -> dockeeper.agent.v1.ExecuteContainerUpdateRequest
+	67,  // 106: dockeeper.agent.v1.AgentUpdateService.UpdateAgentBinary:input_type -> dockeeper.agent.v1.UpdateBinaryChunk
+	69,  // 107: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:input_type -> dockeeper.agent.v1.ExecuteHealthCheckRequest
+	71,  // 108: dockeeper.agent.v1.AgentCommandChannelService.OpenChannel:input_type -> dockeeper.agent.v1.OpenChannelRequest
+	81,  // 109: dockeeper.agent.v1.AgentDataStreamService.OpenDataStream:input_type -> dockeeper.agent.v1.OpenDataStreamRequest
+	88,  // 110: dockeeper.agent.v1.AgentExecStreamService.OpenExecStream:input_type -> dockeeper.agent.v1.OpenExecStreamRequest
+	4,   // 111: dockeeper.agent.v1.AgentEnrollmentService.Enroll:output_type -> dockeeper.agent.v1.EnrollResponse
+	6,   // 112: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:output_type -> dockeeper.agent.v1.RenewCertResponse
+	8,   // 113: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:output_type -> dockeeper.agent.v1.StreamMetricsResponse
+	10,  // 114: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:output_type -> dockeeper.agent.v1.StreamContainerMetricsResponse
+	14,  // 115: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:output_type -> dockeeper.agent.v1.ReportContainersResponse
+	17,  // 116: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:output_type -> dockeeper.agent.v1.ReportImagesResponse
+	20,  // 117: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:output_type -> dockeeper.agent.v1.ReportNetworksResponse
+	23,  // 118: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:output_type -> dockeeper.agent.v1.ReportVolumesResponse
+	25,  // 119: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:output_type -> dockeeper.agent.v1.ExecuteCommandResponse
+	29,  // 120: dockeeper.agent.v1.AgentExecService.Exec:output_type -> dockeeper.agent.v1.ExecResponse
+	31,  // 121: dockeeper.agent.v1.AgentLogsService.StreamLogs:output_type -> dockeeper.agent.v1.StreamLogsResponse
+	33,  // 122: dockeeper.agent.v1.AgentImageService.PullImage:output_type -> dockeeper.agent.v1.ImagePullProgress
+	35,  // 123: dockeeper.agent.v1.AgentImageService.RemoveImage:output_type -> dockeeper.agent.v1.ImageRemoveResponse
+	37,  // 124: dockeeper.agent.v1.AgentImageService.PruneImages:output_type -> dockeeper.agent.v1.ImagePruneResponse
+	39,  // 125: dockeeper.agent.v1.AgentComposeService.ComposeUp:output_type -> dockeeper.agent.v1.ComposeOutput
+	39,  // 126: dockeeper.agent.v1.AgentComposeService.ComposeDown:output_type -> dockeeper.agent.v1.ComposeOutput
+	39,  // 127: dockeeper.agent.v1.AgentComposeService.ComposePull:output_type -> dockeeper.agent.v1.ComposeOutput
+	41,  // 128: dockeeper.agent.v1.AgentComposeService.ComposeConfig:output_type -> dockeeper.agent.v1.ComposeConfigResponse
+	43,  // 129: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:output_type -> dockeeper.agent.v1.CreateNetworkResponse
+	45,  // 130: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:output_type -> dockeeper.agent.v1.RemoveNetworkResponse
+	47,  // 131: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:output_type -> dockeeper.agent.v1.NetworkConnectResponse
+	49,  // 132: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:output_type -> dockeeper.agent.v1.NetworkDisconnectResponse
+	51,  // 133: dockeeper.agent.v1.AgentVolumeService.CreateVolume:output_type -> dockeeper.agent.v1.CreateVolumeResponse
+	53,  // 134: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:output_type -> dockeeper.agent.v1.RemoveVolumeResponse
+	55,  // 135: dockeeper.agent.v1.AgentVolumeService.InspectVolume:output_type -> dockeeper.agent.v1.InspectVolumeResponse
+	59,  // 136: dockeeper.agent.v1.AgentBackupService.BackupVolume:output_type -> dockeeper.agent.v1.BackupProgress
+	59,  // 137: dockeeper.agent.v1.AgentBackupService.RestoreVolume:output_type -> dockeeper.agent.v1.BackupProgress
+	62,  // 138: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:output_type -> dockeeper.agent.v1.ReportTraefikRoutesResponse
+	64,  // 139: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:output_type -> dockeeper.agent.v1.CheckImageDigestResponse
+	66,  // 140: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:output_type -> dockeeper.agent.v1.ContainerUpdateProgress
+	68,  // 141: dockeeper.agent.v1.AgentUpdateService.UpdateAgentBinary:output_type -> dockeeper.agent.v1.UpdateBinaryResponse
+	70,  // 142: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:output_type -> dockeeper.agent.v1.ExecuteHealthCheckResponse
+	72,  // 143: dockeeper.agent.v1.AgentCommandChannelService.OpenChannel:output_type -> dockeeper.agent.v1.OpenChannelResponse
+	82,  // 144: dockeeper.agent.v1.AgentDataStreamService.OpenDataStream:output_type -> dockeeper.agent.v1.OpenDataStreamResponse
+	89,  // 145: dockeeper.agent.v1.AgentExecStreamService.OpenExecStream:output_type -> dockeeper.agent.v1.OpenExecStreamResponse
+	111, // [111:146] is the sub-list for method output_type
+	76,  // [76:111] is the sub-list for method input_type
+	76,  // [76:76] is the sub-list for extension type_name
+	76,  // [76:76] is the sub-list for extension extendee
+	0,   // [0:76] is the sub-list for field type_name
 }
 
 func init() { file_dockeeper_agent_v1_agent_proto_init() }
@@ -5243,15 +7626,87 @@ func file_dockeeper_agent_v1_agent_proto_init() {
 		(*ExecRequest_Resize)(nil),
 	}
 	file_dockeeper_agent_v1_agent_proto_msgTypes[27].OneofWrappers = []any{}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[69].OneofWrappers = []any{
+		(*OpenChannelRequest_Init)(nil),
+		(*OpenChannelRequest_Heartbeat)(nil),
+		(*OpenChannelRequest_CommandResult)(nil),
+	}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[70].OneofWrappers = []any{
+		(*OpenChannelResponse_Heartbeat)(nil),
+		(*OpenChannelResponse_Command)(nil),
+		(*OpenChannelResponse_OpenDataStream)(nil),
+		(*OpenChannelResponse_OpenExecStream)(nil),
+	}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[73].OneofWrappers = []any{
+		(*ChannelCommand_ExecuteCommand)(nil),
+		(*ChannelCommand_RemoveImage)(nil),
+		(*ChannelCommand_PruneImages)(nil),
+		(*ChannelCommand_ComposeConfig)(nil),
+		(*ChannelCommand_CreateNetwork)(nil),
+		(*ChannelCommand_RemoveNetwork)(nil),
+		(*ChannelCommand_ConnectContainer)(nil),
+		(*ChannelCommand_DisconnectContainer)(nil),
+		(*ChannelCommand_CreateVolume)(nil),
+		(*ChannelCommand_RemoveVolume)(nil),
+		(*ChannelCommand_InspectVolume)(nil),
+		(*ChannelCommand_HealthCheck)(nil),
+		(*ChannelCommand_CheckImageDigest)(nil),
+	}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[74].OneofWrappers = []any{
+		(*ChannelCommandResult_ExecuteCommand)(nil),
+		(*ChannelCommandResult_RemoveImage)(nil),
+		(*ChannelCommandResult_PruneImages)(nil),
+		(*ChannelCommandResult_ComposeConfig)(nil),
+		(*ChannelCommandResult_CreateNetwork)(nil),
+		(*ChannelCommandResult_RemoveNetwork)(nil),
+		(*ChannelCommandResult_ConnectContainer)(nil),
+		(*ChannelCommandResult_DisconnectContainer)(nil),
+		(*ChannelCommandResult_CreateVolume)(nil),
+		(*ChannelCommandResult_RemoveVolume)(nil),
+		(*ChannelCommandResult_InspectVolume)(nil),
+		(*ChannelCommandResult_HealthCheck)(nil),
+		(*ChannelCommandResult_CheckImageDigest)(nil),
+		(*ChannelCommandResult_Error)(nil),
+	}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[76].OneofWrappers = []any{
+		(*OpenDataStreamSignal_StreamLogs)(nil),
+		(*OpenDataStreamSignal_PullImage)(nil),
+		(*OpenDataStreamSignal_ComposeUp)(nil),
+		(*OpenDataStreamSignal_ComposeDown)(nil),
+		(*OpenDataStreamSignal_ComposePull)(nil),
+		(*OpenDataStreamSignal_BackupVolume)(nil),
+		(*OpenDataStreamSignal_RestoreVolume)(nil),
+		(*OpenDataStreamSignal_ContainerUpdate)(nil),
+		(*OpenDataStreamSignal_UpdateBinary)(nil),
+	}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[79].OneofWrappers = []any{
+		(*OpenDataStreamRequest_Data)(nil),
+		(*OpenDataStreamRequest_Text)(nil),
+		(*OpenDataStreamRequest_Progress)(nil),
+		(*OpenDataStreamRequest_Complete)(nil),
+		(*OpenDataStreamRequest_Error)(nil),
+	}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[80].OneofWrappers = []any{
+		(*OpenDataStreamResponse_Cancel)(nil),
+	}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[86].OneofWrappers = []any{
+		(*OpenExecStreamRequest_Stdout)(nil),
+		(*OpenExecStreamRequest_Exit)(nil),
+	}
+	file_dockeeper_agent_v1_agent_proto_msgTypes[87].OneofWrappers = []any{
+		(*OpenExecStreamResponse_Stdin)(nil),
+		(*OpenExecStreamResponse_Resize)(nil),
+		(*OpenExecStreamResponse_Close)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dockeeper_agent_v1_agent_proto_rawDesc), len(file_dockeeper_agent_v1_agent_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   73,
+			NumEnums:      2,
+			NumMessages:   95,
 			NumExtensions: 0,
-			NumServices:   14,
+			NumServices:   17,
 		},
 		GoTypes:           file_dockeeper_agent_v1_agent_proto_goTypes,
 		DependencyIndexes: file_dockeeper_agent_v1_agent_proto_depIdxs,

@@ -2130,3 +2130,316 @@ var AgentHealthService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "dockeeper/agent/v1/agent.proto",
 }
+
+const (
+	AgentCommandChannelService_OpenChannel_FullMethodName = "/dockeeper.agent.v1.AgentCommandChannelService/OpenChannel"
+)
+
+// AgentCommandChannelServiceClient is the client API for AgentCommandChannelService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Persistent bidirectional stream for command dispatch.
+// Agent connects on startup and keeps the stream alive.
+// Manager sends commands, agent sends results. Multiplexed by request_id.
+type AgentCommandChannelServiceClient interface {
+	OpenChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[OpenChannelRequest, OpenChannelResponse], error)
+}
+
+type agentCommandChannelServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAgentCommandChannelServiceClient(cc grpc.ClientConnInterface) AgentCommandChannelServiceClient {
+	return &agentCommandChannelServiceClient{cc}
+}
+
+func (c *agentCommandChannelServiceClient) OpenChannel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[OpenChannelRequest, OpenChannelResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &AgentCommandChannelService_ServiceDesc.Streams[0], AgentCommandChannelService_OpenChannel_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[OpenChannelRequest, OpenChannelResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentCommandChannelService_OpenChannelClient = grpc.BidiStreamingClient[OpenChannelRequest, OpenChannelResponse]
+
+// AgentCommandChannelServiceServer is the server API for AgentCommandChannelService service.
+// All implementations must embed UnimplementedAgentCommandChannelServiceServer
+// for forward compatibility.
+//
+// Persistent bidirectional stream for command dispatch.
+// Agent connects on startup and keeps the stream alive.
+// Manager sends commands, agent sends results. Multiplexed by request_id.
+type AgentCommandChannelServiceServer interface {
+	OpenChannel(grpc.BidiStreamingServer[OpenChannelRequest, OpenChannelResponse]) error
+	mustEmbedUnimplementedAgentCommandChannelServiceServer()
+}
+
+// UnimplementedAgentCommandChannelServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAgentCommandChannelServiceServer struct{}
+
+func (UnimplementedAgentCommandChannelServiceServer) OpenChannel(grpc.BidiStreamingServer[OpenChannelRequest, OpenChannelResponse]) error {
+	return status.Error(codes.Unimplemented, "method OpenChannel not implemented")
+}
+func (UnimplementedAgentCommandChannelServiceServer) mustEmbedUnimplementedAgentCommandChannelServiceServer() {
+}
+func (UnimplementedAgentCommandChannelServiceServer) testEmbeddedByValue() {}
+
+// UnsafeAgentCommandChannelServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AgentCommandChannelServiceServer will
+// result in compilation errors.
+type UnsafeAgentCommandChannelServiceServer interface {
+	mustEmbedUnimplementedAgentCommandChannelServiceServer()
+}
+
+func RegisterAgentCommandChannelServiceServer(s grpc.ServiceRegistrar, srv AgentCommandChannelServiceServer) {
+	// If the following call panics, it indicates UnimplementedAgentCommandChannelServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AgentCommandChannelService_ServiceDesc, srv)
+}
+
+func _AgentCommandChannelService_OpenChannel_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AgentCommandChannelServiceServer).OpenChannel(&grpc.GenericServerStream[OpenChannelRequest, OpenChannelResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentCommandChannelService_OpenChannelServer = grpc.BidiStreamingServer[OpenChannelRequest, OpenChannelResponse]
+
+// AgentCommandChannelService_ServiceDesc is the grpc.ServiceDesc for AgentCommandChannelService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AgentCommandChannelService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "dockeeper.agent.v1.AgentCommandChannelService",
+	HandlerType: (*AgentCommandChannelServiceServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "OpenChannel",
+			Handler:       _AgentCommandChannelService_OpenChannel_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "dockeeper/agent/v1/agent.proto",
+}
+
+const (
+	AgentDataStreamService_OpenDataStream_FullMethodName = "/dockeeper.agent.v1.AgentDataStreamService/OpenDataStream"
+)
+
+// AgentDataStreamServiceClient is the client API for AgentDataStreamService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// On-demand streaming for logs, image pull, compose, backup, and updates.
+// Agent opens a DataStream when instructed via OpenDataStreamSignal.
+type AgentDataStreamServiceClient interface {
+	OpenDataStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[OpenDataStreamRequest, OpenDataStreamResponse], error)
+}
+
+type agentDataStreamServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAgentDataStreamServiceClient(cc grpc.ClientConnInterface) AgentDataStreamServiceClient {
+	return &agentDataStreamServiceClient{cc}
+}
+
+func (c *agentDataStreamServiceClient) OpenDataStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[OpenDataStreamRequest, OpenDataStreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &AgentDataStreamService_ServiceDesc.Streams[0], AgentDataStreamService_OpenDataStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[OpenDataStreamRequest, OpenDataStreamResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentDataStreamService_OpenDataStreamClient = grpc.BidiStreamingClient[OpenDataStreamRequest, OpenDataStreamResponse]
+
+// AgentDataStreamServiceServer is the server API for AgentDataStreamService service.
+// All implementations must embed UnimplementedAgentDataStreamServiceServer
+// for forward compatibility.
+//
+// On-demand streaming for logs, image pull, compose, backup, and updates.
+// Agent opens a DataStream when instructed via OpenDataStreamSignal.
+type AgentDataStreamServiceServer interface {
+	OpenDataStream(grpc.BidiStreamingServer[OpenDataStreamRequest, OpenDataStreamResponse]) error
+	mustEmbedUnimplementedAgentDataStreamServiceServer()
+}
+
+// UnimplementedAgentDataStreamServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAgentDataStreamServiceServer struct{}
+
+func (UnimplementedAgentDataStreamServiceServer) OpenDataStream(grpc.BidiStreamingServer[OpenDataStreamRequest, OpenDataStreamResponse]) error {
+	return status.Error(codes.Unimplemented, "method OpenDataStream not implemented")
+}
+func (UnimplementedAgentDataStreamServiceServer) mustEmbedUnimplementedAgentDataStreamServiceServer() {
+}
+func (UnimplementedAgentDataStreamServiceServer) testEmbeddedByValue() {}
+
+// UnsafeAgentDataStreamServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AgentDataStreamServiceServer will
+// result in compilation errors.
+type UnsafeAgentDataStreamServiceServer interface {
+	mustEmbedUnimplementedAgentDataStreamServiceServer()
+}
+
+func RegisterAgentDataStreamServiceServer(s grpc.ServiceRegistrar, srv AgentDataStreamServiceServer) {
+	// If the following call panics, it indicates UnimplementedAgentDataStreamServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AgentDataStreamService_ServiceDesc, srv)
+}
+
+func _AgentDataStreamService_OpenDataStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AgentDataStreamServiceServer).OpenDataStream(&grpc.GenericServerStream[OpenDataStreamRequest, OpenDataStreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentDataStreamService_OpenDataStreamServer = grpc.BidiStreamingServer[OpenDataStreamRequest, OpenDataStreamResponse]
+
+// AgentDataStreamService_ServiceDesc is the grpc.ServiceDesc for AgentDataStreamService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AgentDataStreamService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "dockeeper.agent.v1.AgentDataStreamService",
+	HandlerType: (*AgentDataStreamServiceServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "OpenDataStream",
+			Handler:       _AgentDataStreamService_OpenDataStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "dockeeper/agent/v1/agent.proto",
+}
+
+const (
+	AgentExecStreamService_OpenExecStream_FullMethodName = "/dockeeper.agent.v1.AgentExecStreamService/OpenExecStream"
+)
+
+// AgentExecStreamServiceClient is the client API for AgentExecStreamService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Per-session bidirectional terminal I/O.
+// Agent opens when instructed via OpenExecStreamSignal.
+// Supports detach/reattach on agent reconnect (session_id matching).
+type AgentExecStreamServiceClient interface {
+	OpenExecStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[OpenExecStreamRequest, OpenExecStreamResponse], error)
+}
+
+type agentExecStreamServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAgentExecStreamServiceClient(cc grpc.ClientConnInterface) AgentExecStreamServiceClient {
+	return &agentExecStreamServiceClient{cc}
+}
+
+func (c *agentExecStreamServiceClient) OpenExecStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[OpenExecStreamRequest, OpenExecStreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &AgentExecStreamService_ServiceDesc.Streams[0], AgentExecStreamService_OpenExecStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[OpenExecStreamRequest, OpenExecStreamResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentExecStreamService_OpenExecStreamClient = grpc.BidiStreamingClient[OpenExecStreamRequest, OpenExecStreamResponse]
+
+// AgentExecStreamServiceServer is the server API for AgentExecStreamService service.
+// All implementations must embed UnimplementedAgentExecStreamServiceServer
+// for forward compatibility.
+//
+// Per-session bidirectional terminal I/O.
+// Agent opens when instructed via OpenExecStreamSignal.
+// Supports detach/reattach on agent reconnect (session_id matching).
+type AgentExecStreamServiceServer interface {
+	OpenExecStream(grpc.BidiStreamingServer[OpenExecStreamRequest, OpenExecStreamResponse]) error
+	mustEmbedUnimplementedAgentExecStreamServiceServer()
+}
+
+// UnimplementedAgentExecStreamServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAgentExecStreamServiceServer struct{}
+
+func (UnimplementedAgentExecStreamServiceServer) OpenExecStream(grpc.BidiStreamingServer[OpenExecStreamRequest, OpenExecStreamResponse]) error {
+	return status.Error(codes.Unimplemented, "method OpenExecStream not implemented")
+}
+func (UnimplementedAgentExecStreamServiceServer) mustEmbedUnimplementedAgentExecStreamServiceServer() {
+}
+func (UnimplementedAgentExecStreamServiceServer) testEmbeddedByValue() {}
+
+// UnsafeAgentExecStreamServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AgentExecStreamServiceServer will
+// result in compilation errors.
+type UnsafeAgentExecStreamServiceServer interface {
+	mustEmbedUnimplementedAgentExecStreamServiceServer()
+}
+
+func RegisterAgentExecStreamServiceServer(s grpc.ServiceRegistrar, srv AgentExecStreamServiceServer) {
+	// If the following call panics, it indicates UnimplementedAgentExecStreamServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AgentExecStreamService_ServiceDesc, srv)
+}
+
+func _AgentExecStreamService_OpenExecStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AgentExecStreamServiceServer).OpenExecStream(&grpc.GenericServerStream[OpenExecStreamRequest, OpenExecStreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentExecStreamService_OpenExecStreamServer = grpc.BidiStreamingServer[OpenExecStreamRequest, OpenExecStreamResponse]
+
+// AgentExecStreamService_ServiceDesc is the grpc.ServiceDesc for AgentExecStreamService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AgentExecStreamService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "dockeeper.agent.v1.AgentExecStreamService",
+	HandlerType: (*AgentExecStreamServiceServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "OpenExecStream",
+			Handler:       _AgentExecStreamService_OpenExecStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "dockeeper/agent/v1/agent.proto",
+}
