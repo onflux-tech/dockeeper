@@ -20,6 +20,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -356,7 +364,7 @@ function HealthCheckDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+			<DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>{isEdit ? "Edit Health Check" : "New Health Check"}</DialogTitle>
 				</DialogHeader>
@@ -493,7 +501,7 @@ function LogsDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+			<DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>Logs — {check?.name}</DialogTitle>
 				</DialogHeader>
@@ -509,38 +517,38 @@ function LogsDialog({
 				) : (
 					<div className="space-y-4">
 						<div className="rounded-md border">
-							<table className="w-full text-sm">
-								<thead>
-									<tr className="border-b bg-muted/50">
-										<th className="px-3 py-2 text-left font-medium">Time</th>
-										<th className="px-3 py-2 text-left font-medium">Status</th>
-										<th className="px-3 py-2 text-left font-medium">Code</th>
-										<th className="px-3 py-2 text-left font-medium">Latency</th>
-										<th className="px-3 py-2 text-left font-medium">Error</th>
-									</tr>
-								</thead>
-								<tbody>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Time</TableHead>
+										<TableHead>Status</TableHead>
+										<TableHead>Code</TableHead>
+										<TableHead>Latency</TableHead>
+										<TableHead>Error</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
 									{data.items.map((log) => (
-										<tr key={log.id} className="border-b last:border-0">
-											<td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
+										<TableRow key={log.id}>
+											<TableCell className="text-xs text-muted-foreground whitespace-nowrap">
 												{new Date(log.checked_at).toLocaleString()}
-											</td>
-											<td className="px-3 py-2">
+											</TableCell>
+											<TableCell>
 												{log.success ? (
 													<CheckCircle2 className="h-4 w-4 text-success" />
 												) : (
 													<XCircle className="h-4 w-4 text-destructive" />
 												)}
-											</td>
-											<td className="px-3 py-2 font-mono text-xs">{log.status_code || "—"}</td>
-											<td className="px-3 py-2 font-mono text-xs">{log.response_time_ms}ms</td>
-											<td className="px-3 py-2 text-xs text-muted-foreground truncate max-w-[200px]">
+											</TableCell>
+											<TableCell className="font-mono text-xs">{log.status_code || "—"}</TableCell>
+											<TableCell className="font-mono text-xs">{log.response_time_ms}ms</TableCell>
+											<TableCell className="text-xs text-muted-foreground truncate max-w-[200px]">
 												{log.error || "—"}
-											</td>
-										</tr>
+											</TableCell>
+										</TableRow>
 									))}
-								</tbody>
-							</table>
+								</TableBody>
+							</Table>
 						</div>
 
 						{data.total_items > 20 && (

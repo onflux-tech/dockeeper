@@ -213,8 +213,8 @@ export default function ServersPage() {
 											<DropdownMenuTrigger asChild>
 												<Button
 													variant="ghost"
-													size="sm"
-													className="h-8 w-8 p-0"
+													size="icon"
+													className="h-8 w-8"
 													onClick={(e) => e.stopPropagation()}
 												>
 													<MoreHorizontal className="h-4 w-4" />

@@ -134,6 +134,7 @@ function UsersTab() {
 				</Button>
 			</div>
 
+			<div className="rounded-md border">
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -183,6 +184,7 @@ function UsersTab() {
 					)}
 				</TableBody>
 			</Table>
+			</div>
 
 			{/* Create User Dialog */}
 			<Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -192,7 +194,7 @@ function UsersTab() {
 						<DialogDescription>Add a new user to the system.</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
-						<div>
+						<div className="space-y-2">
 							<Label>Email</Label>
 							<Input
 								type="email"
@@ -201,7 +203,7 @@ function UsersTab() {
 								placeholder="user@example.com"
 							/>
 						</div>
-						<div>
+						<div className="space-y-2">
 							<Label>Password</Label>
 							<Input
 								type="password"
@@ -210,7 +212,7 @@ function UsersTab() {
 								placeholder="Minimum 8 characters"
 							/>
 						</div>
-						<div>
+						<div className="space-y-2">
 							<Label>Group (optional)</Label>
 							<Select value={groupId} onValueChange={setGroupId}>
 								<SelectTrigger>
@@ -419,7 +421,7 @@ function GroupsTab() {
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
-						<div>
+						<div className="space-y-2">
 							<Label>Name</Label>
 							<Input
 								value={name}
@@ -427,7 +429,7 @@ function GroupsTab() {
 								placeholder="Group name"
 							/>
 						</div>
-						<div>
+						<div className="space-y-2">
 							<Label>Description</Label>
 							<Input
 								value={description}
@@ -435,7 +437,7 @@ function GroupsTab() {
 								placeholder="Optional description"
 							/>
 						</div>
-						<div>
+						<div className="space-y-2">
 							<Label>Capabilities</Label>
 							<div className="mt-2 space-y-2">
 								{CAP_DOMAINS.map(({ domain, caps }) => (
@@ -557,6 +559,7 @@ function APIKeysTab() {
 				</Button>
 			</div>
 
+			<div className="rounded-md border">
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -608,6 +611,7 @@ function APIKeysTab() {
 					)}
 				</TableBody>
 			</Table>
+			</div>
 
 			{/* Create API Key Dialog */}
 			<Dialog
@@ -624,7 +628,7 @@ function APIKeysTab() {
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
-						<div>
+						<div className="space-y-2">
 							<Label>Name</Label>
 							<Input
 								value={keyName}
@@ -632,7 +636,7 @@ function APIKeysTab() {
 								placeholder="Key name"
 							/>
 						</div>
-						<div>
+						<div className="space-y-2">
 							<Label>Capabilities</Label>
 							<div className="mt-2 space-y-2">
 								{CAP_DOMAINS.map(({ domain, caps }) => (
@@ -782,15 +786,15 @@ export default function UsersPage() {
 					</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="users" className="mt-6">
+				<TabsContent value="users" className="mt-4">
 					<UsersTab />
 				</TabsContent>
 
-				<TabsContent value="groups" className="mt-6">
+				<TabsContent value="groups" className="mt-4">
 					<GroupsTab />
 				</TabsContent>
 
-				<TabsContent value="api-keys" className="mt-6">
+				<TabsContent value="api-keys" className="mt-4">
 					<APIKeysTab />
 				</TabsContent>
 			</Tabs>

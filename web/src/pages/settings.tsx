@@ -22,6 +22,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	useSettings,
@@ -90,22 +98,22 @@ export default function SettingsPage() {
 					</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="system">
+				<TabsContent value="system" className="mt-4">
 					<SystemTab />
 				</TabsContent>
-				<TabsContent value="retention">
+				<TabsContent value="retention" className="mt-4">
 					<RetentionTab />
 				</TabsContent>
-				<TabsContent value="blackout">
+				<TabsContent value="blackout" className="mt-4">
 					<BlackoutTab />
 				</TabsContent>
-				<TabsContent value="profile">
+				<TabsContent value="profile" className="mt-4">
 					<ProfileTab />
 				</TabsContent>
-				<TabsContent value="about">
+				<TabsContent value="about" className="mt-4">
 					<AboutTab />
 				</TabsContent>
-				<TabsContent value="registry">
+				<TabsContent value="registry" className="mt-4">
 					<RegistryTab />
 				</TabsContent>
 			</Tabs>
@@ -155,7 +163,7 @@ function SystemTab() {
 	};
 
 	return (
-		<div className="space-y-8">
+		<div className="space-y-6">
 			{/* Global Enrollment Token */}
 			<EnrollmentTokenSection />
 
@@ -332,7 +340,7 @@ function ProfileTab() {
 	};
 
 	return (
-		<div className="max-w-md space-y-4">
+		<div className="max-w-md space-y-6">
 			<div>
 				<h3 className="text-lg font-medium">Change Password</h3>
 				<p className="text-sm text-muted-foreground">Update your administrator password.</p>
@@ -553,26 +561,26 @@ function RegistryTab() {
 				<div className="space-y-2">
 					{credentials && credentials.length > 0 ? (
 						<div className="rounded-md border">
-							<table className="w-full text-sm">
-								<thead>
-									<tr className="border-b bg-muted/50">
-										<th className="px-4 py-2 text-left font-medium">Name</th>
-										<th className="px-4 py-2 text-left font-medium">Registry Host</th>
-										<th className="px-4 py-2 text-left font-medium">Created</th>
-										<th className="px-4 py-2 text-right font-medium">Actions</th>
-									</tr>
-								</thead>
-								<tbody>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Name</TableHead>
+										<TableHead>Registry Host</TableHead>
+										<TableHead>Created</TableHead>
+										<TableHead className="text-right">Actions</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
 									{credentials.map((cred) => (
-										<tr key={cred.id} className="border-b last:border-0">
-											<td className="px-4 py-2 font-medium">{cred.name}</td>
-											<td className="px-4 py-2 font-mono text-muted-foreground">
+										<TableRow key={cred.id}>
+											<TableCell className="font-medium">{cred.name}</TableCell>
+											<TableCell className="font-mono text-muted-foreground">
 												{cred.registry_host}
-											</td>
-											<td className="px-4 py-2 text-muted-foreground">
+											</TableCell>
+											<TableCell className="text-muted-foreground">
 												{new Date(cred.created).toLocaleDateString()}
-											</td>
-											<td className="px-4 py-2 text-right">
+											</TableCell>
+											<TableCell className="text-right">
 												<Button
 													variant="ghost"
 													size="icon"
@@ -582,11 +590,11 @@ function RegistryTab() {
 												>
 													<Trash2 className="h-4 w-4" />
 												</Button>
-											</td>
-										</tr>
+											</TableCell>
+										</TableRow>
 									))}
-								</tbody>
-							</table>
+								</TableBody>
+							</Table>
 						</div>
 					) : (
 						<p className="text-sm text-muted-foreground">
@@ -776,30 +784,30 @@ function BlackoutTab() {
 				</div>
 			) : windows && windows.length > 0 ? (
 				<div className="rounded-md border">
-					<table className="w-full text-sm">
-						<thead>
-							<tr className="border-b bg-muted/50">
-								<th className="px-4 py-2 text-left font-medium">Name</th>
-								<th className="px-4 py-2 text-left font-medium">Server</th>
-								<th className="px-4 py-2 text-left font-medium">Start</th>
-								<th className="px-4 py-2 text-left font-medium">End</th>
-								<th className="px-4 py-2 text-right font-medium">Actions</th>
-							</tr>
-						</thead>
-						<tbody>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Name</TableHead>
+								<TableHead>Server</TableHead>
+								<TableHead>Start</TableHead>
+								<TableHead>End</TableHead>
+								<TableHead className="text-right">Actions</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
 							{windows.map((w) => (
-								<tr key={w.id} className="border-b last:border-0">
-									<td className="px-4 py-2 font-medium">{w.name}</td>
-									<td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+								<TableRow key={w.id}>
+									<TableCell className="font-medium">{w.name}</TableCell>
+									<TableCell className="font-mono text-xs text-muted-foreground">
 										{w.server || "all"}
-									</td>
-									<td className="px-4 py-2 text-xs">
+									</TableCell>
+									<TableCell className="text-xs">
 										{w.start_time ? new Date(w.start_time).toLocaleString() : "—"}
-									</td>
-									<td className="px-4 py-2 text-xs">
+									</TableCell>
+									<TableCell className="text-xs">
 										{w.end_time ? new Date(w.end_time).toLocaleString() : "—"}
-									</td>
-									<td className="px-4 py-2 text-right">
+									</TableCell>
+									<TableCell className="text-right">
 										<Button
 											variant="ghost"
 											size="icon"
@@ -809,11 +817,11 @@ function BlackoutTab() {
 										>
 											<Trash2 className="h-4 w-4" />
 										</Button>
-									</td>
-								</tr>
+									</TableCell>
+								</TableRow>
 							))}
-						</tbody>
-					</table>
+						</TableBody>
+					</Table>
 				</div>
 			) : (
 				<p className="text-sm text-muted-foreground">No blackout windows configured.</p>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Bell, Plus, Pencil, Trash2, Radio, Send, Loader2, History, Search } from "lucide-react";
+import { Bell, Plus, Pencil, Trash2, Radio, Send, Loader2, History, Search, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -202,7 +202,7 @@ export default function AlertsPage() {
 				</TabsList>
 
 				{/* ── Rules Tab ───────────────────────────── */}
-				<TabsContent value="rules" className="space-y-4">
+				<TabsContent value="rules" className="mt-4 space-y-4">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
 							<ServerFilterSelect value={serverFilter} onValueChange={setServerFilter} />
@@ -297,9 +297,9 @@ export default function AlertsPage() {
 											<TableCell>
 												<DropdownMenu>
 													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" size="icon" className="h-7 w-7">
+														<Button variant="ghost" size="icon" className="h-8 w-8">
 															<span className="sr-only">Actions</span>
-															<span className="text-xs">...</span>
+															<MoreHorizontal className="h-4 w-4" />
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end">
@@ -339,7 +339,7 @@ export default function AlertsPage() {
 				</TabsContent>
 
 				{/* ── Channels Tab ────────────────────────── */}
-				<TabsContent value="channels" className="space-y-4">
+				<TabsContent value="channels" className="mt-4 space-y-4">
 					<div className="flex items-center justify-end">
 						<Button
 							size="sm"
@@ -403,9 +403,9 @@ export default function AlertsPage() {
 													</Button>
 													<DropdownMenu>
 														<DropdownMenuTrigger asChild>
-															<Button variant="ghost" size="icon" className="h-7 w-7">
+															<Button variant="ghost" size="icon" className="h-8 w-8">
 																<span className="sr-only">Actions</span>
-																<span className="text-xs">...</span>
+																<MoreHorizontal className="h-4 w-4" />
 															</Button>
 														</DropdownMenuTrigger>
 														<DropdownMenuContent align="end">
@@ -446,7 +446,7 @@ export default function AlertsPage() {
 				</TabsContent>
 
 				{/* ── History Tab ─────────────────────────── */}
-				<TabsContent value="history" className="space-y-4">
+				<TabsContent value="history" className="mt-4 space-y-4">
 					<div className="flex items-center gap-3">
 						<ServerFilterSelect value={serverFilter} onValueChange={setServerFilter} />
 					</div>

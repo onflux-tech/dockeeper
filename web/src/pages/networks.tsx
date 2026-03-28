@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Network, Plus, Trash2, Link2, Unlink2, Search } from "lucide-react";
+import { Network, Plus, Trash2, Link2, Unlink2, Search, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,9 +188,8 @@ export default function NetworksPage() {
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="icon" className="h-7 w-7">
-													<span className="sr-only">Actions</span>
-													<span className="text-xs">...</span>
+												<Button variant="ghost" size="icon" className="h-8 w-8">
+													<MoreHorizontal className="h-4 w-4" />
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end">

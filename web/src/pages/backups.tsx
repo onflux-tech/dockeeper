@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Archive, Plus, Pencil, Trash2, Play, Loader2, Search } from "lucide-react";
+import { Archive, Plus, Pencil, Trash2, Play, Loader2, Search, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -272,11 +272,10 @@ export default function BackupsPage() {
 													<Button
 														variant="ghost"
 														size="icon"
-														className="h-7 w-7"
+														className="h-8 w-8"
 														onClick={(e) => e.stopPropagation()}
 													>
-														<span className="sr-only">Actions</span>
-														<span className="text-xs">...</span>
+														<MoreHorizontal className="h-4 w-4" />
 													</Button>
 												</DropdownMenuTrigger>
 												<DropdownMenuContent align="end">
