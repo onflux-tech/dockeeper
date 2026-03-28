@@ -366,20 +366,20 @@ func (s *SelfUpdateService) PeriodicCheck() {
 }
 
 // findAsset locates the appropriate binary asset for the given OS/arch.
+// GoReleaser names archives as: dockeeper-{component}_{version}_{os}_{arch}.tar.gz
+// We match by prefix + suffix to skip the version segment in the middle.
 func (s *SelfUpdateService) findAsset(release *Release, component, goos, goarch string) *ReleaseAsset {
-	patterns := []string{
-		fmt.Sprintf("dockeeper-%s_%s_%s", component, goos, goarch),
-		fmt.Sprintf("dockeeper_%s_%s", goos, goarch),
-		fmt.Sprintf("%s_%s_%s", component, goos, goarch),
-	}
+	prefix := fmt.Sprintf("dockeeper-%s_", component)
+	suffix := fmt.Sprintf("_%s_%s", goos, goarch)
 
 	for _, asset := range release.Assets {
 		name := strings.ToLower(asset.Name)
-		for _, pattern := range patterns {
-			if strings.Contains(name, pattern) && !strings.HasSuffix(name, ".sha256") {
-				a := asset
-				return &a
-			}
+		if strings.HasSuffix(name, ".sha256") {
+			continue
+		}
+		if strings.HasPrefix(name, prefix) && strings.Contains(name, suffix) {
+			a := asset
+			return &a
 		}
 	}
 	return nil
