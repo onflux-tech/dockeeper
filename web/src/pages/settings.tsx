@@ -17,6 +17,7 @@ import {
 	Moon,
 	Clock,
 	Download,
+	Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,7 @@ import {
 	useUpdateRetention,
 	useBlackoutWindows,
 	useCreateBlackoutWindow,
+	useUpdateBlackoutWindow,
 	useDeleteBlackoutWindow,
 } from "@/hooks/use-settings";
 
@@ -634,6 +636,7 @@ function RegistryTab() {
 								placeholder="username"
 								value={username}
 								onChange={(e) => setUsername(e.target.value)}
+								autoComplete="off"
 								required
 							/>
 						</div>
@@ -645,6 +648,7 @@ function RegistryTab() {
 								placeholder="••••••••"
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
+								autoComplete="new-password"
 								required
 							/>
 						</div>
@@ -733,39 +737,67 @@ function RetentionTab() {
 
 /* ── Blackout Windows Tab ──────────────────────────────── */
 
+function toLocalInput(iso: string): string {
+	if (!iso) return "";
+	const d = new Date(iso);
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function BlackoutTab() {
 	const { data: windows, isLoading } = useBlackoutWindows();
 	const createMut = useCreateBlackoutWindow();
+	const updateMut = useUpdateBlackoutWindow();
 	const deleteMut = useDeleteBlackoutWindow();
 
+	const [editId, setEditId] = useState<string | null>(null);
 	const [showForm, setShowForm] = useState(false);
 	const [name, setName] = useState("");
 	const [server, setServer] = useState("");
 	const [startTime, setStartTime] = useState("");
 	const [endTime, setEndTime] = useState("");
 
-	const handleCreate = (e: React.FormEvent) => {
-		e.preventDefault();
-		createMut.mutate(
-			{
-				name,
-				server_ids: server ? [server] : [],
-				start_time: startTime ? new Date(startTime).toISOString() : "",
-				end_time: endTime ? new Date(endTime).toISOString() : "",
-				recurring: false,
-				enabled: true,
-			},
-			{
-				onSuccess: () => {
-					setName("");
-					setServer("");
-					setStartTime("");
-					setEndTime("");
-					setShowForm(false);
-				},
-			},
-		);
+	const resetForm = () => {
+		setEditId(null);
+		setName("");
+		setServer("");
+		setStartTime("");
+		setEndTime("");
+		setShowForm(false);
 	};
+
+	const openEdit = (w: { id: string; name: string; server?: string; server_ids?: string[]; start_time: string; end_time: string }) => {
+		setEditId(w.id);
+		setName(w.name);
+		const sid = w.server_ids?.length ? w.server_ids[0] : (w.server ?? "");
+		setServer(sid);
+		setStartTime(toLocalInput(w.start_time));
+		setEndTime(toLocalInput(w.end_time));
+		setShowForm(true);
+	};
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		const fields = {
+			name,
+			server_ids: server ? [server] : [],
+			start_time: startTime ? new Date(startTime).toISOString() : "",
+			end_time: endTime ? new Date(endTime).toISOString() : "",
+			recurring: false,
+			enabled: true,
+		};
+
+		if (editId) {
+			updateMut.mutate(
+				{ id: editId, fields },
+				{ onSuccess: resetForm },
+			);
+		} else {
+			createMut.mutate(fields, { onSuccess: resetForm });
+		}
+	};
+
+	const isPending = createMut.isPending || updateMut.isPending;
 
 	return (
 		<div className="space-y-6">
@@ -811,6 +843,14 @@ function BlackoutTab() {
 										<Button
 											variant="ghost"
 											size="icon"
+											className="h-8 w-8"
+											onClick={() => openEdit(w)}
+										>
+											<Pencil className="h-4 w-4" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon"
 											className="h-8 w-8 text-destructive hover:text-destructive"
 											onClick={() => deleteMut.mutate(w.id)}
 											disabled={deleteMut.isPending}
@@ -828,7 +868,7 @@ function BlackoutTab() {
 			)}
 
 			{showForm ? (
-				<form onSubmit={handleCreate} className="space-y-4 rounded-md border p-4">
+				<form onSubmit={handleSubmit} className="space-y-4 rounded-md border p-4">
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-2">
 							<Label htmlFor="bw_name">Name</Label>
@@ -871,11 +911,11 @@ function BlackoutTab() {
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={createMut.isPending}>
-							{createMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-							Create Window
+						<Button type="submit" disabled={isPending}>
+							{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+							{editId ? "Save Changes" : "Create Window"}
 						</Button>
-						<Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+						<Button type="button" variant="outline" onClick={resetForm}>
 							Cancel
 						</Button>
 					</div>
