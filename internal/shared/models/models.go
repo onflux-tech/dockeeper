@@ -340,3 +340,17 @@ type Tag struct {
 	ResourceID   string         `json:"resource_id"`
 	Created      types.DateTime `json:"created"`
 }
+
+// ActionToken represents a single-use notification action token.
+type ActionToken struct {
+	ID        string         `json:"id"`
+	Token     string         `json:"token"`
+	Action    string         `json:"action"`    // restart_container, approve_update, ack_alert, silence_alert
+	Params    types.JSONRaw  `json:"params"`
+	ExpiresAt types.DateTime `json:"expires_at"`
+	Used      bool           `json:"used"`
+	UsedAt    types.DateTime `json:"used_at"`
+	CreatedBy string         `json:"created_by"`
+	Created   types.DateTime `json:"created"`
+	Updated   types.DateTime `json:"updated"`
+}

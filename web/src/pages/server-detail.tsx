@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import { EditServerDialog } from "@/components/server/edit-server-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { TagSelector } from "@/components/tag-selector";
 import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
+import { useUpdateCheck, useAgentUpdate } from "@/hooks/use-settings";
 
 const timeRangeLabels: Record<TimeRange, string> = {
 	"1h": "Last 1 hour",
@@ -38,6 +39,8 @@ export default function ServerDetailPage() {
 	const [containerSearch, setContainerSearch] = useState("");
 	const [containerStatus, setContainerStatus] = useState("all");
 	const [editOpen, setEditOpen] = useState(false);
+	const updateCheck = useUpdateCheck();
+	const agentUpdate = useAgentUpdate();
 
 	const { data: server, isLoading: loadingServer } = useRecord("servers", id);
 	const { data: metricsData, isLoading: loadingMetrics } = useServerMetrics(id, range);
@@ -93,6 +96,33 @@ export default function ServerDetailPage() {
 							<Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
 								<Pencil className="mr-1.5 h-3.5 w-3.5" />
 								Edit
+							</Button>
+						)}
+						{server?.status === "online" && (
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={agentUpdate.isPending || updateCheck.isPending}
+								onClick={() => {
+									if (updateCheck.data?.available && id) {
+										agentUpdate.mutate(id);
+									} else {
+										updateCheck.mutate(undefined, {
+											onSuccess: (result) => {
+												if (result.available && id) {
+													agentUpdate.mutate(id);
+												}
+											},
+										});
+									}
+								}}
+							>
+								<Download className="mr-1.5 h-3.5 w-3.5" />
+								{agentUpdate.isPending
+									? "Updating..."
+									: updateCheck.isPending
+										? "Checking..."
+										: "Update Agent"}
 							</Button>
 						)}
 					</>

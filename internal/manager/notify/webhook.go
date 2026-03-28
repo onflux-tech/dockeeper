@@ -54,6 +54,13 @@ func (c *WebhookChannel) Send(ctx context.Context, msg AlertMessage) error {
 		"target_name": msg.TargetName,
 		"message":     formatMessage(msg),
 	}
+	if len(msg.Actions) > 0 {
+		actions := make([]map[string]string, 0, len(msg.Actions))
+		for _, a := range msg.Actions {
+			actions = append(actions, map[string]string{"label": a.Label, "url": a.URL})
+		}
+		payload["actions"] = actions
+	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {

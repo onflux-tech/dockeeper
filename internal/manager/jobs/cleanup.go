@@ -55,6 +55,12 @@ func CleanupOldMetrics(app core.App) {
 		}
 	}
 
+	// Clean up expired action tokens.
+	actionTokensDeleted := cleanupActionTokens(app)
+	if actionTokensDeleted > 0 {
+		slog.Info("job: cleanup deleted action tokens", "count", actionTokensDeleted)
+	}
+
 	slog.Info("job: data cleanup finished")
 }
 
@@ -101,6 +107,40 @@ func deleteInBatches(app core.App, table, cutoff string) int64 {
 		affected, _ := res.RowsAffected()
 		total += affected
 
+		if affected < deleteBatchSize {
+			break
+		}
+	}
+
+	return total
+}
+
+// cleanupActionTokens removes expired and used action tokens.
+func cleanupActionTokens(app core.App) int64 {
+	now := time.Now().UTC().Format("2006-01-02 15:04:05.000Z")
+	old := time.Now().UTC().Add(-24 * time.Hour).Format("2006-01-02 15:04:05.000Z")
+
+	sql := `DELETE FROM action_tokens WHERE id IN (
+		SELECT id FROM action_tokens
+		WHERE (used = true AND expires_at < {:now})
+		   OR (expires_at < {:old})
+		LIMIT {:limit}
+	)`
+
+	var total int64
+	for {
+		res, err := app.DB().NewQuery(sql).Bind(dbx.Params{
+			"now":   now,
+			"old":   old,
+			"limit": deleteBatchSize,
+		}).Execute()
+		if err != nil {
+			slog.Error("job: action token cleanup failed", "error", err)
+			break
+		}
+
+		affected, _ := res.RowsAffected()
+		total += affected
 		if affected < deleteBatchSize {
 			break
 		}

@@ -20,7 +20,9 @@ const (
 
 // NotificationService dispatches alert messages to configured channels with retry logic.
 type NotificationService struct {
-	alertStore *store.AlertStore
+	alertStore     *store.AlertStore
+	actionTokenSvc *ActionTokenService
+	baseURL        string
 }
 
 // NewNotificationService creates a NotificationService.
@@ -28,8 +30,19 @@ func NewNotificationService(alertStore *store.AlertStore) *NotificationService {
 	return &NotificationService{alertStore: alertStore}
 }
 
+// SetActionTokenService wires the action token service for generating action URLs in notifications.
+func (s *NotificationService) SetActionTokenService(svc *ActionTokenService, baseURL string) {
+	s.actionTokenSvc = svc
+	s.baseURL = baseURL
+}
+
 // Dispatch sends an alert message to the channels specified by their IDs.
 func (s *NotificationService) Dispatch(ctx context.Context, channelIDs []string, ruleID string, msg notify.AlertMessage) {
+	// Generate action tokens for firing alerts.
+	if msg.State == "firing" && s.actionTokenSvc != nil && s.baseURL != "" {
+		msg.Actions = s.generateActionURLs(ruleID, msg)
+	}
+
 	channels, err := s.alertStore.GetChannelsByIDs(channelIDs)
 	if err != nil {
 		slog.Error("notification: failed to load channels", "error", err)
@@ -156,4 +169,27 @@ func (s *NotificationService) buildChannel(rec *core.Record) (notify.Channel, er
 	default:
 		return nil, fmt.Errorf("unsupported channel type: %s", channelType)
 	}
+}
+
+// generateActionURLs creates single-use action token URLs for a firing alert.
+func (s *NotificationService) generateActionURLs(ruleID string, msg notify.AlertMessage) []notify.ActionURL {
+	var actions []notify.ActionURL
+
+	// Acknowledge alert.
+	if token, err := s.actionTokenSvc.Create("ack_alert", map[string]string{"rule_id": ruleID}, "alert_engine"); err == nil {
+		actions = append(actions, notify.ActionURL{
+			Label: "Acknowledge",
+			URL:   fmt.Sprintf("%s/api/dk/actions/%s", s.baseURL, token),
+		})
+	}
+
+	// Silence alert for 4 hours.
+	if token, err := s.actionTokenSvc.Create("silence_alert", map[string]string{"rule_id": ruleID}, "alert_engine"); err == nil {
+		actions = append(actions, notify.ActionURL{
+			Label: "Silence 4h",
+			URL:   fmt.Sprintf("%s/api/dk/actions/%s", s.baseURL, token),
+		})
+	}
+
+	return actions
 }

@@ -37,4 +37,5 @@ const (
 	CollHealthCheckLogs     = "health_check_logs"
 	CollBatchJobs           = "batch_jobs"
 	CollTags                = "tags"
+	CollActionTokens        = "action_tokens"
 )

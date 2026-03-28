@@ -55,6 +55,12 @@ const (
 
 	// Compose events (import).
 	ComposeImported EventType = "compose.imported"
+
+	// System self-update events.
+	SystemUpdateAvailable EventType = "system.update.available"
+	SystemUpdateStarted   EventType = "system.update.started"
+	SystemUpdateCompleted EventType = "system.update.completed"
+	SystemUpdateFailed    EventType = "system.update.failed"
 )
 
 // Severity indicates the importance level of an event.
@@ -81,7 +87,7 @@ type Event struct {
 // SeverityFor returns the default severity for a given event type.
 func SeverityFor(t EventType) Severity {
 	switch t {
-	case ContainerCrashed, ServerOffline, ComposeFailed, BackupFailed, ContainerUpdateFailed, HealthGaveUp, BatchFailed:
+	case ContainerCrashed, ServerOffline, ComposeFailed, BackupFailed, ContainerUpdateFailed, HealthGaveUp, BatchFailed, SystemUpdateFailed:
 		return SeverityCritical
 	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved, ContainerUpdateRolledback, HealthDegraded, HealthRestart, BatchStarted, ContainerStateDrift:
 		return SeverityWarning

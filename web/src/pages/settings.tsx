@@ -16,6 +16,7 @@ import {
 	Trash2,
 	Moon,
 	Clock,
+	Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import {
 	useHealth,
 	useEnrollmentToken,
 	useRegenerateEnrollmentToken,
+	useUpdateCheck,
 } from "@/hooks/use-settings";
 import {
 	useRegistryCredentials,
@@ -395,9 +397,10 @@ function ProfileTab() {
 
 function AboutTab() {
 	const { data: health, isLoading } = useHealth();
+	const updateCheck = useUpdateCheck();
 
 	return (
-		<div className="max-w-md space-y-4">
+		<div className="max-w-lg space-y-6">
 			<div>
 				<h3 className="text-lg font-medium">About Dockeeper</h3>
 				<p className="text-sm text-muted-foreground">Server version and build information.</p>
@@ -425,6 +428,74 @@ function AboutTab() {
 			) : (
 				<p className="text-sm text-muted-foreground">Unable to fetch server info.</p>
 			)}
+
+			{/* System Update Check */}
+			<section className="space-y-4">
+				<div>
+					<h3 className="text-lg font-medium">System Updates</h3>
+					<p className="text-sm text-muted-foreground">
+						Check for new Dockeeper releases on GitHub.
+					</p>
+				</div>
+
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => updateCheck.mutate()}
+					disabled={updateCheck.isPending}
+				>
+					{updateCheck.isPending ? (
+						<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+					) : (
+						<RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+					)}
+					Check for Updates
+				</Button>
+
+				{updateCheck.data && (
+					<div className="rounded-md border p-4 space-y-3">
+						{updateCheck.data.available ? (
+							<>
+								<div className="flex items-center gap-2">
+									<Download className="h-4 w-4 text-primary" />
+									<span className="font-medium text-sm">
+										Update available: {updateCheck.data.latest}
+									</span>
+								</div>
+								<div className="flex gap-4 text-xs text-muted-foreground">
+									<span>Current: {updateCheck.data.current}</span>
+									{updateCheck.data.published_at && (
+										<span>
+											Published:{" "}
+											{new Date(updateCheck.data.published_at).toLocaleDateString()}
+										</span>
+									)}
+								</div>
+								{updateCheck.data.changelog && (
+									<div className="rounded bg-muted p-3 text-xs whitespace-pre-wrap max-h-48 overflow-auto">
+										{updateCheck.data.changelog}
+									</div>
+								)}
+								{updateCheck.data.assets && updateCheck.data.assets.length > 0 && (
+									<div className="text-xs text-muted-foreground">
+										{updateCheck.data.assets.length} asset
+										{updateCheck.data.assets.length > 1 ? "s" : ""} available
+									</div>
+								)}
+							</>
+						) : (
+							<div className="flex items-center gap-2 text-sm text-muted-foreground">
+								<Check className="h-4 w-4 text-green-500" />
+								You're running the latest version ({updateCheck.data.current})
+							</div>
+						)}
+					</div>
+				)}
+
+				{updateCheck.error && (
+					<p className="text-sm text-destructive">{updateCheck.error.message}</p>
+				)}
+			</section>
 		</div>
 	);
 }

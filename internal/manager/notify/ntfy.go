@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // NtfyChannel sends push notifications via ntfy.sh or self-hosted ntfy.
@@ -50,6 +51,15 @@ func (c *NtfyChannel) Send(ctx context.Context, msg AlertMessage) error {
 
 	if c.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+
+	// Add action buttons via ntfy Actions header.
+	if len(msg.Actions) > 0 {
+		var actions []string
+		for _, a := range msg.Actions {
+			actions = append(actions, fmt.Sprintf("view, %s, %s", a.Label, a.URL))
+		}
+		req.Header.Set("Actions", strings.Join(actions, "; "))
 	}
 
 	resp, err := httpClient.Do(req)

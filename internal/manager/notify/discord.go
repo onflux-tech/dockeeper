@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -52,6 +53,16 @@ func (c *DiscordChannel) Send(ctx context.Context, msg AlertMessage) error {
 			"fields":    fields,
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 		}},
+	}
+
+	// Add action link buttons as a description with markdown links.
+	if len(msg.Actions) > 0 {
+		var links []string
+		for _, a := range msg.Actions {
+			links = append(links, fmt.Sprintf("[%s](%s)", a.Label, a.URL))
+		}
+		embeds := payload["embeds"].([]map[string]any)
+		embeds[0]["description"] = strings.Join(links, " | ")
 	}
 
 	body, err := json.Marshal(payload)

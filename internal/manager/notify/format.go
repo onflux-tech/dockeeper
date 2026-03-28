@@ -24,6 +24,13 @@ func AlertMessage2Text(msg AlertMessage) string {
 	fmt.Fprintf(&b, "Current:  %.2f\n", msg.Value)
 	fmt.Fprintf(&b, "Target:    %s (%s)\n", msg.TargetName, msg.TargetType)
 
+	if len(msg.Actions) > 0 {
+		fmt.Fprintf(&b, "\nActions:\n")
+		for _, a := range msg.Actions {
+			fmt.Fprintf(&b, "  %s: %s\n", a.Label, a.URL)
+		}
+	}
+
 	return b.String()
 }
 
@@ -40,6 +47,14 @@ func AlertMessage2HTML(msg AlertMessage) string {
 	fmt.Fprintf(&b, "Metric:    <code>%s %s %.2f</code>\n", escapeHTML(msg.Metric), escapeHTML(operatorSymbol(msg.Operator)), msg.Threshold)
 	fmt.Fprintf(&b, "Current:  <code>%.2f</code>\n", msg.Value)
 	fmt.Fprintf(&b, "Target:    %s <i>(%s)</i>\n", escapeHTML(msg.TargetName), escapeHTML(msg.TargetType))
+
+	if len(msg.Actions) > 0 {
+		fmt.Fprintf(&b, "\n")
+		for _, a := range msg.Actions {
+			fmt.Fprintf(&b, "<a href=\"%s\">%s</a>  ", escapeHTML(a.URL), escapeHTML(a.Label))
+		}
+		fmt.Fprintf(&b, "\n")
+	}
 
 	return b.String()
 }

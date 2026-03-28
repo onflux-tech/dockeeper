@@ -518,6 +518,7 @@ message ReportTraefikRoutesResponse {
 service AgentUpdateService {
   rpc CheckImageDigest(CheckImageDigestRequest) returns (CheckImageDigestResponse);
   rpc ExecuteContainerUpdate(ExecuteContainerUpdateRequest) returns (stream ContainerUpdateProgress);
+  rpc UpdateAgentBinary(stream UpdateBinaryChunk) returns (UpdateBinaryResponse);
 }
 
 message CheckImageDigestRequest {
@@ -542,6 +543,21 @@ message ContainerUpdateProgress {
   string step = 1;     // pulling, stopping, creating, starting, verifying, done, failed, rolledback
   string message = 2;
   float progress = 3;  // 0.0-1.0 for pull progress
+}
+
+// ── Agent Binary Update ─────────────────────────────────
+
+message UpdateBinaryChunk {
+  bytes chunk = 1;
+  string checksum = 2;     // SHA256, sent in last chunk
+  string version = 3;      // Target version
+  bool is_last_chunk = 4;
+}
+
+message UpdateBinaryResponse {
+  bool success = 1;
+  string error = 2;
+  string current_version = 3;
 }
 
 // ── Health Checks ────────────────────────────────────────

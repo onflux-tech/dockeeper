@@ -40,6 +40,17 @@ func (c *TelegramChannel) Send(ctx context.Context, msg AlertMessage) error {
 		"parse_mode": "HTML",
 	}
 
+	// Add inline keyboard buttons for action URLs.
+	if len(msg.Actions) > 0 {
+		buttons := make([][]map[string]any, 0, len(msg.Actions))
+		for _, a := range msg.Actions {
+			buttons = append(buttons, []map[string]any{
+				{"text": a.Label, "url": a.URL},
+			})
+		}
+		payload["reply_markup"] = map[string]any{"inline_keyboard": buttons}
+	}
+
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("telegram marshal: %w", err)

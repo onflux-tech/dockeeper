@@ -141,13 +141,26 @@ func buildHTMLEmail(msg AlertMessage) string {
 			escapeHTML(msg.Metric), escapeHTML(operatorSymbol(msg.Operator)), msg.Threshold, msg.Value)
 	}
 
-	return fmt.Sprintf(`<!DOCTYPE html><html><body style="font-family:sans-serif;margin:0;padding:20px;background:#f5f5f5">
+	html := fmt.Sprintf(`<!DOCTYPE html><html><body style="font-family:sans-serif;margin:0;padding:20px;background:#f5f5f5">
 <div style="max-width:500px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden">
 <div style="background:%s;color:#fff;padding:16px 20px;font-size:18px;font-weight:bold">%s — %s</div>
 <table style="width:100%%;border-collapse:collapse;padding:16px">
 <tr><td style="padding:4px 8px;color:#666">Target</td><td style="padding:4px 8px">%s (%s)</td></tr>
 %s
-</table></div></body></html>`,
+</table>`,
 		color, strings.ToUpper(msg.State), escapeHTML(msg.RuleName),
 		escapeHTML(msg.TargetName), escapeHTML(msg.TargetType), metricRow)
+
+	// Add action buttons.
+	if len(msg.Actions) > 0 {
+		html += `<div style="padding:12px 20px;text-align:center">`
+		for _, a := range msg.Actions {
+			html += fmt.Sprintf(`<a href="%s" style="display:inline-block;padding:8px 16px;margin:4px;background:#3498db;color:#fff;border-radius:4px;text-decoration:none;font-size:14px">%s</a>`,
+				escapeHTML(a.URL), escapeHTML(a.Label))
+		}
+		html += `</div>`
+	}
+
+	html += `</div></body></html>`
+	return html
 }

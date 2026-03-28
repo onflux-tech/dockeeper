@@ -48,6 +48,19 @@ func (c *SlackChannel) Send(ctx context.Context, msg AlertMessage) error {
 		{"type": "section", "fields": sectionFields},
 	}
 
+	// Add action buttons.
+	if len(msg.Actions) > 0 {
+		elements := make([]map[string]any, 0, len(msg.Actions))
+		for _, a := range msg.Actions {
+			elements = append(elements, map[string]any{
+				"type": "button",
+				"text": map[string]any{"type": "plain_text", "text": a.Label},
+				"url":  a.URL,
+			})
+		}
+		blocks = append(blocks, map[string]any{"type": "actions", "elements": elements})
+	}
+
 	payload := map[string]any{"blocks": blocks}
 
 	body, err := json.Marshal(payload)

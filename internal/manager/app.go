@@ -193,6 +193,21 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		routes.RegisterUpdateRoutes(se, updateOrch, rbac)
 		registerUpdateCron(app, updateOrch)
 
+		// Action tokens system.
+		actionTokenStore := store.NewActionTokenStore(app)
+		actionTokenSvc := services.NewActionTokenService(app, actionTokenStore, containerSvc)
+		routes.RegisterActionTokenRoutes(se, actionTokenSvc, auditStore)
+
+		// Wire action tokens into notification service.
+		baseURL := os.Getenv("DOCKEEPER_BASE_URL")
+		if baseURL != "" {
+			notifySvc.SetActionTokenService(actionTokenSvc, baseURL)
+		}
+
+		// Self-update system routes.
+		selfUpdateSvc := services.NewSelfUpdateService(app, eventBus, pool, version)
+		routes.RegisterSystemRoutes(se, app, selfUpdateSvc, rbac)
+
 		// Serve embedded frontend (SPA fallback).
 		registerFrontendHandler(se, frontendFS)
 

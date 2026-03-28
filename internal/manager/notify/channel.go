@@ -2,6 +2,12 @@ package notify
 
 import "context"
 
+// ActionURL represents a clickable action link embedded in notifications.
+type ActionURL struct {
+	Label string
+	URL   string
+}
+
 // AlertMessage contains alert information to be sent via notification channels.
 type AlertMessage struct {
 	RuleName   string
@@ -12,6 +18,7 @@ type AlertMessage struct {
 	TargetType string
 	TargetName string
 	State      string // "firing" or "resolved"
+	Actions    []ActionURL
 }
 
 // Channel sends alert notifications through a specific delivery mechanism.
