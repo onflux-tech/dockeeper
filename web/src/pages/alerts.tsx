@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Bell, Plus, Pencil, Trash2, Radio, Send, Loader2, History } from "lucide-react";
+import { Bell, Plus, Pencil, Trash2, Radio, Send, Loader2, History, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,7 +175,7 @@ export default function AlertsPage() {
 	return (
 		<div className="flex flex-col gap-6">
 			{/* Header */}
-			<div className="flex items-center gap-3">
+			<div className="flex items-center gap-2">
 				<Bell className="h-5 w-5 text-muted-foreground" />
 				<h1 className="text-2xl font-semibold">Alerts</h1>
 				{firingCount > 0 && (
@@ -183,9 +183,6 @@ export default function AlertsPage() {
 						{firingCount} firing
 					</Badge>
 				)}
-				<div className="ml-auto">
-					<ServerFilterSelect value={serverFilter} onValueChange={setServerFilter} />
-				</div>
 			</div>
 
 			<Tabs defaultValue="rules">
@@ -207,15 +204,21 @@ export default function AlertsPage() {
 				{/* ── Rules Tab ───────────────────────────── */}
 				<TabsContent value="rules" className="space-y-4">
 					<div className="flex items-center justify-between">
-						<Input
-							placeholder="Search rules..."
-							value={ruleSearch}
-							onChange={(e) => {
-								setRuleSearch(e.target.value);
-								setRulesPage(1);
-							}}
-							className="max-w-xs"
-						/>
+						<div className="flex items-center gap-3">
+							<ServerFilterSelect value={serverFilter} onValueChange={setServerFilter} />
+							<div className="relative w-64">
+								<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<Input
+									placeholder="Search rules..."
+									value={ruleSearch}
+									onChange={(e) => {
+										setRuleSearch(e.target.value);
+										setRulesPage(1);
+									}}
+									className="pl-8"
+								/>
+							</div>
+						</div>
 						<Button
 							size="sm"
 							onClick={() => {
@@ -444,6 +447,10 @@ export default function AlertsPage() {
 
 				{/* ── History Tab ─────────────────────────── */}
 				<TabsContent value="history" className="space-y-4">
+					<div className="flex items-center gap-3">
+						<ServerFilterSelect value={serverFilter} onValueChange={setServerFilter} />
+					</div>
+
 					{logsLoading ? (
 						<div className="space-y-2">
 							{[1, 2, 3].map((i) => (

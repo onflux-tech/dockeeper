@@ -760,12 +760,10 @@ function APIKeysTab() {
 
 export default function UsersPage() {
 	return (
-		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl font-bold tracking-tight">Users & Access</h1>
-				<p className="text-muted-foreground">
-					Manage users, role groups, and API keys.
-				</p>
+		<div className="flex flex-col gap-6">
+			<div className="flex items-center gap-2">
+				<Users2 className="h-5 w-5 text-muted-foreground" />
+				<h1 className="text-2xl font-semibold">Users & Access</h1>
 			</div>
 
 			<Tabs defaultValue="users">

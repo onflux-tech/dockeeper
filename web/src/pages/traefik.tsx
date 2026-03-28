@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Globe, ShieldCheck, ShieldOff } from "lucide-react";
+import { Globe, ShieldCheck, ShieldOff, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,9 +68,7 @@ export default function TraefikPage() {
 				<Globe className="h-5 w-5 text-muted-foreground" />
 				<h1 className="text-2xl font-semibold">Traefik Routes</h1>
 				{!isLoading && (
-					<span className="text-sm text-muted-foreground">
-						({routesResult?.totalItems ?? 0} routes)
-					</span>
+					<Badge variant="secondary" className="ml-1">{routesResult?.totalItems ?? 0}</Badge>
 				)}
 			</div>
 
@@ -95,15 +93,18 @@ export default function TraefikPage() {
 						))}
 					</SelectContent>
 				</Select>
-				<Input
-					placeholder="Search routes..."
-					value={search}
-					onChange={(e) => {
-						setSearch(e.target.value);
-						setPage(1);
-					}}
-					className="max-w-xs"
-				/>
+				<div className="relative w-64">
+					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search routes..."
+						value={search}
+						onChange={(e) => {
+							setSearch(e.target.value);
+							setPage(1);
+						}}
+						className="pl-8"
+					/>
+				</div>
 			</div>
 
 			{/* Routes Table */}

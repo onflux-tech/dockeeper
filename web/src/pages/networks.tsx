@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Network, Plus, Trash2, Link2, Unlink2 } from "lucide-react";
+import { Network, Plus, Trash2, Link2, Unlink2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,7 +98,7 @@ export default function NetworksPage() {
 				<div className="flex items-center gap-2">
 					<Network className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Networks</h1>
-					{!isLoading && <span className="text-sm text-muted-foreground">({totalNetworks})</span>}
+					{!isLoading && <Badge variant="secondary" className="ml-1">{totalNetworks}</Badge>}
 				</div>
 				<Button size="sm" onClick={() => setCreateOpen(true)} disabled={serverFilter === "all"}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -126,12 +126,15 @@ export default function NetworksPage() {
 						))}
 					</SelectContent>
 				</Select>
-				<Input
-					placeholder="Search networks..."
-					value={filters.search}
-					onChange={(e) => setSearch(e.target.value)}
-					className="max-w-xs"
-				/>
+				<div className="relative w-64">
+					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search networks..."
+						value={filters.search}
+						onChange={(e) => setSearch(e.target.value)}
+						className="pl-8"
+					/>
+				</div>
 			</div>
 
 			{/* Table */}
@@ -235,14 +238,16 @@ export default function NetworksPage() {
 				</div>
 			)}
 
-			<PaginationControls
-				page={filters.page}
-				totalPages={networksResult?.totalPages ?? 0}
-				totalItems={totalNetworks}
-				onPageChange={setPage}
-				label="networks"
-			/>
-			<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+			<div className="flex items-center justify-between">
+				<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+				<PaginationControls
+					page={filters.page}
+					totalPages={networksResult?.totalPages ?? 0}
+					totalItems={totalNetworks}
+					onPageChange={setPage}
+					label="networks"
+				/>
+			</div>
 
 			{/* Create Dialog */}
 			{serverFilter !== "all" && (

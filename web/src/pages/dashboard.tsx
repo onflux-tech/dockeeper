@@ -13,6 +13,7 @@ import {
 	Lock,
 	Unlock,
 	RotateCcw,
+	LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -207,7 +208,7 @@ export default function DashboardPage() {
 	};
 
 	return (
-		<div className="flex flex-col gap-4" ref={containerRef}>
+		<div className="flex flex-col gap-6" ref={containerRef}>
 			{loadingLayout ? (
 				<>
 					<Skeleton className="h-8 w-48" />
@@ -220,7 +221,10 @@ export default function DashboardPage() {
 			) : (
 				<>
 					<div className="flex items-center justify-between">
-						<h1 className="text-2xl font-semibold">Dashboard</h1>
+						<div className="flex items-center gap-2">
+							<LayoutDashboard className="h-5 w-5 text-muted-foreground" />
+							<h1 className="text-2xl font-semibold">Dashboard</h1>
+						</div>
 						<div className="flex items-center gap-2">
 							{editing && (
 								<Button variant="outline" size="sm" onClick={handleReset}>

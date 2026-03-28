@@ -92,7 +92,7 @@ export default function VolumesPage() {
 				<div className="flex items-center gap-2">
 					<HardDrive className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Volumes</h1>
-					{!isLoading && <span className="text-sm text-muted-foreground">({totalVolumes})</span>}
+					{!isLoading && <Badge variant="secondary" className="ml-1">{totalVolumes}</Badge>}
 				</div>
 				<Button size="sm" onClick={() => setCreateOpen(true)} disabled={serverFilter === "all"}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -120,12 +120,15 @@ export default function VolumesPage() {
 						))}
 					</SelectContent>
 				</Select>
-				<Input
-					placeholder="Search volumes..."
-					value={filters.search}
-					onChange={(e) => setSearch(e.target.value)}
-					className="max-w-xs"
-				/>
+				<div className="relative w-64">
+					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search volumes..."
+						value={filters.search}
+						onChange={(e) => setSearch(e.target.value)}
+						className="pl-8"
+					/>
+				</div>
 			</div>
 
 			{/* Table */}
@@ -202,14 +205,16 @@ export default function VolumesPage() {
 				</div>
 			)}
 
-			<PaginationControls
-				page={filters.page}
-				totalPages={volumesResult?.totalPages ?? 0}
-				totalItems={totalVolumes}
-				onPageChange={setPage}
-				label="volumes"
-			/>
-			<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+			<div className="flex items-center justify-between">
+				<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+				<PaginationControls
+					page={filters.page}
+					totalPages={volumesResult?.totalPages ?? 0}
+					totalItems={totalVolumes}
+					onPageChange={setPage}
+					label="volumes"
+				/>
+			</div>
 
 			{/* Create Dialog */}
 			{serverFilter !== "all" && (

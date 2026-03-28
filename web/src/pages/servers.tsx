@@ -98,7 +98,7 @@ export default function ServersPage() {
 	const totalServers = serversResult?.totalItems ?? 0;
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					<Server className="h-5 w-5 text-muted-foreground" />
@@ -109,14 +109,14 @@ export default function ServersPage() {
 						</Badge>
 					)}
 				</div>
-				<Button onClick={() => navigate("/servers/create")}>
+				<Button size="sm" onClick={() => navigate("/servers/create")}>
 					<Plus className="mr-2 h-4 w-4" />
 					Add Server
 				</Button>
 			</div>
 
-			<div className="flex items-center gap-2">
-				<div className="relative w-72">
+			<div className="flex items-center gap-3">
+				<div className="relative w-64">
 					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
 						placeholder="Search servers…"

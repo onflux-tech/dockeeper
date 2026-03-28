@@ -9,6 +9,7 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { ContainerTable, type SortKey, type SortDir } from "@/components/server/container-table";
 import { ServerFilterSelect } from "@/components/server-filter-select";
 import { TagFilterSelect } from "@/components/tag-filter-select";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { containsFilter, andFilters } from "@/lib/pocketbase-filters";
 
@@ -81,7 +82,7 @@ export default function ContainersPage() {
 					<Box className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Containers</h1>
 					{!isLoading && containersResult && (
-						<span className="text-sm text-muted-foreground">({totalContainers})</span>
+						<Badge variant="secondary" className="ml-1">{totalContainers}</Badge>
 					)}
 				</div>
 				<Button asChild size="sm">

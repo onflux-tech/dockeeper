@@ -100,14 +100,14 @@ export default function EventsPage() {
 	const page = Math.floor(offset / PAGE_SIZE) + 1;
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
 			{/* Header */}
 			<div className="flex items-center gap-2">
 				<Activity className="h-5 w-5 text-muted-foreground" />
 				<h1 className="text-2xl font-semibold">Events</h1>
 				{!isLoading && (
-					<Badge variant="secondary" className="ml-2">
-						{events.length} shown
+					<Badge variant="secondary" className="ml-1">
+						{events.length}
 					</Badge>
 				)}
 			</div>

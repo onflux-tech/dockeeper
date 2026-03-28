@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Archive, Plus, Pencil, Trash2, Play, Loader2 } from "lucide-react";
+import { Archive, Plus, Pencil, Trash2, Play, Loader2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,9 +133,7 @@ export default function BackupsPage() {
 					<Archive className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Backups</h1>
 					{!policiesLoading && (
-						<span className="text-sm text-muted-foreground">
-							({policiesResult?.totalItems ?? 0} policies)
-						</span>
+						<Badge variant="secondary" className="ml-1">{policiesResult?.totalItems ?? 0}</Badge>
 					)}
 					{runningCount > 0 && (
 						<Badge variant="secondary" className="gap-1">
@@ -180,15 +178,18 @@ export default function BackupsPage() {
 						))}
 					</SelectContent>
 				</Select>
-				<Input
-					placeholder="Search policies..."
-					value={search}
-					onChange={(e) => {
-						setSearch(e.target.value);
-						setPoliciesPage(1);
-					}}
-					className="max-w-xs"
-				/>
+				<div className="relative w-64">
+					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search policies..."
+						value={search}
+						onChange={(e) => {
+							setSearch(e.target.value);
+							setPoliciesPage(1);
+						}}
+						className="pl-8"
+					/>
+				</div>
 			</div>
 
 			{/* Policies Table */}

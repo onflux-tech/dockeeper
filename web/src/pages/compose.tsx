@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Rocket, Plus, Download } from "lucide-react";
+import { Rocket, Plus, Download, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,7 +78,7 @@ export default function ComposePage() {
 					<Rocket className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Compose Stacks</h1>
 					{!isLoading && (
-						<span className="text-sm text-muted-foreground">({stacksResult?.totalItems ?? 0})</span>
+						<Badge variant="secondary" className="ml-1">{stacksResult?.totalItems ?? 0}</Badge>
 					)}
 				</div>
 				<div className="flex items-center gap-2">
@@ -121,12 +121,15 @@ export default function ComposePage() {
 						))}
 					</SelectContent>
 				</Select>
-				<Input
-					placeholder="Search stacks..."
-					value={filters.search}
-					onChange={(e) => setSearch(e.target.value)}
-					className="max-w-xs"
-				/>
+				<div className="relative w-64">
+					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search stacks..."
+						value={filters.search}
+						onChange={(e) => setSearch(e.target.value)}
+						className="pl-8"
+					/>
+				</div>
 			</div>
 
 			{/* Table */}
@@ -188,14 +191,16 @@ export default function ComposePage() {
 				</div>
 			)}
 
-			<PaginationControls
-				page={filters.page}
-				totalPages={stacksResult?.totalPages ?? 0}
-				totalItems={stacksResult?.totalItems ?? 0}
-				onPageChange={setPage}
-				label="stacks"
-			/>
-			<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+			<div className="flex items-center justify-between">
+				<PerPageSelector value={filters.perPage} onChange={setPerPage} />
+				<PaginationControls
+					page={filters.page}
+					totalPages={stacksResult?.totalPages ?? 0}
+					totalItems={stacksResult?.totalItems ?? 0}
+					onPageChange={setPage}
+					label="stacks"
+				/>
+			</div>
 
 			{/* Stack Detail */}
 			{selectedStack && <StackDetail stack={selectedStack} onDeleted={() => setSelectedId(null)} />}

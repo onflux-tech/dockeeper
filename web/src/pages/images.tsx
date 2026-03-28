@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Layers, Download, Trash2, Eraser } from "lucide-react";
+import { Layers, Download, Trash2, Eraser, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,7 +110,7 @@ export default function ImagesPage() {
 				<div className="flex items-center gap-2">
 					<Layers className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Images</h1>
-					{!isLoading && <span className="text-sm text-muted-foreground">({totalImages})</span>}
+					{!isLoading && <Badge variant="secondary" className="ml-1">{totalImages}</Badge>}
 				</div>
 				<div className="flex items-center gap-2">
 					<Button
@@ -149,14 +149,17 @@ export default function ImagesPage() {
 						))}
 					</SelectContent>
 				</Select>
-				<Input
-					placeholder="Search images..."
-					value={filters.search}
-					onChange={(e) => {
-						setSearch(e.target.value);
-					}}
-					className="max-w-xs"
-				/>
+				<div className="relative w-64">
+					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search images..."
+						value={filters.search}
+						onChange={(e) => {
+							setSearch(e.target.value);
+						}}
+						className="pl-8"
+					/>
+				</div>
 			</div>
 
 			{/* Table */}

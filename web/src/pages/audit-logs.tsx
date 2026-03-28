@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { ScrollText, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ScrollText, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Select,
@@ -66,7 +66,7 @@ export default function AuditLogsPage() {
 	};
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
 			{/* Header */}
 			<div className="flex items-center gap-2">
 				<ScrollText className="h-5 w-5 text-muted-foreground" />
@@ -171,31 +171,13 @@ export default function AuditLogsPage() {
 
 			{/* Pagination */}
 			{data && data.totalPages > 1 && (
-				<div className="flex items-center justify-between">
-					<p className="text-sm text-muted-foreground">
-						Page {data.page} of {data.totalPages} ({data.totalItems} total)
-					</p>
-					<div className="flex items-center gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={page <= 1}
-							onClick={() => setPage((p) => Math.max(1, p - 1))}
-						>
-							<ChevronLeft className="h-4 w-4" />
-							Previous
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={page >= data.totalPages}
-							onClick={() => setPage((p) => p + 1)}
-						>
-							Next
-							<ChevronRight className="h-4 w-4" />
-						</Button>
-					</div>
-				</div>
+				<PaginationControls
+					page={data.page}
+					totalPages={data.totalPages}
+					totalItems={data.totalItems}
+					onPageChange={setPage}
+					label="logs"
+				/>
 			)}
 		</div>
 	);

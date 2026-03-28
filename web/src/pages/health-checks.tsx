@@ -96,7 +96,7 @@ export default function HealthChecksPage() {
 					<HeartPulse className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Health Checks</h1>
 				</div>
-				<Button onClick={() => setShowCreate(true)}>
+				<Button size="sm" onClick={() => setShowCreate(true)}>
 					<Plus className="mr-1.5 h-4 w-4" />
 					New Check
 				</Button>
