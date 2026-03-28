@@ -324,6 +324,7 @@ function GroupsTab() {
 	const [selectedCaps, setSelectedCaps] = useState<string[]>([]);
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 	const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+	const [viewingPreset, setViewingPreset] = useState(false);
 
 	function toggleCap(cap: string) {
 		setSelectedCaps((prev) =>
@@ -345,11 +346,12 @@ function GroupsTab() {
 		);
 	}
 
-	function openEdit(group: { id: string; name: string; description: string; capabilities: string[] }) {
+	function openEdit(group: { id: string; name: string; description: string; capabilities: string[]; is_preset: boolean }) {
 		setEditingGroupId(group.id);
 		setName(group.name);
 		setDescription(group.description);
 		setSelectedCaps(group.capabilities ?? []);
+		setViewingPreset(group.is_preset);
 	}
 
 	function handleUpdate() {
@@ -393,7 +395,7 @@ function GroupsTab() {
 
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{groups?.map((group) => (
-					<Card key={group.id} className="cursor-pointer hover:ring-1 hover:ring-ring" onClick={() => !group.is_preset && openEdit(group)}>
+					<Card key={group.id} className="cursor-pointer hover:ring-1 hover:ring-ring" onClick={() => openEdit(group)}>
 						<CardHeader className="pb-3">
 							<div className="flex items-center justify-between">
 								<CardTitle className="text-base">{group.name}</CardTitle>
@@ -442,13 +444,14 @@ function GroupsTab() {
 				))}
 			</div>
 
-			{/* Create / Edit Group Dialog */}
+			{/* Create / Edit / View Group Dialog */}
 			<Dialog
 				open={showCreate || !!editingGroupId}
 				onOpenChange={(open) => {
 					if (!open) {
 						setShowCreate(false);
 						setEditingGroupId(null);
+						setViewingPreset(false);
 						setName("");
 						setDescription("");
 						setSelectedCaps([]);
@@ -457,28 +460,38 @@ function GroupsTab() {
 			>
 				<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
 					<DialogHeader>
-						<DialogTitle>{editingGroupId ? "Edit Group" : "Create Group"}</DialogTitle>
+						<DialogTitle>
+							{viewingPreset ? name : editingGroupId ? "Edit Group" : "Create Group"}
+						</DialogTitle>
 						<DialogDescription>
-							{editingGroupId ? "Update group details and capabilities." : "Define a new role group with capabilities."}
+							{viewingPreset
+								? "This is a preset group. Its capabilities cannot be modified."
+								: editingGroupId
+									? "Update group details and capabilities."
+									: "Define a new role group with capabilities."}
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
-						<div className="space-y-2">
-							<Label>Name</Label>
-							<Input
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								placeholder="Group name"
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Description</Label>
-							<Input
-								value={description}
-								onChange={(e) => setDescription(e.target.value)}
-								placeholder="Optional description"
-							/>
-						</div>
+						{!viewingPreset && (
+							<>
+								<div className="space-y-2">
+									<Label>Name</Label>
+									<Input
+										value={name}
+										onChange={(e) => setName(e.target.value)}
+										placeholder="Group name"
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label>Description</Label>
+									<Input
+										value={description}
+										onChange={(e) => setDescription(e.target.value)}
+										placeholder="Optional description"
+									/>
+								</div>
+							</>
+						)}
 						<div className="space-y-2">
 							<Label>Capabilities</Label>
 							<div className="mt-2 space-y-2">
@@ -489,13 +502,14 @@ function GroupsTab() {
 											{caps.map((cap) => (
 												<label
 													key={cap}
-													className="flex cursor-pointer items-center gap-1.5 text-xs"
+													className={`flex items-center gap-1.5 text-xs ${viewingPreset ? "" : "cursor-pointer"}`}
 												>
 													<input
 														type="checkbox"
 														className="accent-primary"
 														checked={selectedCaps.includes(cap)}
-														onChange={() => toggleCap(cap)}
+														onChange={() => !viewingPreset && toggleCap(cap)}
+														disabled={viewingPreset}
 													/>
 													{cap.split(".")[1]}
 												</label>
@@ -507,15 +521,23 @@ function GroupsTab() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => { setShowCreate(false); setEditingGroupId(null); }}>
-							Cancel
-						</Button>
-						<Button
-							onClick={editingGroupId ? handleUpdate : handleCreate}
-							disabled={!name || (editingGroupId ? updateGroup.isPending : createGroup.isPending)}
-						>
-							{editingGroupId ? "Save" : "Create"}
-						</Button>
+						{viewingPreset ? (
+							<Button onClick={() => { setEditingGroupId(null); setViewingPreset(false); }}>
+								Close
+							</Button>
+						) : (
+							<>
+								<Button variant="outline" onClick={() => { setShowCreate(false); setEditingGroupId(null); }}>
+									Cancel
+								</Button>
+								<Button
+									onClick={editingGroupId ? handleUpdate : handleCreate}
+									disabled={!name || (editingGroupId ? updateGroup.isPending : createGroup.isPending)}
+								>
+									{editingGroupId ? "Save" : "Create"}
+								</Button>
+							</>
+						)}
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
