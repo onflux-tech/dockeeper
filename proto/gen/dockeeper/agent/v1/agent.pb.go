@@ -6063,6 +6063,7 @@ type OpenDataStreamResponse struct {
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*OpenDataStreamResponse_Cancel
+	//	*OpenDataStreamResponse_Data
 	Payload       isOpenDataStreamResponse_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -6121,6 +6122,15 @@ func (x *OpenDataStreamResponse) GetCancel() *DataStreamCancel {
 	return nil
 }
 
+func (x *OpenDataStreamResponse) GetData() []byte {
+	if x != nil {
+		if x, ok := x.Payload.(*OpenDataStreamResponse_Data); ok {
+			return x.Data
+		}
+	}
+	return nil
+}
+
 type isOpenDataStreamResponse_Payload interface {
 	isOpenDataStreamResponse_Payload()
 }
@@ -6129,7 +6139,13 @@ type OpenDataStreamResponse_Cancel struct {
 	Cancel *DataStreamCancel `protobuf:"bytes,2,opt,name=cancel,proto3,oneof"` // Manager requests cancellation
 }
 
+type OpenDataStreamResponse_Data struct {
+	Data []byte `protobuf:"bytes,3,opt,name=data,proto3,oneof"` // Raw binary (agent update chunks)
+}
+
 func (*OpenDataStreamResponse_Cancel) isOpenDataStreamResponse_Payload() {}
+
+func (*OpenDataStreamResponse_Data) isOpenDataStreamResponse_Payload() {}
 
 // Text payload for log lines, compose output, etc.
 type DataStreamText struct {
@@ -7226,10 +7242,11 @@ const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
 	"\bprogress\x18\x04 \x01(\v2&.dockeeper.agent.v1.DataStreamProgressH\x00R\bprogress\x12D\n" +
 	"\bcomplete\x18\x05 \x01(\v2&.dockeeper.agent.v1.DataStreamCompleteH\x00R\bcomplete\x12;\n" +
 	"\x05error\x18\x06 \x01(\v2#.dockeeper.agent.v1.DataStreamErrorH\x00R\x05errorB\t\n" +
-	"\apayload\"\x80\x01\n" +
+	"\apayload\"\x96\x01\n" +
 	"\x16OpenDataStreamResponse\x12\x1b\n" +
 	"\tstream_id\x18\x01 \x01(\tR\bstreamId\x12>\n" +
-	"\x06cancel\x18\x02 \x01(\v2$.dockeeper.agent.v1.DataStreamCancelH\x00R\x06cancelB\t\n" +
+	"\x06cancel\x18\x02 \x01(\v2$.dockeeper.agent.v1.DataStreamCancelH\x00R\x06cancel\x12\x14\n" +
+	"\x04data\x18\x03 \x01(\fH\x00R\x04dataB\t\n" +
 	"\apayload\"<\n" +
 	"\x0eDataStreamText\x12\x12\n" +
 	"\x04line\x18\x01 \x01(\tR\x04line\x12\x16\n" +
@@ -7688,6 +7705,7 @@ func file_dockeeper_agent_v1_agent_proto_init() {
 	}
 	file_dockeeper_agent_v1_agent_proto_msgTypes[80].OneofWrappers = []any{
 		(*OpenDataStreamResponse_Cancel)(nil),
+		(*OpenDataStreamResponse_Data)(nil),
 	}
 	file_dockeeper_agent_v1_agent_proto_msgTypes[86].OneofWrappers = []any{
 		(*OpenExecStreamRequest_Stdout)(nil),

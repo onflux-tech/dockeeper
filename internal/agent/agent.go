@@ -14,6 +14,7 @@ import (
 	"github.com/onflux-tech/dockeeper/internal/agent/cert"
 	"github.com/onflux-tech/dockeeper/internal/agent/collector"
 	"github.com/onflux-tech/dockeeper/internal/agent/executor"
+	"github.com/onflux-tech/dockeeper/internal/agent/tunnel"
 )
 
 // Version is set at build time via ldflags.
@@ -126,18 +127,27 @@ func (a *Agent) Run(ctx context.Context) error {
 		traefikColl := collector.NewTraefikCollector(orch, a.client.Traefik(), a.cfg.ServerID, a.logger)
 		go traefikColl.Run(ctx)
 
-		// Start agent gRPC server so the manager can send commands and stream logs.
+		// Start reverse tunnel client — replaces the old agent gRPC server.
+		// The tunnel client opens a persistent CommandChannel to the manager
+		// and spawns on-demand DataStream/ExecStream sessions when signalled.
 		exec, execErr := executor.NewDockerExecutor()
 		if execErr != nil {
 			a.logger.Warn("failed to create docker executor, commands disabled", "error", execErr)
 		} else {
-			agentSrv := NewAgentServer(exec, orch, a.logger, cancel)
+			tc := tunnel.NewClient(
+				a.cfg.ServerID,
+				a.client.Conn(),
+				exec,
+				orch,
+				a.logger,
+				cancel,
+				a.cfg.DataDir,
+			)
 			go func() {
-				if srvErr := agentSrv.Start(); srvErr != nil {
-					a.logger.Error("agent gRPC server exited", "error", srvErr)
+				if tunnelErr := tc.Run(ctx); tunnelErr != nil && ctx.Err() == nil {
+					a.logger.Error("tunnel client exited", "error", tunnelErr)
 				}
 			}()
-			defer agentSrv.Stop()
 		}
 	}
 

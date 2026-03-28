@@ -760,6 +760,7 @@ message OpenDataStreamResponse {
 
   oneof payload {
     DataStreamCancel cancel = 2;             // Manager requests cancellation
+    bytes data = 3;                          // Raw binary (agent update chunks)
   }
 }
 
