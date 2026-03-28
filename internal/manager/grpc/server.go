@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/onflux-tech/dockeeper/internal/manager/channel"
 	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/manager/services"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
@@ -19,10 +20,11 @@ import (
 type Server struct {
 	grpcServer *grpc.Server
 	addr       string
+	Registry   *channel.Registry
 }
 
 // NewServer creates a configured gRPC server with TLS, interceptors and
-// the enrollment service registered.
+// all agent services registered.
 func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr string, bus *events.Bus) (*Server, error) {
 	tlsCfg, err := ca.ServerTLSConfig()
 	if err != nil {
@@ -35,7 +37,7 @@ func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr stri
 		grpc.ChainStreamInterceptor(ChainStreamInterceptors(tlsCfg)...),
 	)
 
-	// Register services.
+	// Register existing agent→manager services.
 	enrollment := NewEnrollmentHandler(app, ca, bus)
 	agentpb.RegisterAgentEnrollmentServiceServer(gs, enrollment)
 
@@ -52,7 +54,19 @@ func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr stri
 	traefikHandler := NewTraefikHandler(app, traefikStore, bus)
 	agentpb.RegisterAgentTraefikServiceServer(gs, traefikHandler)
 
-	return &Server{grpcServer: gs, addr: addr}, nil
+	// Register reverse-tunnel services (agent connects to manager).
+	registry := channel.NewRegistry(app, bus)
+
+	cmdChannelHandler := NewCommandChannelHandler(registry)
+	agentpb.RegisterAgentCommandChannelServiceServer(gs, cmdChannelHandler)
+
+	dataStreamHandler := NewDataStreamHandler(registry)
+	agentpb.RegisterAgentDataStreamServiceServer(gs, dataStreamHandler)
+
+	execStreamHandler := NewExecStreamHandler(registry)
+	agentpb.RegisterAgentExecStreamServiceServer(gs, execStreamHandler)
+
+	return &Server{grpcServer: gs, addr: addr, Registry: registry}, nil
 }
 
 // Start begins listening and serving gRPC requests. This method blocks.
