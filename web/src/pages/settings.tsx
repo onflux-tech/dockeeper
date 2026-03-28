@@ -45,6 +45,7 @@ import {
 import {
 	useRegistryCredentials,
 	useCreateRegistryCredential,
+	useUpdateRegistryCredential,
 	useDeleteRegistryCredential,
 } from "@/hooks/use-updates";
 import {
@@ -520,29 +521,55 @@ function AboutTab() {
 function RegistryTab() {
 	const { data: credentials, isLoading } = useRegistryCredentials();
 	const createCred = useCreateRegistryCredential();
+	const updateCred = useUpdateRegistryCredential();
 	const deleteCred = useDeleteRegistryCredential();
 
 	const [showForm, setShowForm] = useState(false);
+	const [editId, setEditId] = useState<string | null>(null);
 	const [name, setName] = useState("");
 	const [host, setHost] = useState("");
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 
-	const handleCreate = (e: React.FormEvent) => {
+	function resetForm() {
+		setName("");
+		setHost("");
+		setUsername("");
+		setPassword("");
+		setEditId(null);
+		setShowForm(false);
+	}
+
+	function openEdit(cred: { id: string; name: string; registry_host: string }) {
+		setEditId(cred.id);
+		setName(cred.name);
+		setHost(cred.registry_host);
+		setUsername("");
+		setPassword("");
+		setShowForm(true);
+	}
+
+	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		createCred.mutate(
-			{ name, registry_host: host, username, password },
-			{
-				onSuccess: () => {
-					setName("");
-					setHost("");
-					setUsername("");
-					setPassword("");
-					setShowForm(false);
+		if (editId) {
+			updateCred.mutate(
+				{
+					id: editId,
+					name,
+					registry_host: host,
+					...(username && password ? { username, password } : {}),
 				},
-			},
-		);
+				{ onSuccess: resetForm },
+			);
+		} else {
+			createCred.mutate(
+				{ name, registry_host: host, username, password },
+				{ onSuccess: resetForm },
+			);
+		}
 	};
+
+	const isPending = editId ? updateCred.isPending : createCred.isPending;
 
 	return (
 		<div className="space-y-6">
@@ -583,15 +610,25 @@ function RegistryTab() {
 												{new Date(cred.created).toLocaleDateString()}
 											</TableCell>
 											<TableCell className="text-right">
-												<Button
-													variant="ghost"
-													size="icon"
-													className="h-8 w-8 text-destructive hover:text-destructive"
-													onClick={() => deleteCred.mutate(cred.id)}
-													disabled={deleteCred.isPending}
-												>
-													<Trash2 className="h-4 w-4" />
-												</Button>
+												<div className="flex items-center justify-end gap-1">
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8"
+														onClick={() => openEdit(cred)}
+													>
+														<Pencil className="h-4 w-4" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8 text-destructive hover:text-destructive"
+														onClick={() => deleteCred.mutate(cred.id)}
+														disabled={deleteCred.isPending}
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												</div>
 											</TableCell>
 										</TableRow>
 									))}
@@ -607,7 +644,12 @@ function RegistryTab() {
 			)}
 
 			{showForm ? (
-				<form onSubmit={handleCreate} className="space-y-4 rounded-md border p-4">
+				<form onSubmit={handleSubmit} className="space-y-4 rounded-md border p-4">
+					{editId && (
+						<p className="text-sm text-muted-foreground">
+							Leave username and password blank to keep existing credentials.
+						</p>
+					)}
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-2">
 							<Label htmlFor="cred_name">Label</Label>
@@ -633,11 +675,11 @@ function RegistryTab() {
 							<Label htmlFor="cred_user">Username</Label>
 							<Input
 								id="cred_user"
-								placeholder="username"
+								placeholder={editId ? "Leave blank to keep" : "username"}
 								value={username}
 								onChange={(e) => setUsername(e.target.value)}
 								autoComplete="off"
-								required
+								required={!editId}
 							/>
 						</div>
 						<div className="space-y-2">
@@ -645,20 +687,20 @@ function RegistryTab() {
 							<Input
 								id="cred_pass"
 								type="password"
-								placeholder="••••••••"
+								placeholder={editId ? "Leave blank to keep" : "••••••••"}
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								autoComplete="new-password"
-								required
+								required={!editId}
 							/>
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={createCred.isPending}>
-							{createCred.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-							Save Credential
+						<Button type="submit" disabled={isPending}>
+							{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+							{editId ? "Save Changes" : "Save Credential"}
 						</Button>
-						<Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+						<Button type="button" variant="outline" onClick={resetForm}>
 							Cancel
 						</Button>
 					</div>

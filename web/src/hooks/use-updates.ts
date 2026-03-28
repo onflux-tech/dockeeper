@@ -149,6 +149,29 @@ export function useCreateRegistryCredential() {
 	});
 }
 
+export function useUpdateRegistryCredential() {
+	const qc = useQueryClient();
+	return useMutation<
+		RegistryCredential,
+		Error,
+		{ id: string; name?: string; registry_host?: string; username?: string; password?: string }
+	>({
+		mutationFn: ({ id, ...body }) =>
+			fetchJson(`/api/dk/registry-credentials/${id}`, {
+				method: "PUT",
+				headers: authHeaders(true),
+				body: JSON.stringify(body),
+			}),
+		onSuccess: () => {
+			toast.success("Registry credential updated");
+			qc.invalidateQueries({ queryKey: ["registry-credentials"] });
+		},
+		onError: (err) => {
+			toast.error(`Failed to update credential: ${err.message}`);
+		},
+	});
+}
+
 export function useDeleteRegistryCredential() {
 	const qc = useQueryClient();
 	return useMutation<{ status: string }, Error, string>({
