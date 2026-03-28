@@ -1958,3 +1958,105 @@ var AgentUpdateService_ServiceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "dockeeper/agent/v1/agent.proto",
 }
+
+const (
+	AgentHealthService_ExecuteHealthCheck_FullMethodName = "/dockeeper.agent.v1.AgentHealthService/ExecuteHealthCheck"
+)
+
+// AgentHealthServiceClient is the client API for AgentHealthService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AgentHealthServiceClient interface {
+	ExecuteHealthCheck(ctx context.Context, in *ExecuteHealthCheckRequest, opts ...grpc.CallOption) (*ExecuteHealthCheckResponse, error)
+}
+
+type agentHealthServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAgentHealthServiceClient(cc grpc.ClientConnInterface) AgentHealthServiceClient {
+	return &agentHealthServiceClient{cc}
+}
+
+func (c *agentHealthServiceClient) ExecuteHealthCheck(ctx context.Context, in *ExecuteHealthCheckRequest, opts ...grpc.CallOption) (*ExecuteHealthCheckResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExecuteHealthCheckResponse)
+	err := c.cc.Invoke(ctx, AgentHealthService_ExecuteHealthCheck_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentHealthServiceServer is the server API for AgentHealthService service.
+// All implementations must embed UnimplementedAgentHealthServiceServer
+// for forward compatibility.
+type AgentHealthServiceServer interface {
+	ExecuteHealthCheck(context.Context, *ExecuteHealthCheckRequest) (*ExecuteHealthCheckResponse, error)
+	mustEmbedUnimplementedAgentHealthServiceServer()
+}
+
+// UnimplementedAgentHealthServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAgentHealthServiceServer struct{}
+
+func (UnimplementedAgentHealthServiceServer) ExecuteHealthCheck(context.Context, *ExecuteHealthCheckRequest) (*ExecuteHealthCheckResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExecuteHealthCheck not implemented")
+}
+func (UnimplementedAgentHealthServiceServer) mustEmbedUnimplementedAgentHealthServiceServer() {}
+func (UnimplementedAgentHealthServiceServer) testEmbeddedByValue()                            {}
+
+// UnsafeAgentHealthServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AgentHealthServiceServer will
+// result in compilation errors.
+type UnsafeAgentHealthServiceServer interface {
+	mustEmbedUnimplementedAgentHealthServiceServer()
+}
+
+func RegisterAgentHealthServiceServer(s grpc.ServiceRegistrar, srv AgentHealthServiceServer) {
+	// If the following call panics, it indicates UnimplementedAgentHealthServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AgentHealthService_ServiceDesc, srv)
+}
+
+func _AgentHealthService_ExecuteHealthCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExecuteHealthCheckRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentHealthServiceServer).ExecuteHealthCheck(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentHealthService_ExecuteHealthCheck_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentHealthServiceServer).ExecuteHealthCheck(ctx, req.(*ExecuteHealthCheckRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// AgentHealthService_ServiceDesc is the grpc.ServiceDesc for AgentHealthService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AgentHealthService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "dockeeper.agent.v1.AgentHealthService",
+	HandlerType: (*AgentHealthServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ExecuteHealthCheck",
+			Handler:    _AgentHealthService_ExecuteHealthCheck_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "dockeeper/agent/v1/agent.proto",
+}

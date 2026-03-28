@@ -1,0 +1,48 @@
+/* ── Dashboard Overrides ─────────────────────────────── */
+
+/* Drag highlight for server cards and widget cards */
+.dashboard-drag-active {
+  opacity: 0.5;
+}
+
+/* Prevent text selection during drag */
+[draggable="true"] {
+  user-select: none;
+}
+
+/* Server card grid scroll — show 2 rows of cards, scroll for more.
+   Each card ~180px + 12px gap = ~192px per row, 2 rows ~384px + buffer */
+.server-card-scroll {
+  max-height: 400px;
+}
+
+/* ── RGL overrides for bottom widgets ─────────────────── */
+
+/* Placeholder shown while dragging a widget */
+.react-grid-layout .react-grid-placeholder {
+  background: hsl(var(--primary) / 0.15);
+  border: 2px dashed hsl(var(--primary) / 0.4);
+  border-radius: var(--radius);
+  opacity: 1;
+}
+
+/* Resize handle visibility only in edit mode */
+.dashboard-editing .react-resizable-handle {
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.dashboard-editing .react-resizable-handle:hover {
+  opacity: 1;
+}
+
+/* Hide resize handles when not editing */
+.react-grid-layout:not(.dashboard-editing) .react-resizable-handle {
+  display: none;
+}
+
+/* Drag shadow for widgets in edit mode */
+.dashboard-editing .react-grid-item.react-draggable-dragging {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+}

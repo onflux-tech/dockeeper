@@ -154,6 +154,14 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		// Subscribe event-based alert handler (needs alertEngine + blackoutSvc).
 		eventBus.Subscribe(events.NewAlertHandler(app, alertStore, alertEngine, blackoutSvc))
 
+		// Health checks system.
+		healthStore := store.NewHealthStore(app)
+		healthScheduler := services.NewHealthScheduler(app, healthStore, pool, eventBus)
+		routes.RegisterHealthCheckRoutes(se, app, healthStore, healthScheduler, rbac)
+
+		// Dashboard layout persistence.
+		routes.RegisterDashboardRoutes(se, app, rbac)
+
 		// Retention settings routes.
 		routes.RegisterRetentionRoutes(se, app, rbac)
 
@@ -203,15 +211,18 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 			return err
 		}
 
-		// Start gRPC server in background goroutine.
+		// Start health scheduler and gRPC server in background goroutines.
+		go healthScheduler.Start()
+
 		go func() {
 			if err := grpcServer.Start(); err != nil {
 				slog.Error("gRPC server exited", "error", err)
 			}
 		}()
 
-		// Register termination hook to stop gRPC server and EventBus.
+		// Register termination hook to stop gRPC server, scheduler, and EventBus.
 		app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
+			healthScheduler.Stop()
 			grpcServer.Stop()
 			pool.Close()
 			eventBus.Close()

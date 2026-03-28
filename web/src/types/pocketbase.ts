@@ -271,6 +271,36 @@ export interface TraefikRouteRecord extends BaseRecord {
 	status: string;
 }
 
+export interface HealthCheckRecord extends BaseRecord {
+	name: string;
+	container: string;
+	server: string;
+	url_path: string;
+	port: number;
+	expected_status: number;
+	interval_seconds: number;
+	timeout_seconds: number;
+	failure_threshold: number;
+	success_threshold: number;
+	auto_restart: boolean;
+	max_restarts: number;
+	restart_window_minutes: number;
+	enabled: boolean;
+	status: "healthy" | "unhealthy" | "unknown";
+	consecutive_failures: number;
+	last_check_at: string;
+	next_check_at: string;
+}
+
+export interface HealthCheckLogRecord extends BaseRecord {
+	check: string;
+	status_code: number;
+	response_time_ms: number;
+	success: boolean;
+	error: string;
+	checked_at: string;
+}
+
 // ── Collection name → record type map ───────────────────────────────────────
 
 export interface Collections {
@@ -297,6 +327,8 @@ export interface Collections {
 	settings: SettingRecord;
 	traefik_routes: TraefikRouteRecord;
 	blackout_windows: BlackoutWindowRecord;
+	health_checks: HealthCheckRecord;
+	health_check_logs: HealthCheckLogRecord;
 }
 
 /** All valid collection names. */

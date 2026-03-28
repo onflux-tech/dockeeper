@@ -33,4 +33,6 @@ const (
 	CollRegistryCredentials = "registry_credentials"
 	CollUpdateHistory       = "update_history"
 	CollBlackoutWindows     = "blackout_windows"
+	CollHealthChecks        = "health_checks"
+	CollHealthCheckLogs     = "health_check_logs"
 )

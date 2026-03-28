@@ -5,6 +5,7 @@ import {
 	Container,
 	Globe,
 	HardDrive,
+	HeartPulse,
 	Home,
 	Layers,
 	Network,
@@ -50,6 +51,7 @@ export const navigation: NavGroup[] = [
 		label: "Monitoring",
 		items: [
 			{ label: "Metrics", href: "/metrics", icon: BarChart3 },
+			{ label: "Health Checks", href: "/health-checks", icon: HeartPulse },
 			{ label: "Alerts", href: "/alerts", icon: Bell },
 			{ label: "Backups", href: "/backups", icon: Archive },
 			{ label: "Traefik", href: "/traefik", icon: Globe },

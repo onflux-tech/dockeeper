@@ -38,6 +38,12 @@ const (
 	ContainerUpdateCompleted  EventType = "container.update.completed"
 	ContainerUpdateFailed     EventType = "container.update.failed"
 	ContainerUpdateRolledback EventType = "container.update.rolledback"
+
+	// Health events.
+	HealthDegraded  EventType = "container.health.degraded"
+	HealthRecovered EventType = "container.health.recovered"
+	HealthRestart   EventType = "container.health.restart"
+	HealthGaveUp    EventType = "container.health.gave_up"
 )
 
 // Severity indicates the importance level of an event.
@@ -64,9 +70,9 @@ type Event struct {
 // SeverityFor returns the default severity for a given event type.
 func SeverityFor(t EventType) Severity {
 	switch t {
-	case ContainerCrashed, ServerOffline, ComposeFailed, BackupFailed, ContainerUpdateFailed:
+	case ContainerCrashed, ServerOffline, ComposeFailed, BackupFailed, ContainerUpdateFailed, HealthGaveUp:
 		return SeverityCritical
-	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved, ContainerUpdateRolledback:
+	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved, ContainerUpdateRolledback, HealthDegraded, HealthRestart:
 		return SeverityWarning
 	default:
 		return SeverityInfo

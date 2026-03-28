@@ -4215,6 +4215,150 @@ func (x *ContainerUpdateProgress) GetProgress() float32 {
 	return 0
 }
 
+type ExecuteHealthCheckRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ContainerId    string                 `protobuf:"bytes,1,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"` // Docker container ID to resolve IP
+	UrlPath        string                 `protobuf:"bytes,2,opt,name=url_path,json=urlPath,proto3" json:"url_path,omitempty"`             // HTTP path e.g. "/health"
+	Port           int32                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`                                 // Container port
+	TimeoutMs      int32                  `protobuf:"varint,4,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	ExpectedStatus int32                  `protobuf:"varint,5,opt,name=expected_status,json=expectedStatus,proto3" json:"expected_status,omitempty"` // e.g. 200
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ExecuteHealthCheckRequest) Reset() {
+	*x = ExecuteHealthCheckRequest{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecuteHealthCheckRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteHealthCheckRequest) ProtoMessage() {}
+
+func (x *ExecuteHealthCheckRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteHealthCheckRequest.ProtoReflect.Descriptor instead.
+func (*ExecuteHealthCheckRequest) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *ExecuteHealthCheckRequest) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
+func (x *ExecuteHealthCheckRequest) GetUrlPath() string {
+	if x != nil {
+		return x.UrlPath
+	}
+	return ""
+}
+
+func (x *ExecuteHealthCheckRequest) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *ExecuteHealthCheckRequest) GetTimeoutMs() int32 {
+	if x != nil {
+		return x.TimeoutMs
+	}
+	return 0
+}
+
+func (x *ExecuteHealthCheckRequest) GetExpectedStatus() int32 {
+	if x != nil {
+		return x.ExpectedStatus
+	}
+	return 0
+}
+
+type ExecuteHealthCheckResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	StatusCode     int32                  `protobuf:"varint,1,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	ResponseTimeMs int64                  `protobuf:"varint,2,opt,name=response_time_ms,json=responseTimeMs,proto3" json:"response_time_ms,omitempty"`
+	Error          string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Success        bool                   `protobuf:"varint,4,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ExecuteHealthCheckResponse) Reset() {
+	*x = ExecuteHealthCheckResponse{}
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecuteHealthCheckResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteHealthCheckResponse) ProtoMessage() {}
+
+func (x *ExecuteHealthCheckResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dockeeper_agent_v1_agent_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteHealthCheckResponse.ProtoReflect.Descriptor instead.
+func (*ExecuteHealthCheckResponse) Descriptor() ([]byte, []int) {
+	return file_dockeeper_agent_v1_agent_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *ExecuteHealthCheckResponse) GetStatusCode() int32 {
+	if x != nil {
+		return x.StatusCode
+	}
+	return 0
+}
+
+func (x *ExecuteHealthCheckResponse) GetResponseTimeMs() int64 {
+	if x != nil {
+		return x.ResponseTimeMs
+	}
+	return 0
+}
+
+func (x *ExecuteHealthCheckResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *ExecuteHealthCheckResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_dockeeper_agent_v1_agent_proto protoreflect.FileDescriptor
 
 const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
@@ -4576,7 +4720,20 @@ const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
 	"\x17ContainerUpdateProgress\x12\x12\n" +
 	"\x04step\x18\x01 \x01(\tR\x04step\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1a\n" +
-	"\bprogress\x18\x03 \x01(\x02R\bprogress*\xf2\x02\n" +
+	"\bprogress\x18\x03 \x01(\x02R\bprogress\"\xb5\x01\n" +
+	"\x19ExecuteHealthCheckRequest\x12!\n" +
+	"\fcontainer_id\x18\x01 \x01(\tR\vcontainerId\x12\x19\n" +
+	"\burl_path\x18\x02 \x01(\tR\aurlPath\x12\x12\n" +
+	"\x04port\x18\x03 \x01(\x05R\x04port\x12\x1d\n" +
+	"\n" +
+	"timeout_ms\x18\x04 \x01(\x05R\ttimeoutMs\x12'\n" +
+	"\x0fexpected_status\x18\x05 \x01(\x05R\x0eexpectedStatus\"\x97\x01\n" +
+	"\x1aExecuteHealthCheckResponse\x12\x1f\n" +
+	"\vstatus_code\x18\x01 \x01(\x05R\n" +
+	"statusCode\x12(\n" +
+	"\x10response_time_ms\x18\x02 \x01(\x03R\x0eresponseTimeMs\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x18\n" +
+	"\asuccess\x18\x04 \x01(\bR\asuccess*\xf2\x02\n" +
 	"\vCommandType\x12\x1c\n" +
 	"\x18COMMAND_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12COMMAND_TYPE_START\x10\x01\x12\x15\n" +
@@ -4634,7 +4791,9 @@ const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
 	"\x13ReportTraefikRoutes\x12..dockeeper.agent.v1.ReportTraefikRoutesRequest\x1a/.dockeeper.agent.v1.ReportTraefikRoutesResponse2\xff\x01\n" +
 	"\x12AgentUpdateService\x12m\n" +
 	"\x10CheckImageDigest\x12+.dockeeper.agent.v1.CheckImageDigestRequest\x1a,.dockeeper.agent.v1.CheckImageDigestResponse\x12z\n" +
-	"\x16ExecuteContainerUpdate\x121.dockeeper.agent.v1.ExecuteContainerUpdateRequest\x1a+.dockeeper.agent.v1.ContainerUpdateProgress0\x01BGZEgithub.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1;agentpbb\x06proto3"
+	"\x16ExecuteContainerUpdate\x121.dockeeper.agent.v1.ExecuteContainerUpdateRequest\x1a+.dockeeper.agent.v1.ContainerUpdateProgress0\x012\x89\x01\n" +
+	"\x12AgentHealthService\x12s\n" +
+	"\x12ExecuteHealthCheck\x12-.dockeeper.agent.v1.ExecuteHealthCheckRequest\x1a..dockeeper.agent.v1.ExecuteHealthCheckResponseBGZEgithub.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1;agentpbb\x06proto3"
 
 var (
 	file_dockeeper_agent_v1_agent_proto_rawDescOnce sync.Once
@@ -4649,7 +4808,7 @@ func file_dockeeper_agent_v1_agent_proto_rawDescGZIP() []byte {
 }
 
 var file_dockeeper_agent_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_dockeeper_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 67)
+var file_dockeeper_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 69)
 var file_dockeeper_agent_v1_agent_proto_goTypes = []any{
 	(CommandType)(0),                       // 0: dockeeper.agent.v1.CommandType
 	(*ServerInfo)(nil),                     // 1: dockeeper.agent.v1.ServerInfo
@@ -4715,34 +4874,36 @@ var file_dockeeper_agent_v1_agent_proto_goTypes = []any{
 	(*CheckImageDigestResponse)(nil),       // 61: dockeeper.agent.v1.CheckImageDigestResponse
 	(*ExecuteContainerUpdateRequest)(nil),  // 62: dockeeper.agent.v1.ExecuteContainerUpdateRequest
 	(*ContainerUpdateProgress)(nil),        // 63: dockeeper.agent.v1.ContainerUpdateProgress
-	nil,                                    // 64: dockeeper.agent.v1.ExecuteCommandRequest.ParamsEntry
-	nil,                                    // 65: dockeeper.agent.v1.CreateNetworkRequest.LabelsEntry
-	nil,                                    // 66: dockeeper.agent.v1.CreateVolumeRequest.LabelsEntry
-	nil,                                    // 67: dockeeper.agent.v1.InspectVolumeResponse.LabelsEntry
-	(*timestamppb.Timestamp)(nil),          // 68: google.protobuf.Timestamp
+	(*ExecuteHealthCheckRequest)(nil),      // 64: dockeeper.agent.v1.ExecuteHealthCheckRequest
+	(*ExecuteHealthCheckResponse)(nil),     // 65: dockeeper.agent.v1.ExecuteHealthCheckResponse
+	nil,                                    // 66: dockeeper.agent.v1.ExecuteCommandRequest.ParamsEntry
+	nil,                                    // 67: dockeeper.agent.v1.CreateNetworkRequest.LabelsEntry
+	nil,                                    // 68: dockeeper.agent.v1.CreateVolumeRequest.LabelsEntry
+	nil,                                    // 69: dockeeper.agent.v1.InspectVolumeResponse.LabelsEntry
+	(*timestamppb.Timestamp)(nil),          // 70: google.protobuf.Timestamp
 }
 var file_dockeeper_agent_v1_agent_proto_depIdxs = []int32{
 	1,  // 0: dockeeper.agent.v1.EnrollRequest.info:type_name -> dockeeper.agent.v1.ServerInfo
-	68, // 1: dockeeper.agent.v1.EnrollResponse.cert_expires_at:type_name -> google.protobuf.Timestamp
-	68, // 2: dockeeper.agent.v1.RenewCertResponse.expires_at:type_name -> google.protobuf.Timestamp
-	68, // 3: dockeeper.agent.v1.StreamMetricsRequest.timestamp:type_name -> google.protobuf.Timestamp
-	68, // 4: dockeeper.agent.v1.StreamContainerMetricsRequest.timestamp:type_name -> google.protobuf.Timestamp
+	70, // 1: dockeeper.agent.v1.EnrollResponse.cert_expires_at:type_name -> google.protobuf.Timestamp
+	70, // 2: dockeeper.agent.v1.RenewCertResponse.expires_at:type_name -> google.protobuf.Timestamp
+	70, // 3: dockeeper.agent.v1.StreamMetricsRequest.timestamp:type_name -> google.protobuf.Timestamp
+	70, // 4: dockeeper.agent.v1.StreamContainerMetricsRequest.timestamp:type_name -> google.protobuf.Timestamp
 	10, // 5: dockeeper.agent.v1.ContainerInfo.resource_limits:type_name -> dockeeper.agent.v1.ResourceLimits
-	68, // 6: dockeeper.agent.v1.ContainerInfo.created_at:type_name -> google.protobuf.Timestamp
-	68, // 7: dockeeper.agent.v1.ContainerInfo.started_at:type_name -> google.protobuf.Timestamp
+	70, // 6: dockeeper.agent.v1.ContainerInfo.created_at:type_name -> google.protobuf.Timestamp
+	70, // 7: dockeeper.agent.v1.ContainerInfo.started_at:type_name -> google.protobuf.Timestamp
 	11, // 8: dockeeper.agent.v1.ReportContainersRequest.containers:type_name -> dockeeper.agent.v1.ContainerInfo
-	68, // 9: dockeeper.agent.v1.ImageInfo.created_at:type_name -> google.protobuf.Timestamp
+	70, // 9: dockeeper.agent.v1.ImageInfo.created_at:type_name -> google.protobuf.Timestamp
 	14, // 10: dockeeper.agent.v1.ReportImagesRequest.images:type_name -> dockeeper.agent.v1.ImageInfo
 	17, // 11: dockeeper.agent.v1.ReportNetworksRequest.networks:type_name -> dockeeper.agent.v1.NetworkInfo
 	20, // 12: dockeeper.agent.v1.ReportVolumesRequest.volumes:type_name -> dockeeper.agent.v1.VolumeInfo
 	0,  // 13: dockeeper.agent.v1.ExecuteCommandRequest.type:type_name -> dockeeper.agent.v1.CommandType
-	64, // 14: dockeeper.agent.v1.ExecuteCommandRequest.params:type_name -> dockeeper.agent.v1.ExecuteCommandRequest.ParamsEntry
+	66, // 14: dockeeper.agent.v1.ExecuteCommandRequest.params:type_name -> dockeeper.agent.v1.ExecuteCommandRequest.ParamsEntry
 	25, // 15: dockeeper.agent.v1.ExecRequest.start:type_name -> dockeeper.agent.v1.ExecStart
 	26, // 16: dockeeper.agent.v1.ExecRequest.resize:type_name -> dockeeper.agent.v1.ExecResize
-	68, // 17: dockeeper.agent.v1.StreamLogsResponse.timestamp:type_name -> google.protobuf.Timestamp
-	65, // 18: dockeeper.agent.v1.CreateNetworkRequest.labels:type_name -> dockeeper.agent.v1.CreateNetworkRequest.LabelsEntry
-	66, // 19: dockeeper.agent.v1.CreateVolumeRequest.labels:type_name -> dockeeper.agent.v1.CreateVolumeRequest.LabelsEntry
-	67, // 20: dockeeper.agent.v1.InspectVolumeResponse.labels:type_name -> dockeeper.agent.v1.InspectVolumeResponse.LabelsEntry
+	70, // 17: dockeeper.agent.v1.StreamLogsResponse.timestamp:type_name -> google.protobuf.Timestamp
+	67, // 18: dockeeper.agent.v1.CreateNetworkRequest.labels:type_name -> dockeeper.agent.v1.CreateNetworkRequest.LabelsEntry
+	68, // 19: dockeeper.agent.v1.CreateVolumeRequest.labels:type_name -> dockeeper.agent.v1.CreateVolumeRequest.LabelsEntry
+	69, // 20: dockeeper.agent.v1.InspectVolumeResponse.labels:type_name -> dockeeper.agent.v1.InspectVolumeResponse.LabelsEntry
 	53, // 21: dockeeper.agent.v1.BackupVolumeRequest.s3:type_name -> dockeeper.agent.v1.S3Config
 	53, // 22: dockeeper.agent.v1.RestoreVolumeRequest.s3:type_name -> dockeeper.agent.v1.S3Config
 	57, // 23: dockeeper.agent.v1.ReportTraefikRoutesRequest.routes:type_name -> dockeeper.agent.v1.TraefikRouteInfo
@@ -4775,37 +4936,39 @@ var file_dockeeper_agent_v1_agent_proto_depIdxs = []int32{
 	58, // 50: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:input_type -> dockeeper.agent.v1.ReportTraefikRoutesRequest
 	60, // 51: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:input_type -> dockeeper.agent.v1.CheckImageDigestRequest
 	62, // 52: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:input_type -> dockeeper.agent.v1.ExecuteContainerUpdateRequest
-	3,  // 53: dockeeper.agent.v1.AgentEnrollmentService.Enroll:output_type -> dockeeper.agent.v1.EnrollResponse
-	5,  // 54: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:output_type -> dockeeper.agent.v1.RenewCertResponse
-	7,  // 55: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:output_type -> dockeeper.agent.v1.StreamMetricsResponse
-	9,  // 56: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:output_type -> dockeeper.agent.v1.StreamContainerMetricsResponse
-	13, // 57: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:output_type -> dockeeper.agent.v1.ReportContainersResponse
-	16, // 58: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:output_type -> dockeeper.agent.v1.ReportImagesResponse
-	19, // 59: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:output_type -> dockeeper.agent.v1.ReportNetworksResponse
-	22, // 60: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:output_type -> dockeeper.agent.v1.ReportVolumesResponse
-	24, // 61: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:output_type -> dockeeper.agent.v1.ExecuteCommandResponse
-	28, // 62: dockeeper.agent.v1.AgentExecService.Exec:output_type -> dockeeper.agent.v1.ExecResponse
-	30, // 63: dockeeper.agent.v1.AgentLogsService.StreamLogs:output_type -> dockeeper.agent.v1.StreamLogsResponse
-	32, // 64: dockeeper.agent.v1.AgentImageService.PullImage:output_type -> dockeeper.agent.v1.ImagePullProgress
-	34, // 65: dockeeper.agent.v1.AgentImageService.RemoveImage:output_type -> dockeeper.agent.v1.ImageRemoveResponse
-	36, // 66: dockeeper.agent.v1.AgentImageService.PruneImages:output_type -> dockeeper.agent.v1.ImagePruneResponse
-	38, // 67: dockeeper.agent.v1.AgentComposeService.ComposeUp:output_type -> dockeeper.agent.v1.ComposeOutput
-	38, // 68: dockeeper.agent.v1.AgentComposeService.ComposeDown:output_type -> dockeeper.agent.v1.ComposeOutput
-	38, // 69: dockeeper.agent.v1.AgentComposeService.ComposePull:output_type -> dockeeper.agent.v1.ComposeOutput
-	40, // 70: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:output_type -> dockeeper.agent.v1.CreateNetworkResponse
-	42, // 71: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:output_type -> dockeeper.agent.v1.RemoveNetworkResponse
-	44, // 72: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:output_type -> dockeeper.agent.v1.NetworkConnectResponse
-	46, // 73: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:output_type -> dockeeper.agent.v1.NetworkDisconnectResponse
-	48, // 74: dockeeper.agent.v1.AgentVolumeService.CreateVolume:output_type -> dockeeper.agent.v1.CreateVolumeResponse
-	50, // 75: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:output_type -> dockeeper.agent.v1.RemoveVolumeResponse
-	52, // 76: dockeeper.agent.v1.AgentVolumeService.InspectVolume:output_type -> dockeeper.agent.v1.InspectVolumeResponse
-	56, // 77: dockeeper.agent.v1.AgentBackupService.BackupVolume:output_type -> dockeeper.agent.v1.BackupProgress
-	56, // 78: dockeeper.agent.v1.AgentBackupService.RestoreVolume:output_type -> dockeeper.agent.v1.BackupProgress
-	59, // 79: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:output_type -> dockeeper.agent.v1.ReportTraefikRoutesResponse
-	61, // 80: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:output_type -> dockeeper.agent.v1.CheckImageDigestResponse
-	63, // 81: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:output_type -> dockeeper.agent.v1.ContainerUpdateProgress
-	53, // [53:82] is the sub-list for method output_type
-	24, // [24:53] is the sub-list for method input_type
+	64, // 53: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:input_type -> dockeeper.agent.v1.ExecuteHealthCheckRequest
+	3,  // 54: dockeeper.agent.v1.AgentEnrollmentService.Enroll:output_type -> dockeeper.agent.v1.EnrollResponse
+	5,  // 55: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:output_type -> dockeeper.agent.v1.RenewCertResponse
+	7,  // 56: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:output_type -> dockeeper.agent.v1.StreamMetricsResponse
+	9,  // 57: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:output_type -> dockeeper.agent.v1.StreamContainerMetricsResponse
+	13, // 58: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:output_type -> dockeeper.agent.v1.ReportContainersResponse
+	16, // 59: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:output_type -> dockeeper.agent.v1.ReportImagesResponse
+	19, // 60: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:output_type -> dockeeper.agent.v1.ReportNetworksResponse
+	22, // 61: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:output_type -> dockeeper.agent.v1.ReportVolumesResponse
+	24, // 62: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:output_type -> dockeeper.agent.v1.ExecuteCommandResponse
+	28, // 63: dockeeper.agent.v1.AgentExecService.Exec:output_type -> dockeeper.agent.v1.ExecResponse
+	30, // 64: dockeeper.agent.v1.AgentLogsService.StreamLogs:output_type -> dockeeper.agent.v1.StreamLogsResponse
+	32, // 65: dockeeper.agent.v1.AgentImageService.PullImage:output_type -> dockeeper.agent.v1.ImagePullProgress
+	34, // 66: dockeeper.agent.v1.AgentImageService.RemoveImage:output_type -> dockeeper.agent.v1.ImageRemoveResponse
+	36, // 67: dockeeper.agent.v1.AgentImageService.PruneImages:output_type -> dockeeper.agent.v1.ImagePruneResponse
+	38, // 68: dockeeper.agent.v1.AgentComposeService.ComposeUp:output_type -> dockeeper.agent.v1.ComposeOutput
+	38, // 69: dockeeper.agent.v1.AgentComposeService.ComposeDown:output_type -> dockeeper.agent.v1.ComposeOutput
+	38, // 70: dockeeper.agent.v1.AgentComposeService.ComposePull:output_type -> dockeeper.agent.v1.ComposeOutput
+	40, // 71: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:output_type -> dockeeper.agent.v1.CreateNetworkResponse
+	42, // 72: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:output_type -> dockeeper.agent.v1.RemoveNetworkResponse
+	44, // 73: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:output_type -> dockeeper.agent.v1.NetworkConnectResponse
+	46, // 74: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:output_type -> dockeeper.agent.v1.NetworkDisconnectResponse
+	48, // 75: dockeeper.agent.v1.AgentVolumeService.CreateVolume:output_type -> dockeeper.agent.v1.CreateVolumeResponse
+	50, // 76: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:output_type -> dockeeper.agent.v1.RemoveVolumeResponse
+	52, // 77: dockeeper.agent.v1.AgentVolumeService.InspectVolume:output_type -> dockeeper.agent.v1.InspectVolumeResponse
+	56, // 78: dockeeper.agent.v1.AgentBackupService.BackupVolume:output_type -> dockeeper.agent.v1.BackupProgress
+	56, // 79: dockeeper.agent.v1.AgentBackupService.RestoreVolume:output_type -> dockeeper.agent.v1.BackupProgress
+	59, // 80: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:output_type -> dockeeper.agent.v1.ReportTraefikRoutesResponse
+	61, // 81: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:output_type -> dockeeper.agent.v1.CheckImageDigestResponse
+	63, // 82: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:output_type -> dockeeper.agent.v1.ContainerUpdateProgress
+	65, // 83: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:output_type -> dockeeper.agent.v1.ExecuteHealthCheckResponse
+	54, // [54:84] is the sub-list for method output_type
+	24, // [24:54] is the sub-list for method input_type
 	24, // [24:24] is the sub-list for extension type_name
 	24, // [24:24] is the sub-list for extension extendee
 	0,  // [0:24] is the sub-list for field type_name
@@ -4828,9 +4991,9 @@ func file_dockeeper_agent_v1_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dockeeper_agent_v1_agent_proto_rawDesc), len(file_dockeeper_agent_v1_agent_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   67,
+			NumMessages:   69,
 			NumExtensions: 0,
-			NumServices:   13,
+			NumServices:   14,
 		},
 		GoTypes:           file_dockeeper_agent_v1_agent_proto_goTypes,
 		DependencyIndexes: file_dockeeper_agent_v1_agent_proto_depIdxs,

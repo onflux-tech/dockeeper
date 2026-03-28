@@ -121,18 +121,11 @@ const S3_KEYS = [
 	"s3_bucket",
 ] as const;
 
-const RETENTION_KEYS = [
-	"retention_raw_hours",
-	"retention_hourly_days",
-	"retention_daily_days",
-] as const;
-
 function SystemTab() {
 	const { data: settings, isLoading } = useSettings();
 	const save = useSaveSettings();
 
 	const [s3, setS3] = useState<Record<string, string>>({});
-	const [retention, setRetention] = useState<Record<string, string>>({});
 	const [initialized, setInitialized] = useState(false);
 
 	// Initialize form from settings once loaded
@@ -142,12 +135,6 @@ function SystemTab() {
 			s3Values[k] = getSettingValue(settings, k);
 		}
 		setS3(s3Values);
-
-		const retValues: Record<string, string> = {};
-		for (const k of RETENTION_KEYS) {
-			retValues[k] = getSettingValue(settings, k);
-		}
-		setRetention(retValues);
 		setInitialized(true);
 	}
 
@@ -163,10 +150,6 @@ function SystemTab() {
 
 	const handleSaveS3 = () => {
 		save.mutate(s3);
-	};
-
-	const handleSaveRetention = () => {
-		save.mutate(retention);
 	};
 
 	return (
@@ -233,67 +216,6 @@ function SystemTab() {
 				<Button onClick={handleSaveS3} disabled={save.isPending}>
 					{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 					Save S3 Settings
-				</Button>
-			</section>
-
-			{/* Metric Retention */}
-			<section className="space-y-4">
-				<div>
-					<h3 className="text-lg font-medium">Metric Retention</h3>
-					<p className="text-sm text-muted-foreground">
-						Configure how long raw, hourly, and daily metrics are kept.
-					</p>
-				</div>
-				<div className="grid gap-4 sm:grid-cols-3">
-					<div className="space-y-2">
-						<Label htmlFor="retention_raw_hours">Raw (hours)</Label>
-						<Input
-							id="retention_raw_hours"
-							type="number"
-							placeholder="24"
-							value={retention.retention_raw_hours ?? ""}
-							onChange={(e) =>
-								setRetention((p) => ({
-									...p,
-									retention_raw_hours: e.target.value,
-								}))
-							}
-						/>
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="retention_hourly_days">Hourly (days)</Label>
-						<Input
-							id="retention_hourly_days"
-							type="number"
-							placeholder="30"
-							value={retention.retention_hourly_days ?? ""}
-							onChange={(e) =>
-								setRetention((p) => ({
-									...p,
-									retention_hourly_days: e.target.value,
-								}))
-							}
-						/>
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="retention_daily_days">Daily (days)</Label>
-						<Input
-							id="retention_daily_days"
-							type="number"
-							placeholder="365"
-							value={retention.retention_daily_days ?? ""}
-							onChange={(e) =>
-								setRetention((p) => ({
-									...p,
-									retention_daily_days: e.target.value,
-								}))
-							}
-						/>
-					</div>
-				</div>
-				<Button onClick={handleSaveRetention} disabled={save.isPending}>
-					{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-					Save Retention Settings
 				</Button>
 			</section>
 		</div>
