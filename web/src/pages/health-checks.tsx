@@ -32,6 +32,16 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCollection } from "@/hooks/use-collection";
 import {
 	useHealthChecks,
@@ -71,6 +81,7 @@ export default function HealthChecksPage() {
 	const [showCreate, setShowCreate] = useState(false);
 	const [logsFor, setLogsFor] = useState<HealthCheckRecord | null>(null);
 	const [editCheck, setEditCheck] = useState<HealthCheckRecord | null>(null);
+	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 	const deleteMut = useDeleteHealthCheck();
 	const triggerMut = useTriggerHealthCheck();
 
@@ -197,7 +208,7 @@ export default function HealthChecksPage() {
 										size="icon"
 										className="h-8 w-8 text-destructive hover:text-destructive"
 										title="Delete"
-										onClick={() => deleteMut.mutate(check.id)}
+										onClick={() => setConfirmDeleteId(check.id)}
 										disabled={deleteMut.isPending}
 									>
 										<Trash2 className="h-4 w-4" />
@@ -228,6 +239,33 @@ export default function HealthChecksPage() {
 				open={!!logsFor}
 				onOpenChange={(open) => !open && setLogsFor(null)}
 			/>
+
+			{/* Delete confirmation */}
+			<AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete Health Check</AlertDialogTitle>
+						<AlertDialogDescription>
+							Are you sure you want to delete this health check? This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								if (confirmDeleteId) {
+									deleteMut.mutate(confirmDeleteId, {
+										onSuccess: () => setConfirmDeleteId(null),
+									});
+								}
+							}}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

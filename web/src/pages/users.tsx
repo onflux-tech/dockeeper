@@ -12,6 +12,16 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -232,28 +242,26 @@ function UsersTab() {
 			</Dialog>
 
 			{/* Delete Confirmation Dialog */}
-			<Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Delete User</DialogTitle>
-						<DialogDescription>
+			<AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete User</AlertDialogTitle>
+						<AlertDialogDescription>
 							Are you sure you want to delete this user? This action cannot be undone.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
 							onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
 							disabled={deleteUser.isPending}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
 							Delete
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</>
 	);
 }
@@ -469,28 +477,26 @@ function GroupsTab() {
 			</Dialog>
 
 			{/* Delete Confirmation Dialog */}
-			<Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Delete Group</DialogTitle>
-						<DialogDescription>
+			<AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete Group</AlertDialogTitle>
+						<AlertDialogDescription>
 							Are you sure you want to delete this group? Members will lose these capabilities.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
 							onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
 							disabled={deleteGroup.isPending}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
 							Delete
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</>
 	);
 }
@@ -726,28 +732,26 @@ function APIKeysTab() {
 			</Dialog>
 
 			{/* Delete API Key Confirmation Dialog */}
-			<Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Revoke API Key</DialogTitle>
-						<DialogDescription>
+			<AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Revoke API Key</AlertDialogTitle>
+						<AlertDialogDescription>
 							Are you sure you want to revoke this API key? Applications using it will immediately lose access.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
 							onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
 							disabled={deleteKey.isPending}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
 							Revoke
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</>
 	);
 }

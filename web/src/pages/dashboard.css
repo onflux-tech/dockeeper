@@ -20,8 +20,8 @@
 
 /* Placeholder shown while dragging a widget */
 .react-grid-layout .react-grid-placeholder {
-  background: hsl(var(--primary) / 0.15);
-  border: 2px dashed hsl(var(--primary) / 0.4);
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+  border: 2px dashed color-mix(in oklch, var(--primary) 40%, transparent);
   border-radius: var(--radius);
   opacity: 1;
 }
