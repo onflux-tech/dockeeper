@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyRound, Plus, Shield, Trash2, Users2 } from "lucide-react";
+import { KeyRound, Pencil, Plus, Shield, Trash2, Users2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ import {
 import {
 	useUsers,
 	useCreateUser,
+	useUpdateUser,
 	useDeleteUser,
 	useGroups,
 	useCreateGroup,
@@ -84,29 +85,56 @@ function UsersTab() {
 	const { data: users, isLoading } = useUsers();
 	const { data: groups } = useGroups();
 	const createUser = useCreateUser();
+	const updateUser = useUpdateUser();
 	const deleteUser = useDeleteUser();
 	const addMember = useAddMember();
 
 	const [showCreate, setShowCreate] = useState(false);
+	const [editId, setEditId] = useState<string | null>(null);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [groupId, setGroupId] = useState("");
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+	function resetForm() {
+		setEmail("");
+		setPassword("");
+		setGroupId("");
+		setEditId(null);
+		setShowCreate(false);
+	}
+
+	function openEdit(user: { id: string; email: string; groups: { id: string; name: string }[] }) {
+		setEditId(user.id);
+		setEmail(user.email);
+		setPassword("");
+		setGroupId(user.groups?.[0]?.id ?? "");
+		setShowCreate(true);
+	}
 
 	function handleCreate() {
 		createUser.mutate(
 			{ email, password },
 			{
 				onSuccess: (data) => {
-					if (groupId) {
+					if (groupId && groupId !== "none") {
 						addMember.mutate({ groupId, userId: data.id });
 					}
-					setShowCreate(false);
-					setEmail("");
-					setPassword("");
-					setGroupId("");
+					resetForm();
 				},
 			},
+		);
+	}
+
+	function handleUpdate() {
+		if (!editId) return;
+		updateUser.mutate(
+			{
+				id: editId,
+				email,
+				...(password ? { password } : {}),
+			},
+			{ onSuccess: resetForm },
 		);
 	}
 
@@ -141,7 +169,7 @@ function UsersTab() {
 						<TableHead>Email</TableHead>
 						<TableHead>Groups</TableHead>
 						<TableHead>Created</TableHead>
-						<TableHead className="w-[80px]" />
+						<TableHead className="w-[100px]" />
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -165,13 +193,22 @@ function UsersTab() {
 								{new Date(user.created).toLocaleDateString()}
 							</TableCell>
 							<TableCell>
-								<Button
-									variant="ghost"
-									size="icon"
-									onClick={() => setConfirmDeleteId(user.id)}
-								>
-									<Trash2 className="h-4 w-4 text-destructive" />
-								</Button>
+								<div className="flex items-center gap-1">
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => openEdit(user)}
+									>
+										<Pencil className="h-4 w-4" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => setConfirmDeleteId(user.id)}
+									>
+										<Trash2 className="h-4 w-4 text-destructive" />
+									</Button>
+								</div>
 							</TableCell>
 						</TableRow>
 					))}
@@ -186,12 +223,14 @@ function UsersTab() {
 			</Table>
 			</div>
 
-			{/* Create User Dialog */}
-			<Dialog open={showCreate} onOpenChange={setShowCreate}>
+			{/* Create / Edit User Dialog */}
+			<Dialog open={showCreate} onOpenChange={(open) => { if (!open) resetForm(); }}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Create User</DialogTitle>
-						<DialogDescription>Add a new user to the system.</DialogDescription>
+						<DialogTitle>{editId ? "Edit User" : "Create User"}</DialogTitle>
+						<DialogDescription>
+							{editId ? "Update user email or password." : "Add a new user to the system."}
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
 						<div className="space-y-2">
@@ -204,40 +243,43 @@ function UsersTab() {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Password</Label>
+							<Label>Password{editId ? " (leave blank to keep)" : ""}</Label>
 							<Input
 								type="password"
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
-								placeholder="Minimum 8 characters"
+								placeholder={editId ? "Leave blank to keep" : "Minimum 8 characters"}
+								required={!editId}
 							/>
 						</div>
-						<div className="space-y-2">
-							<Label>Group (optional)</Label>
-							<Select value={groupId} onValueChange={setGroupId}>
-								<SelectTrigger>
-									<SelectValue placeholder="No group" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="none">No group</SelectItem>
-									{groups?.map((g) => (
-										<SelectItem key={g.id} value={g.id}>
-											{g.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
+						{!editId && (
+							<div className="space-y-2">
+								<Label>Group (optional)</Label>
+								<Select value={groupId} onValueChange={setGroupId}>
+									<SelectTrigger>
+										<SelectValue placeholder="No group" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="none">No group</SelectItem>
+										{groups?.map((g) => (
+											<SelectItem key={g.id} value={g.id}>
+												{g.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						)}
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowCreate(false)}>
+						<Button variant="outline" onClick={resetForm}>
 							Cancel
 						</Button>
 						<Button
-							onClick={handleCreate}
-							disabled={!email || !password || createUser.isPending}
+							onClick={editId ? handleUpdate : handleCreate}
+							disabled={!email || (!editId && !password) || (editId ? updateUser.isPending : createUser.isPending)}
 						>
-							Create
+							{editId ? "Save" : "Create"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
