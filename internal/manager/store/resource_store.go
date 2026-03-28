@@ -404,6 +404,12 @@ func (s *ResourceStore) linkComposeStack(serverID string, rec *core.Record, labe
 	project := labels["com.docker.compose.project"]
 	service := labels["com.docker.compose.service"]
 
+	// Fallback: Docker Swarm stacks use a different label.
+	if project == "" {
+		project = labels["com.docker.stack.namespace"]
+		service = labels["com.docker.swarm.service.name"]
+	}
+
 	if project == "" {
 		return
 	}
