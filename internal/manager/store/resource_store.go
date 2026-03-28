@@ -109,6 +109,9 @@ func (s *ResourceStore) UpsertContainers(serverID string, containers []*agentpb.
 				s.publishContainerEvent(events.ContainerCreated, serverID, serverName, rec.Id, c.GetName(), nil)
 			} else if oldStatus != newStatus && oldStatus != "" {
 				s.publishStateTransition(oldStatus, newStatus, serverID, serverName, rec.Id, c.GetName())
+
+				// Drift detection: check desired_state.
+				s.checkDesiredStateDrift(rec, newStatus, serverID, serverName)
 			}
 		}
 	}
@@ -164,6 +167,44 @@ func (s *ResourceStore) publishContainerEvent(t events.EventType, serverID, serv
 		ContainerName: containerName,
 		Details:       details,
 		Timestamp:     time.Now().UTC(),
+	})
+}
+
+// checkDesiredStateDrift publishes a drift event when container state differs
+// from the desired state (ignoring "none"/unset).
+func (s *ResourceStore) checkDesiredStateDrift(rec *core.Record, actualState, serverID, serverName string) {
+	desired := rec.GetString("desired_state")
+	if desired == "" || desired == "none" {
+		return
+	}
+
+	drifted := false
+	switch desired {
+	case "running":
+		drifted = actualState != "running"
+	case "stopped":
+		drifted = actualState == "running"
+	}
+
+	if !drifted {
+		return
+	}
+
+	// Suppress drift if a compose operation happened recently (30s).
+	composeStack := rec.GetString("compose_stack")
+	if composeStack != "" {
+		key := "compose_op:" + composeStack
+		if last, ok := s.debounce.Load(key); ok {
+			if time.Since(last.(time.Time)) < 30*time.Second {
+				return // suppress during compose operations
+			}
+		}
+	}
+
+	s.publishContainerEvent(events.ContainerStateDrift, serverID, serverName, rec.Id, rec.GetString("name"), map[string]any{
+		"desired_state":  desired,
+		"actual_state":   actualState,
+		"compose_project": rec.GetString("compose_project"),
 	})
 }
 

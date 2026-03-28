@@ -49,6 +49,12 @@ const (
 	BatchStarted   EventType = "batch.started"
 	BatchCompleted EventType = "batch.completed"
 	BatchFailed    EventType = "batch.failed"
+
+	// Drift events.
+	ContainerStateDrift EventType = "container.state.drift"
+
+	// Compose events (import).
+	ComposeImported EventType = "compose.imported"
 )
 
 // Severity indicates the importance level of an event.
@@ -77,7 +83,7 @@ func SeverityFor(t EventType) Severity {
 	switch t {
 	case ContainerCrashed, ServerOffline, ComposeFailed, BackupFailed, ContainerUpdateFailed, HealthGaveUp, BatchFailed:
 		return SeverityCritical
-	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved, ContainerUpdateRolledback, HealthDegraded, HealthRestart, BatchStarted:
+	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved, ContainerUpdateRolledback, HealthDegraded, HealthRestart, BatchStarted, ContainerStateDrift:
 		return SeverityWarning
 	default:
 		return SeverityInfo

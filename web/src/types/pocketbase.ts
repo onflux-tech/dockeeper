@@ -31,6 +31,7 @@ export interface ContainerRecord extends BaseRecord {
 	name: string;
 	image: string;
 	status: string;
+	desired_state: "none" | "running" | "stopped";
 	ports: unknown;
 	labels: unknown;
 	env_vars: unknown;
@@ -85,6 +86,7 @@ export interface ComposeStackRecord extends BaseRecord {
 	name: string;
 	yaml_content: string;
 	status: "running" | "stopped" | "partial";
+	source: "managed" | "imported";
 	services_count: number;
 	deployed_at: string;
 }

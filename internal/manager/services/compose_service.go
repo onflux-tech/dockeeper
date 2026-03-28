@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -138,6 +140,158 @@ func (s *ComposeService) MarkStackStatus(stackID, status string, servicesCount i
 	if saveErr := s.app.Save(record); saveErr != nil {
 		slog.Warn("failed to update compose stack status", "error", saveErr)
 	}
+}
+
+// ImportedStack holds info about a single imported stack.
+type ImportedStack struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	ServicesCount int      `json:"services_count"`
+	Services      []string `json:"services"`
+}
+
+// ImportStacks scans containers for a server and imports compose stacks
+// based on Docker Compose labels.
+func (s *ComposeService) ImportStacks(serverID string) ([]ImportedStack, error) {
+	// Validate server exists and get agent address.
+	agentAddr, err := s.resolveServer(serverID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch all containers for this server.
+	containers, err := s.app.FindRecordsByFilter(
+		constants.CollContainers,
+		"server = {:sid}",
+		"", 0, 0,
+		map[string]any{"sid": serverID},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("fetch containers: %w", err)
+	}
+
+	// Group containers by compose project label, extracting compose metadata from labels.
+	type svcInfo struct {
+		recordID string
+		service  string
+	}
+	type projectInfo struct {
+		svcs       []svcInfo
+		workingDir string
+		files      []string
+	}
+	projects := make(map[string]*projectInfo)
+	for _, c := range containers {
+		project := c.GetString("compose_project")
+		service := c.GetString("compose_service")
+		if project == "" {
+			continue
+		}
+		pi, ok := projects[project]
+		if !ok {
+			pi = &projectInfo{}
+			// Extract compose working_dir and config_files from first container's labels.
+			labelsRaw := c.GetString("labels")
+			if labelsRaw != "" {
+				var labels map[string]string
+				if err := json.Unmarshal([]byte(labelsRaw), &labels); err == nil {
+					pi.workingDir = labels["com.docker.compose.project.working_dir"]
+					if cf := labels["com.docker.compose.project.config_files"]; cf != "" {
+						pi.files = strings.Split(cf, ",")
+					}
+				}
+			}
+			projects[project] = pi
+		}
+		pi.svcs = append(pi.svcs, svcInfo{
+			recordID: c.Id,
+			service:  service,
+		})
+	}
+
+	if len(projects) == 0 {
+		return []ImportedStack{}, nil
+	}
+
+	stackCol, err := s.app.FindCollectionByNameOrId(constants.CollComposeStacks)
+	if err != nil {
+		return nil, fmt.Errorf("find compose_stacks collection: %w", err)
+	}
+
+	// Get gRPC connection to fetch YAML content from agent.
+	var composeClient agentpb.AgentComposeServiceClient
+	if conn, connErr := s.pool.Get(agentAddr); connErr == nil {
+		composeClient = agentpb.NewAgentComposeServiceClient(conn)
+	}
+
+	var imported []ImportedStack
+
+	for projectName, pi := range projects {
+		// Upsert compose_stacks record.
+		existing, _ := s.app.FindRecordsByFilter(
+			constants.CollComposeStacks,
+			"server = {:sid} && name = {:name}",
+			"", 1, 0,
+			map[string]any{"sid": serverID, "name": projectName},
+		)
+
+		var rec *core.Record
+		if len(existing) > 0 {
+			rec = existing[0]
+		} else {
+			rec = core.NewRecord(stackCol)
+			rec.Set("server", serverID)
+			rec.Set("name", projectName)
+			rec.Set("status", "running")
+		}
+
+		rec.Set("source", "imported")
+		rec.Set("services_count", len(pi.svcs))
+
+		// Fetch compose YAML from agent via `docker compose config`.
+		if composeClient != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
+			resp, configErr := composeClient.ComposeConfig(ctx, &agentpb.ComposeConfigRequest{
+				ProjectName: projectName,
+				WorkingDir:  pi.workingDir,
+				Files:       pi.files,
+			})
+			cancel()
+			if configErr == nil && resp.GetYamlContent() != "" {
+				rec.Set("yaml_content", resp.GetYamlContent())
+			} else if configErr != nil {
+				slog.Warn("import stack: compose config failed", "project", projectName, "error", configErr)
+			}
+		}
+
+		if err := s.app.Save(rec); err != nil {
+			slog.Error("import stack: save failed", "project", projectName, "error", err)
+			continue
+		}
+
+		// Link containers to this stack.
+		serviceNames := make([]string, 0, len(pi.svcs))
+		for _, si := range pi.svcs {
+			serviceNames = append(serviceNames, si.service)
+			cRec, findErr := s.app.FindRecordById(constants.CollContainers, si.recordID)
+			if findErr != nil {
+				continue
+			}
+			if cRec.GetString("compose_stack") != rec.Id {
+				cRec.Set("compose_stack", rec.Id)
+				_ = s.app.Save(cRec)
+			}
+		}
+
+		imported = append(imported, ImportedStack{
+			ID:            rec.Id,
+			Name:          projectName,
+			ServicesCount: len(pi.svcs),
+			Services:      serviceNames,
+		})
+	}
+
+	return imported, nil
 }
 
 func (s *ComposeService) resolveServer(serverID string) (string, error) {

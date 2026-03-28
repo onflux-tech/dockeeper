@@ -87,7 +87,7 @@ export function DesktopSidebar() {
 	return (
 		<aside
 			className={cn(
-				"hidden flex-col border-r border-sidebar-border bg-sidebar lg:flex",
+				"hidden h-screen flex-col border-r border-sidebar-border bg-sidebar lg:flex",
 				"transition-all duration-300",
 				collapsed ? "w-16" : "w-64",
 			)}

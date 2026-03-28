@@ -1,6 +1,7 @@
 package grpc_handlers
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/onflux-tech/dockeeper/internal/agent/executor"
@@ -46,6 +47,16 @@ func (h *ComposeHandler) ComposePull(req *agentpb.ComposeRequest, stream agentpb
 	h.logger.Info("compose pull", "project", req.GetProjectName(), "dir", req.GetWorkingDir())
 	outCh, doneCh := h.runner.Pull(stream.Context(), req.GetProjectName(), req.GetWorkingDir(), req.GetFiles())
 	return h.forward(stream, outCh, doneCh)
+}
+
+// ComposeConfig runs `docker compose config` and returns the resolved YAML.
+func (h *ComposeHandler) ComposeConfig(ctx context.Context, req *agentpb.ComposeConfigRequest) (*agentpb.ComposeConfigResponse, error) {
+	h.logger.Info("compose config", "project", req.GetProjectName(), "dir", req.GetWorkingDir())
+	yaml, err := h.runner.Config(ctx, req.GetProjectName(), req.GetWorkingDir(), req.GetFiles())
+	if err != nil {
+		return nil, err
+	}
+	return &agentpb.ComposeConfigResponse{YamlContent: yaml}, nil
 }
 
 // forward bridges compose output channels to a gRPC server stream.

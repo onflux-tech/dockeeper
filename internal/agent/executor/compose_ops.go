@@ -138,3 +138,25 @@ func (r *ComposeRunner) Down(ctx context.Context, projectName, workingDir string
 func (r *ComposeRunner) Pull(ctx context.Context, projectName, workingDir string, files []string) (<-chan ComposeOutputLine, <-chan ComposeResult) {
 	return r.RunCompose(ctx, projectName, workingDir, files, "pull")
 }
+
+// Config runs `docker compose config` and returns the resolved YAML.
+func (r *ComposeRunner) Config(ctx context.Context, projectName, workingDir string, files []string) (string, error) {
+	args := []string{"compose"}
+	if projectName != "" {
+		args = append(args, "-p", projectName)
+	}
+	for _, f := range files {
+		args = append(args, "-f", f)
+	}
+	args = append(args, "config")
+
+	cmd := exec.CommandContext(ctx, "docker", args...)
+	if workingDir != "" {
+		cmd.Dir = workingDir
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("docker compose config: %w", err)
+	}
+	return string(out), nil
+}

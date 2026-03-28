@@ -38,6 +38,10 @@ func RegisterComposeRoutes(se *core.ServeEvent, app core.App, svc *services.Comp
 		return handleCreateStack(e, svc)
 	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 
+	compose.POST("/validate", func(e *core.RequestEvent) error {
+		return handleValidateCompose(e)
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
+
 	compose.PUT("/{id}", func(e *core.RequestEvent) error {
 		return handleUpdateStack(e, svc)
 	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
@@ -57,6 +61,11 @@ func RegisterComposeRoutes(se *core.ServeEvent, app core.App, svc *services.Comp
 
 	compose.GET("/{id}/pull", func(e *core.RequestEvent) error {
 		return handleComposeSSE(e, svc, "pull")
+	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
+
+	// Stack import endpoint (under servers group).
+	se.Router.POST("/api/dk/servers/{id}/compose/import", func(e *core.RequestEvent) error {
+		return handleImportStacks(e, svc)
 	}).BindFunc(rbac.RequireCapability(constants.CapComposeManage))
 }
 
@@ -83,6 +92,7 @@ func handleListStacks(e *core.RequestEvent, app core.App) error {
 		Server        string `json:"server"`
 		Name          string `json:"name"`
 		Status        string `json:"status"`
+		Source        string `json:"source"`
 		ServicesCount int    `json:"services_count"`
 		DeployedAt    string `json:"deployed_at"`
 		Created       string `json:"created"`
@@ -90,11 +100,16 @@ func handleListStacks(e *core.RequestEvent, app core.App) error {
 
 	items := make([]stackEntry, 0, len(records))
 	for _, r := range records {
+		source := r.GetString("source")
+		if source == "" {
+			source = "managed"
+		}
 		items = append(items, stackEntry{
 			ID:            r.Id,
 			Server:        r.GetString("server"),
 			Name:          r.GetString("name"),
 			Status:        r.GetString("status"),
+			Source:        source,
 			ServicesCount: int(r.GetFloat("services_count")),
 			DeployedAt:    r.GetString("deployed_at"),
 			Created:       r.GetString("created"),
@@ -112,12 +127,18 @@ func handleGetStack(e *core.RequestEvent, app core.App) error {
 		return e.JSON(http.StatusNotFound, map[string]string{"error": "stack not found"})
 	}
 
+	source := record.GetString("source")
+	if source == "" {
+		source = "managed"
+	}
+
 	return e.JSON(http.StatusOK, map[string]any{
 		"id":             record.Id,
 		"server":         record.GetString("server"),
 		"name":           record.GetString("name"),
 		"yaml_content":   record.GetString("yaml_content"),
 		"status":         record.GetString("status"),
+		"source":         source,
 		"services_count": record.GetFloat("services_count"),
 		"deployed_at":    record.GetString("deployed_at"),
 		"created":        record.GetString("created"),
@@ -141,6 +162,14 @@ func handleCreateStack(e *core.RequestEvent, svc *services.ComposeService) error
 
 	if err := security.ValidateContainerName(body.Name); err != nil {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	// Validate YAML before creating the stack.
+	if valErrors := services.ValidateComposeYAML([]byte(body.YAMLContent)); len(valErrors) > 0 {
+		return e.JSON(http.StatusUnprocessableEntity, map[string]any{
+			"error":  "compose YAML validation failed",
+			"errors": valErrors,
+		})
 	}
 
 	record, err := svc.CreateStack(body.ServerID, body.Name, body.YAMLContent)
@@ -349,4 +378,43 @@ func mapComposeServiceError(e *core.RequestEvent, err error) error {
 		}
 		return e.JSON(http.StatusBadGateway, map[string]string{"error": err.Error()})
 	}
+}
+
+func handleValidateCompose(e *core.RequestEvent) error {
+	body, err := io.ReadAll(io.LimitReader(e.Request.Body, 100*1024))
+	if err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "failed to read body"})
+	}
+	if len(body) == 0 {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "empty body"})
+	}
+
+	errors := services.ValidateComposeYAML(body)
+	if len(errors) > 0 {
+		return e.JSON(http.StatusUnprocessableEntity, map[string]any{
+			"valid":  false,
+			"errors": errors,
+		})
+	}
+
+	return e.JSON(http.StatusOK, map[string]any{
+		"valid":  true,
+		"errors": []services.ComposeValidationError{},
+	})
+}
+
+func handleImportStacks(e *core.RequestEvent, svc *services.ComposeService) error {
+	serverID := e.Request.PathValue("id")
+	if serverID == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "server ID required"})
+	}
+
+	imported, err := svc.ImportStacks(serverID)
+	if err != nil {
+		return mapComposeServiceError(e, err)
+	}
+
+	return e.JSON(http.StatusOK, map[string]any{
+		"imported": imported,
+	})
 }

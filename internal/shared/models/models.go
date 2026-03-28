@@ -31,6 +31,7 @@ type Container struct {
 	Name               string         `json:"name"`
 	Image              string         `json:"image"`
 	Status             string         `json:"status"` // running | stopped | paused | restarting | removing | created | exited | dead
+	DesiredState       string         `json:"desired_state"` // none | running | stopped
 	Ports              types.JSONRaw  `json:"ports"`
 	Labels             types.JSONRaw  `json:"labels"`
 	EnvVars            types.JSONRaw  `json:"env_vars"`
@@ -97,6 +98,7 @@ type ComposeStack struct {
 	Name          string         `json:"name"`
 	YAMLContent   string         `json:"yaml_content"`
 	Status        string         `json:"status"` // running | stopped | partial
+	Source        string         `json:"source"` // managed | imported
 	ServicesCount int            `json:"services_count"`
 	DeployedAt    types.DateTime `json:"deployed_at"`
 	Created       types.DateTime `json:"created"`

@@ -124,40 +124,71 @@ export function useBatchProgress(jobId: string | null) {
 	useEffect(() => {
 		if (!jobId) return;
 
+		const ctrl = new AbortController();
+		const token = getAccessToken();
 		const url = `/api/dk/batch/${jobId}/progress`;
-		const source = new EventSource(url);
 
-		source.addEventListener("connected", () => {
-			// Connection established.
-		});
+		(async () => {
+			try {
+				const res = await fetch(url, {
+					headers: token ? { Authorization: token } : {},
+					signal: ctrl.signal,
+				});
 
-		source.addEventListener("progress", (e) => {
-			const data: BatchProgress = JSON.parse(e.data);
-			setState((prev) => ({
-				...prev,
-				progress: [...prev.progress, data],
-			}));
-		});
+				if (!res.ok) return;
 
-		source.addEventListener("complete", (e) => {
-			const data: BatchProgress = JSON.parse(e.data);
-			setState((prev) => ({
-				...prev,
-				progress: [...prev.progress, data],
-				isComplete: true,
-			}));
-			void queryClient.invalidateQueries({ queryKey: ["collection", "containers"] });
-			void queryClient.invalidateQueries({ queryKey: ["batch-jobs"] });
-			source.close();
-		});
+				const reader = res.body?.getReader();
+				if (!reader) return;
 
-		source.onerror = () => {
-			setState((prev) => ({ ...prev, isComplete: true }));
-			source.close();
-		};
+				const decoder = new TextDecoder();
+				let buffer = "";
+				let eventType = "";
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+
+					buffer += decoder.decode(value, { stream: true });
+					const lines = buffer.split("\n");
+					buffer = lines.pop() ?? "";
+
+					for (const line of lines) {
+						if (line.startsWith("event: ")) {
+							eventType = line.slice(7);
+						} else if (line.startsWith("data: ")) {
+							const raw = line.slice(6);
+							try {
+								const data: BatchProgress = JSON.parse(raw);
+								if (eventType === "progress") {
+									setState((prev) => ({
+										...prev,
+										progress: [...prev.progress, data],
+									}));
+								} else if (eventType === "complete") {
+									setState((prev) => ({
+										...prev,
+										progress: [...prev.progress, data],
+										isComplete: true,
+									}));
+									void queryClient.invalidateQueries({ queryKey: ["collection", "containers"] });
+									void queryClient.invalidateQueries({ queryKey: ["batch-jobs"] });
+								}
+							} catch {
+								// ignore parse errors
+							}
+							eventType = "";
+						}
+					}
+				}
+			} catch {
+				// AbortError or network error
+			} finally {
+				setState((prev) => ({ ...prev, isComplete: true }));
+			}
+		})();
 
 		return () => {
-			source.close();
+			ctrl.abort();
 		};
 	}, [jobId, queryClient]);
 

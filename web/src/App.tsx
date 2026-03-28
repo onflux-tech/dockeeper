@@ -14,9 +14,9 @@ const ContainerDetailPage = lazy(() => import("@/pages/container-detail"));
 const ContainerTerminalPage = lazy(() => import("@/pages/container-terminal"));
 const ImagesPage = lazy(() => import("@/pages/images"));
 const ComposePage = lazy(() => import("@/pages/compose"));
+const ComposeCreatePage = lazy(() => import("@/pages/compose-create"));
 const NetworksPage = lazy(() => import("@/pages/networks"));
 const VolumesPage = lazy(() => import("@/pages/volumes"));
-const MetricsPage = lazy(() => import("@/pages/metrics"));
 const AlertsPage = lazy(() => import("@/pages/alerts"));
 const BackupsPage = lazy(() => import("@/pages/backups"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
@@ -53,9 +53,9 @@ function App() {
 							<Route path="containers/:id/terminal" element={<ContainerTerminalPage />} />
 							<Route path="images" element={<ImagesPage />} />
 							<Route path="compose" element={<ComposePage />} />
+							<Route path="compose/create" element={<ComposeCreatePage />} />
 							<Route path="networks" element={<NetworksPage />} />
 							<Route path="volumes" element={<VolumesPage />} />
-							<Route path="metrics" element={<MetricsPage />} />
 							<Route path="alerts" element={<AlertsPage />} />
 							<Route path="health-checks" element={<HealthChecksPage />} />
 							<Route path="backups" element={<BackupsPage />} />

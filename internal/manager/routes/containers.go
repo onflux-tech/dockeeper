@@ -25,6 +25,7 @@ func RegisterContainerRoutes(se *core.ServeEvent, svc *services.ContainerService
 	containers.POST("/{id}/unpause", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UNPAUSE)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
 	containers.POST("/{id}/update", handleAction(svc, agentpb.CommandType_COMMAND_TYPE_UPDATE_IMAGE)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
 	containers.GET("/{id}/inspect", handleInspect(svc)).BindFunc(rbac.RequireCapability(constants.CapContainersView))
+	containers.PUT("/{id}/desired-state", handleDesiredState(svc)).BindFunc(rbac.RequireCapability(constants.CapContainersManage))
 }
 
 func handleAction(svc *services.ContainerService, cmdType agentpb.CommandType) func(e *core.RequestEvent) error {
@@ -174,5 +175,45 @@ func handleRemove(svc *services.ContainerService, cascadeSvc *services.CascadeSe
 		}
 
 		return e.JSON(http.StatusOK, resp)
+	}
+}
+
+func handleDesiredState(svc *services.ContainerService) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+		if id == "" {
+			return e.JSON(http.StatusBadRequest, map[string]string{"error": "container ID is required"})
+		}
+
+		var body struct {
+			DesiredState string `json:"desired_state"`
+		}
+		if err := e.BindBody(&body); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		}
+
+		switch body.DesiredState {
+		case "none", "running", "stopped":
+			// valid
+		default:
+			return e.JSON(http.StatusBadRequest, map[string]string{
+				"error": "desired_state must be one of: none, running, stopped",
+			})
+		}
+
+		record, err := svc.InspectContainer(id)
+		if err != nil {
+			return mapServiceError(e, err)
+		}
+
+		record.Set("desired_state", body.DesiredState)
+		if err := svc.App().Save(record); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save desired state"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"id":            record.Id,
+			"desired_state": body.DesiredState,
+		})
 	}
 }

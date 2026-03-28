@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Rocket, Plus } from "lucide-react";
+import { Link } from "react-router";
+import { Rocket, Plus, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
-import { DeployDialog } from "@/components/compose/deploy-dialog";
+import { useImportStacks } from "@/hooks/use-compose";
 import { StackDetail } from "@/components/compose/stack-detail";
 import type { ComposeStackRecord, ServerRecord } from "@/types/pocketbase";
 
@@ -40,10 +41,10 @@ export default function ComposePage() {
 		searchFields: ["name"],
 		customFilters: { server: "server" },
 	});
-	const [deployOpen, setDeployOpen] = useState(false);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 
 	const serverFilter = filters.custom.server ?? "all";
+	const importStacks = useImportStacks();
 
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
 	const { data: stacksResult, isLoading } = useCollection("compose_stacks", pbOptions);
@@ -80,10 +81,24 @@ export default function ComposePage() {
 						<span className="text-sm text-muted-foreground">({stacksResult?.totalItems ?? 0})</span>
 					)}
 				</div>
-				<Button size="sm" onClick={() => setDeployOpen(true)}>
-					<Plus className="mr-1.5 h-3.5 w-3.5" />
-					Deploy Stack
-				</Button>
+				<div className="flex items-center gap-2">
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => importStacks.mutate(serverFilter)}
+						disabled={serverFilter === "all" || importStacks.isPending}
+						title={serverFilter === "all" ? "Select a server to import stacks" : undefined}
+					>
+						<Download className="mr-1.5 h-3.5 w-3.5" />
+						{importStacks.isPending ? "Importing..." : "Import Stacks"}
+					</Button>
+					<Button size="sm" asChild>
+						<Link to="/compose/create">
+							<Plus className="mr-1.5 h-3.5 w-3.5" />
+							Create Stack
+						</Link>
+					</Button>
+				</div>
 			</div>
 
 			{/* Filters */}
@@ -142,7 +157,16 @@ export default function ComposePage() {
 									className={`cursor-pointer ${selectedId === stack.id ? "bg-muted/50" : ""}`}
 									onClick={() => setSelectedId(selectedId === stack.id ? null : stack.id)}
 								>
-									<TableCell className="font-medium">{stack.name}</TableCell>
+									<TableCell className="font-medium">
+									<span className="flex items-center gap-2">
+										{stack.name}
+										{stack.source === "imported" && (
+											<Badge variant="outline" className="text-[10px]">
+												imported
+											</Badge>
+										)}
+									</span>
+								</TableCell>
 									<TableCell className="text-xs text-muted-foreground">
 										{serverName(stack.server)}
 									</TableCell>
@@ -176,8 +200,6 @@ export default function ComposePage() {
 			{/* Stack Detail */}
 			{selectedStack && <StackDetail stack={selectedStack} onDeleted={() => setSelectedId(null)} />}
 
-			{/* Deploy Dialog */}
-			<DeployDialog open={deployOpen} onOpenChange={setDeployOpen} servers={servers} />
 		</div>
 	);
 }

@@ -85,6 +85,9 @@ func NewContainerService(app core.App, dispatcher CommandDispatcher, audit *stor
 	}
 }
 
+// App returns the PocketBase app instance.
+func (s *ContainerService) App() core.App { return s.app }
+
 // ActionResult is the outcome of a container action.
 type ActionResult struct {
 	Success bool   `json:"success"`

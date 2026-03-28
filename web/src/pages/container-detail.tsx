@@ -12,6 +12,7 @@ import {
 	ArrowDownToLine,
 	MoreHorizontal,
 	ArrowUpCircle,
+	AlertTriangle,
 } from "lucide-react";
 import {
 	AlertDialog,
@@ -32,6 +33,13 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -43,6 +51,7 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { useContainerMetrics } from "@/hooks/use-container-metrics";
 import { useContainerActions } from "@/hooks/use-container-actions";
 import { useRemoveContainerWithCascade } from "@/hooks/use-container-actions";
+import { useDesiredState } from "@/hooks/use-desired-state";
 import { ContainerInfo } from "@/components/container/container-info";
 import { ContainerMetrics } from "@/components/container/container-metrics";
 import { LogViewer } from "@/components/container/log-viewer";
@@ -69,6 +78,7 @@ export default function ContainerDetailPage() {
 
 	const actions = useContainerActions();
 	const removeCascade = useRemoveContainerWithCascade();
+	const desiredState = useDesiredState();
 	const [removeOpen, setRemoveOpen] = useState(false);
 	const [updateOpen, setUpdateOpen] = useState(false);
 
@@ -109,9 +119,34 @@ export default function ContainerDetailPage() {
 							<TagSelector resourceType="container" resourceId={id} />
 						)}
 
+						{/* Desired State Drift Warning */}
+						{container?.desired_state &&
+							container.desired_state !== "none" &&
+							((container.desired_state === "running" && container.status !== "running") ||
+								(container.desired_state === "stopped" && container.status === "running")) && (
+								<Badge variant="outline" className="gap-1 border-amber-500 text-amber-500">
+									<AlertTriangle className="h-3 w-3" />
+									State Drift
+								</Badge>
+							)}
+
 						{/* Actions */}
 						{id && container && (
 							<div className="ml-auto flex items-center gap-2">
+								{/* Desired State */}
+								<Select
+									value={container.desired_state || "none"}
+									onValueChange={(val) => desiredState.mutate({ id: id!, desiredState: val })}
+								>
+									<SelectTrigger className="h-8 w-32 text-xs">
+										<SelectValue placeholder="Desired" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="none">No enforcement</SelectItem>
+										<SelectItem value="running">Should run</SelectItem>
+										<SelectItem value="stopped">Should stop</SelectItem>
+									</SelectContent>
+								</Select>
 								{isStopped && (
 									<Button variant="outline" size="sm" onClick={() => actions.start.mutate(id)}>
 										<Play className="mr-1.5 h-4 w-4" />

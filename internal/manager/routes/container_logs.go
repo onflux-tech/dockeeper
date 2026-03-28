@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -24,6 +26,10 @@ const agentLogsPort = "50052"
 func RegisterContainerLogRoutes(se *core.ServeEvent, app core.App, rbac *middleware.RBAC) {
 	se.Router.GET("/api/dk/containers/{id}/logs/stream", func(e *core.RequestEvent) error {
 		return handleLogStream(e, app)
+	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
+
+	se.Router.GET("/api/dk/containers/multi-logs", func(e *core.RequestEvent) error {
+		return handleMultiLogStream(e, app)
 	}).BindFunc(rbac.RequireCapability(constants.CapContainersView))
 }
 
@@ -158,6 +164,206 @@ func handleLogStream(e *core.RequestEvent, app core.App) error {
 			ev := logEvent{
 				Stream:  res.entry.GetStream(),
 				Message: res.entry.GetMessage(),
+			}
+			if res.entry.GetTimestamp() != nil {
+				ev.Timestamp = res.entry.GetTimestamp().AsTime().Format("2006-01-02T15:04:05.000Z")
+			}
+
+			data, _ := json.Marshal(ev)
+			_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)
+			flusher.Flush()
+		}
+	}
+}
+
+// multiLogEvent extends logEvent with a container identifier.
+type multiLogEvent struct {
+	ContainerID   string `json:"container_id"`
+	ContainerName string `json:"container_name"`
+	Timestamp     string `json:"timestamp"`
+	Stream        string `json:"stream"`
+	Message       string `json:"message"`
+}
+
+// handleMultiLogStream opens log streams for multiple containers and merges
+// them into a single SSE connection. Query: ids=a,b,c&tail=100&follow=true.
+func handleMultiLogStream(e *core.RequestEvent, app core.App) error {
+	idsParam := e.Request.URL.Query().Get("ids")
+	if idsParam == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "ids query parameter required"})
+	}
+
+	ids := strings.Split(idsParam, ",")
+	if len(ids) < 2 || len(ids) > 6 {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "provide 2-6 container IDs"})
+	}
+
+	follow := e.Request.URL.Query().Get("follow") != "false"
+	tail := e.Request.URL.Query().Get("tail")
+	if tail == "" {
+		tail = "100"
+	}
+	var tailLines uint32
+	if _, scanErr := fmt.Sscanf(tail, "%d", &tailLines); scanErr != nil {
+		tailLines = 100
+	}
+
+	// Resolve all containers and their servers.
+	type containerInfo struct {
+		recordID          string
+		name              string
+		dockerContainerID string
+		agentAddr         string
+	}
+	var containers []containerInfo
+
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		container, err := app.FindRecordById(constants.CollContainers, id)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]string{"error": "container not found: " + id})
+		}
+		server, err := app.FindRecordById(constants.CollServers, container.GetString("server"))
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]string{"error": "server not found for container: " + id})
+		}
+		if server.GetString("status") != "online" {
+			return e.JSON(http.StatusServiceUnavailable, map[string]string{"error": "server offline for container: " + id})
+		}
+		containers = append(containers, containerInfo{
+			recordID:          id,
+			name:              container.GetString("name"),
+			dockerContainerID: container.GetString("container_id"),
+			agentAddr:         net.JoinHostPort(server.GetString("ip_address"), agentLogsPort),
+		})
+	}
+
+	// Set SSE headers.
+	w := e.Response
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return fmt.Errorf("response writer does not support flushing")
+	}
+
+	rc := http.NewResponseController(w)
+	_ = rc.SetWriteDeadline(time.Time{})
+
+	_, _ = fmt.Fprintf(w, "event: connected\ndata: {}\n\n")
+	flusher.Flush()
+
+	// Merged channel for all container log entries.
+	type mergedEntry struct {
+		containerID   string
+		containerName string
+		entry         *agentpb.StreamLogsResponse
+		err           error
+	}
+	ch := make(chan mergedEntry, 16)
+
+	// Track gRPC connections for cleanup.
+	var conns []*grpc.ClientConn
+	var connsMu sync.Mutex
+
+	// Open a log stream for each container.
+	var wg sync.WaitGroup
+	for _, c := range containers {
+		wg.Add(1)
+		go func(ci containerInfo) {
+			defer wg.Done()
+
+			conn, err := grpc.NewClient(ci.agentAddr,
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			)
+			if err != nil {
+				slog.Error("multi-log: dial failed", "container", ci.recordID, "error", err)
+				return
+			}
+			connsMu.Lock()
+			conns = append(conns, conn)
+			connsMu.Unlock()
+
+			client := agentpb.NewAgentLogsServiceClient(conn)
+			stream, err := client.StreamLogs(e.Request.Context(), &agentpb.StreamLogsRequest{
+				ContainerId: ci.dockerContainerID,
+				Follow:      follow,
+				TailLines:   tailLines,
+			})
+			if err != nil {
+				slog.Error("multi-log: stream open failed", "container", ci.recordID, "error", err)
+				return
+			}
+
+			for {
+				entry, recvErr := stream.Recv()
+				ch <- mergedEntry{
+					containerID:   ci.recordID,
+					containerName: ci.name,
+					entry:         entry,
+					err:           recvErr,
+				}
+				if recvErr != nil {
+					return
+				}
+			}
+		}(c)
+	}
+
+	// Close all connections on exit.
+	defer func() {
+		connsMu.Lock()
+		for _, conn := range conns {
+			_ = conn.Close()
+		}
+		connsMu.Unlock()
+	}()
+
+	// Close merged channel when all goroutines finish.
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	keepalive := time.NewTicker(15 * time.Second)
+	defer keepalive.Stop()
+
+	for {
+		select {
+		case <-e.Request.Context().Done():
+			return nil
+
+		case <-keepalive.C:
+			_, _ = fmt.Fprintf(w, ": keepalive\n\n")
+			flusher.Flush()
+
+		case res, ok := <-ch:
+			if !ok {
+				// All streams closed.
+				_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
+				flusher.Flush()
+				return nil
+			}
+			if res.err != nil {
+				if res.err == io.EOF {
+					continue // One stream ended, others may still be active.
+				}
+				slog.Debug("multi-log stream error", "container", res.containerID, "error", res.err)
+				continue
+			}
+
+			ev := multiLogEvent{
+				ContainerID:   res.containerID,
+				ContainerName: res.containerName,
+				Stream:        res.entry.GetStream(),
+				Message:       res.entry.GetMessage(),
 			}
 			if res.entry.GetTimestamp() != nil {
 				ev.Timestamp = res.entry.GetTimestamp().AsTime().Format("2006-01-02T15:04:05.000Z")

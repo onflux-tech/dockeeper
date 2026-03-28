@@ -2,6 +2,82 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getAccessToken } from "@/lib/api";
 
+// ── Validation ──────────────────────────────────────
+
+export interface ValidationError {
+	line: number;
+	column: number;
+	message: string;
+	field: string;
+}
+
+interface ValidateResult {
+	valid: boolean;
+	errors: ValidationError[];
+}
+
+export function useValidateCompose() {
+	return useMutation<ValidateResult, Error, string>({
+		mutationFn: async (yamlContent) => {
+			const token = getAccessToken();
+			const res = await fetch("/api/dk/compose/validate", {
+				method: "POST",
+				headers: {
+					"Content-Type": "text/plain",
+					...(token ? { Authorization: token } : {}),
+				},
+				body: yamlContent,
+			});
+			if (!res.ok && res.status !== 422) {
+				const body = await res.json().catch(() => ({ error: res.statusText }));
+				throw new Error(body.error || "Validation failed");
+			}
+			return res.json();
+		},
+	});
+}
+
+// ── Stack Import ────────────────────────────────────
+
+interface ImportedStack {
+	id: string;
+	name: string;
+	services_count: number;
+	services: string[];
+}
+
+interface ImportResult {
+	imported: ImportedStack[];
+}
+
+export function useImportStacks() {
+	const queryClient = useQueryClient();
+
+	return useMutation<ImportResult, Error, string>({
+		mutationFn: async (serverId) => {
+			const token = getAccessToken();
+			const res = await fetch(`/api/dk/servers/${serverId}/compose/import`, {
+				method: "POST",
+				headers: token ? { Authorization: token } : {},
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({ error: res.statusText }));
+				throw new Error(body.error || "Import failed");
+			}
+			return res.json();
+		},
+		onSuccess: (data) => {
+			void queryClient.invalidateQueries({ queryKey: ["collection", "compose_stacks"] });
+			void queryClient.invalidateQueries({ queryKey: ["collection", "containers"] });
+			const count = data.imported?.length ?? 0;
+			toast.success(`Imported ${count} stack${count !== 1 ? "s" : ""}`);
+		},
+		onError: (err) => {
+			toast.error(`Import failed: ${err.message}`);
+		},
+	});
+}
+
 // ── Stack CRUD ──────────────────────────────────────
 
 interface CreateStackInput {

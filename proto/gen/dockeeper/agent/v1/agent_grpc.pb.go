@@ -987,9 +987,10 @@ var AgentImageService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	AgentComposeService_ComposeUp_FullMethodName   = "/dockeeper.agent.v1.AgentComposeService/ComposeUp"
-	AgentComposeService_ComposeDown_FullMethodName = "/dockeeper.agent.v1.AgentComposeService/ComposeDown"
-	AgentComposeService_ComposePull_FullMethodName = "/dockeeper.agent.v1.AgentComposeService/ComposePull"
+	AgentComposeService_ComposeUp_FullMethodName     = "/dockeeper.agent.v1.AgentComposeService/ComposeUp"
+	AgentComposeService_ComposeDown_FullMethodName   = "/dockeeper.agent.v1.AgentComposeService/ComposeDown"
+	AgentComposeService_ComposePull_FullMethodName   = "/dockeeper.agent.v1.AgentComposeService/ComposePull"
+	AgentComposeService_ComposeConfig_FullMethodName = "/dockeeper.agent.v1.AgentComposeService/ComposeConfig"
 )
 
 // AgentComposeServiceClient is the client API for AgentComposeService service.
@@ -999,6 +1000,7 @@ type AgentComposeServiceClient interface {
 	ComposeUp(ctx context.Context, in *ComposeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ComposeOutput], error)
 	ComposeDown(ctx context.Context, in *ComposeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ComposeOutput], error)
 	ComposePull(ctx context.Context, in *ComposeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ComposeOutput], error)
+	ComposeConfig(ctx context.Context, in *ComposeConfigRequest, opts ...grpc.CallOption) (*ComposeConfigResponse, error)
 }
 
 type agentComposeServiceClient struct {
@@ -1066,6 +1068,16 @@ func (c *agentComposeServiceClient) ComposePull(ctx context.Context, in *Compose
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AgentComposeService_ComposePullClient = grpc.ServerStreamingClient[ComposeOutput]
 
+func (c *agentComposeServiceClient) ComposeConfig(ctx context.Context, in *ComposeConfigRequest, opts ...grpc.CallOption) (*ComposeConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ComposeConfigResponse)
+	err := c.cc.Invoke(ctx, AgentComposeService_ComposeConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentComposeServiceServer is the server API for AgentComposeService service.
 // All implementations must embed UnimplementedAgentComposeServiceServer
 // for forward compatibility.
@@ -1073,6 +1085,7 @@ type AgentComposeServiceServer interface {
 	ComposeUp(*ComposeRequest, grpc.ServerStreamingServer[ComposeOutput]) error
 	ComposeDown(*ComposeRequest, grpc.ServerStreamingServer[ComposeOutput]) error
 	ComposePull(*ComposeRequest, grpc.ServerStreamingServer[ComposeOutput]) error
+	ComposeConfig(context.Context, *ComposeConfigRequest) (*ComposeConfigResponse, error)
 	mustEmbedUnimplementedAgentComposeServiceServer()
 }
 
@@ -1091,6 +1104,9 @@ func (UnimplementedAgentComposeServiceServer) ComposeDown(*ComposeRequest, grpc.
 }
 func (UnimplementedAgentComposeServiceServer) ComposePull(*ComposeRequest, grpc.ServerStreamingServer[ComposeOutput]) error {
 	return status.Error(codes.Unimplemented, "method ComposePull not implemented")
+}
+func (UnimplementedAgentComposeServiceServer) ComposeConfig(context.Context, *ComposeConfigRequest) (*ComposeConfigResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ComposeConfig not implemented")
 }
 func (UnimplementedAgentComposeServiceServer) mustEmbedUnimplementedAgentComposeServiceServer() {}
 func (UnimplementedAgentComposeServiceServer) testEmbeddedByValue()                             {}
@@ -1146,13 +1162,36 @@ func _AgentComposeService_ComposePull_Handler(srv interface{}, stream grpc.Serve
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AgentComposeService_ComposePullServer = grpc.ServerStreamingServer[ComposeOutput]
 
+func _AgentComposeService_ComposeConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ComposeConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentComposeServiceServer).ComposeConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentComposeService_ComposeConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentComposeServiceServer).ComposeConfig(ctx, req.(*ComposeConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentComposeService_ServiceDesc is the grpc.ServiceDesc for AgentComposeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AgentComposeService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "dockeeper.agent.v1.AgentComposeService",
 	HandlerType: (*AgentComposeServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ComposeConfig",
+			Handler:    _AgentComposeService_ComposeConfig_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "ComposeUp",
