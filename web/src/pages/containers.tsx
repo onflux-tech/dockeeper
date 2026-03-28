@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router";
-import { Box, Plus } from "lucide-react";
+import { Box, Plus, Search } from "lucide-react";
 import { Link } from "react-router";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { PerPageSelector } from "@/components/ui/per-page-selector";
@@ -7,10 +7,19 @@ import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ContainerTable, type SortKey, type SortDir } from "@/components/server/container-table";
+import { statusOptions } from "@/lib/container-constants";
 import { ServerFilterSelect } from "@/components/server-filter-select";
 import { TagFilterSelect } from "@/components/tag-filter-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { containsFilter, andFilters } from "@/lib/pocketbase-filters";
 
 const SORT_MAP: Record<SortKey, string> = {
@@ -93,30 +102,49 @@ export default function ContainersPage() {
 				</Button>
 			</div>
 
+			<div className="flex items-center gap-3">
+				<ServerFilterSelect
+					value={filters.custom.server ?? "all"}
+					onValueChange={(v) => setCustom("server", v)}
+				/>
+				<TagFilterSelect
+					resourceType="container"
+					value={tagValue}
+					onValueChange={setTagFilter}
+				/>
+				<Select
+					value={filters.custom.status ?? "all"}
+					onValueChange={(value) => setCustom("status", value)}
+				>
+					<SelectTrigger className="w-36">
+						<SelectValue placeholder="Status" />
+					</SelectTrigger>
+					<SelectContent>
+						{statusOptions.map((s) => (
+							<SelectItem key={s} value={s}>
+								{s === "all" ? "All statuses" : s}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<div className="relative w-64">
+					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search containers..."
+						className="pl-8"
+						value={filters.search}
+						onChange={(e) => setSearch(e.target.value)}
+					/>
+				</div>
+			</div>
+
 			<ContainerTable
 				containers={containers}
 				isLoading={isLoading}
 				showServer
-				search={filters.search}
-				onSearchChange={setSearch}
-				statusFilter={filters.custom.status ?? "all"}
-				onStatusFilterChange={(value) => setCustom("status", value)}
 				sortKey={sortKey}
 				sortDir={sortDir}
 				onSortChange={handleSortChange}
-				toolbarSlot={
-					<>
-						<ServerFilterSelect
-							value={filters.custom.server ?? "all"}
-							onValueChange={(v) => setCustom("server", v)}
-						/>
-						<TagFilterSelect
-							resourceType="container"
-							value={tagValue}
-							onValueChange={setTagFilter}
-						/>
-					</>
-				}
 			/>
 
 			<div className="flex items-center justify-between">

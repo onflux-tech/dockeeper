@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import {
-	ArrowUpDown,
 	MoreHorizontal,
-	Search,
 	Play,
 	RotateCcw,
 	Square,
@@ -33,15 +31,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SortableHead } from "@/components/ui/sortable-head";
 import {
 	Table,
 	TableBody,
@@ -72,14 +63,9 @@ interface ContainerTableProps {
 	containers: ContainerRecord[];
 	isLoading: boolean;
 	showServer?: boolean;
-	search?: string;
-	onSearchChange?: (value: string) => void;
-	statusFilter?: string;
-	onStatusFilterChange?: (value: string) => void;
 	sortKey?: SortKey;
 	sortDir?: SortDir;
 	onSortChange?: (key: SortKey) => void;
-	toolbarSlot?: React.ReactNode;
 }
 
 export type SortKey = "name" | "status" | "image" | "created";
@@ -98,33 +84,22 @@ const statusColors: Record<string, "default" | "secondary" | "destructive"> = {
 	removed: "destructive",
 };
 
-const statusOptions = ["all", "running", "exited", "paused", "created", "restarting", "dead"];
-
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function ContainerTable({
 	containers,
 	isLoading,
 	showServer,
-	search,
-	onSearchChange,
-	statusFilter,
-	onStatusFilterChange,
 	sortKey: externalSortKey,
 	sortDir: externalSortDir,
 	onSortChange,
-	toolbarSlot,
 }: ContainerTableProps) {
-	const [localSearch, setLocalSearch] = useState("");
-	const [localStatusFilter, setLocalStatusFilter] = useState("all");
 	const [localSortKey, setLocalSortKey] = useState<SortKey>("name");
 	const [localSortDir, setLocalSortDir] = useState<SortDir>("asc");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [removeTarget, setRemoveTarget] = useState<{ ids: string[]; name: string } | null>(null);
 	const [updateTarget, setUpdateTarget] = useState<string | null>(null);
 	const [bulkLoading, setBulkLoading] = useState(false);
-	const searchValue = search ?? localSearch;
-	const statusValue = statusFilter ?? localStatusFilter;
 	const sortKey = externalSortKey ?? localSortKey;
 	const sortDir = externalSortDir ?? localSortDir;
 
@@ -273,39 +248,6 @@ export function ContainerTable({
 
 	return (
 		<div className="flex flex-col gap-3">
-			{/* Toolbar */}
-			<div className="flex flex-wrap items-center gap-2">
-				<div className="relative w-64">
-					<Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-					<Input
-						placeholder="Search containers..."
-						value={searchValue}
-						onChange={(e) =>
-							onSearchChange ? onSearchChange(e.target.value) : setLocalSearch(e.target.value)
-						}
-						className="pl-9"
-					/>
-				</div>
-				<Select
-					value={statusValue}
-					onValueChange={(value) =>
-						onStatusFilterChange ? onStatusFilterChange(value) : setLocalStatusFilter(value)
-					}
-				>
-					<SelectTrigger className="w-36">
-						<SelectValue placeholder="Status" />
-					</SelectTrigger>
-					<SelectContent>
-						{statusOptions.map((s) => (
-							<SelectItem key={s} value={s}>
-								{s === "all" ? "All statuses" : s}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				{toolbarSlot}
-			</div>
-
 			{/* Bulk actions bar */}
 			{selected.size > 0 && (
 				<div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm">
@@ -360,21 +302,21 @@ export function ContainerTable({
 								label="Name"
 								sortKey="name"
 								currentKey={sortKey}
-								dir={sortDir}
+								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
 							<SortableHead
 								label="Image"
 								sortKey="image"
 								currentKey={sortKey}
-								dir={sortDir}
+								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
 							<SortableHead
 								label="Status"
 								sortKey="status"
 								currentKey={sortKey}
-								dir={sortDir}
+								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
 							<TableHead>Tags</TableHead>
@@ -383,7 +325,7 @@ export function ContainerTable({
 								label="Created"
 								sortKey="created"
 								currentKey={sortKey}
-								dir={sortDir}
+								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
 							<TableHead className="w-10" />
@@ -393,9 +335,7 @@ export function ContainerTable({
 						{processed.length === 0 ? (
 							<TableRow>
 								<TableCell colSpan={colCount} className="py-8 text-center text-muted-foreground">
-									{searchValue || statusValue !== "all"
-										? "No containers match your filters."
-										: "No containers found."}
+									No containers found.
 								</TableCell>
 							</TableRow>
 						) : (
@@ -509,39 +449,6 @@ export function ContainerTable({
 }
 
 // ── Subcomponents ────────────────────────────────────────────────────────────
-
-function SortableHead({
-	label,
-	sortKey: key,
-	currentKey,
-	dir,
-	onToggle,
-}: {
-	label: string;
-	sortKey: SortKey;
-	currentKey: SortKey;
-	dir: SortDir;
-	onToggle: (k: SortKey) => void;
-}) {
-	const active = key === currentKey;
-	return (
-		<TableHead>
-			<button
-				type="button"
-				className="inline-flex items-center gap-1 text-xs font-medium"
-				onClick={() => onToggle(key)}
-			>
-				{label}
-				<ArrowUpDown
-					className={`h-3 w-3 ${active ? "text-foreground" : "text-muted-foreground/50"}`}
-				/>
-				{active && (
-					<span className="text-[10px] text-muted-foreground">{dir === "asc" ? "↑" : "↓"}</span>
-				)}
-			</button>
-		</TableHead>
-	);
-}
 
 function RowActions({
 	container,

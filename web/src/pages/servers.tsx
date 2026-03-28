@@ -13,6 +13,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { SortableHead, type SortDir } from "@/components/ui/sortable-head";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -35,6 +36,14 @@ import { relativeTime } from "@/lib/format";
 import { containsFilter, andFilters } from "@/lib/pocketbase-filters";
 import type { ServerRecord } from "@/types/pocketbase";
 
+type ServerSortKey = "name" | "status" | "last_seen";
+
+const SERVER_SORT_MAP: Record<ServerSortKey, string> = {
+	name: "name",
+	status: "status",
+	last_seen: "last_seen",
+};
+
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
 	switch (status) {
 		case "online":
@@ -49,7 +58,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 }
 
 export default function ServersPage() {
-	const { filters, setSearch, setPage, setPerPage, pbOptions } = useListFilters({
+	const { filters, setSearch, setPage, setPerPage, setSort, pbOptions } = useListFilters({
 		defaultSort: "name",
 		searchFields: ["name", "hostname", "ip_address"],
 	});
@@ -97,6 +106,22 @@ export default function ServersPage() {
 	const servers = serversResult?.items ?? [];
 	const totalServers = serversResult?.totalItems ?? 0;
 
+	// Derive sort state from URL
+	const rawSort = filters.sort;
+	const isDesc = rawSort.startsWith("-");
+	const sortField = isDesc ? rawSort.slice(1) : rawSort;
+	const sortKey = (Object.entries(SERVER_SORT_MAP).find(([, v]) => v === sortField)?.[0] ?? "name") as ServerSortKey;
+	const sortDir: SortDir = isDesc ? "desc" : "asc";
+
+	const handleSortChange = (key: ServerSortKey) => {
+		const pbField = SERVER_SORT_MAP[key];
+		if (sortKey === key) {
+			setSort(sortDir === "asc" ? `-${pbField}` : pbField);
+		} else {
+			setSort(pbField);
+		}
+	};
+
 	return (
 		<div className="flex flex-col gap-6">
 			<div className="flex items-center justify-between">
@@ -138,14 +163,14 @@ export default function ServersPage() {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Name</TableHead>
+							<SortableHead label="Name" sortKey="name" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
 							<TableHead>Hostname</TableHead>
 							<TableHead>IP Address</TableHead>
 							<TableHead>OS / Arch</TableHead>
 							<TableHead>Agent</TableHead>
 							<TableHead>Tags</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead>Last Seen</TableHead>
+							<SortableHead label="Status" sortKey="status" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
+							<SortableHead label="Last Seen" sortKey="last_seen" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
 							<TableHead className="w-10" />
 						</TableRow>
 					</TableHeader>

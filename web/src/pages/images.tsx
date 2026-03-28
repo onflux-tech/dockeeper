@@ -20,6 +20,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { SortableHead, type SortDir } from "@/components/ui/sortable-head";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -74,8 +75,16 @@ function formatTags(tags: string[] | string | null): string {
 		.join(", ");
 }
 
+type ImageSortKey = "tags" | "size" | "created";
+
+const IMAGE_SORT_MAP: Record<ImageSortKey, string> = {
+	tags: "tags",
+	size: "size",
+	created: "image_created_at",
+};
+
 export default function ImagesPage() {
-	const { filters, setSearch, setPage, setPerPage, setCustom, pbOptions } = useListFilters({
+	const { filters, setSearch, setPage, setPerPage, setCustom, setSort, pbOptions } = useListFilters({
 		defaultSort: "-created",
 		searchFields: ["tags", "image_id"],
 		customFilters: { server: "server" },
@@ -92,6 +101,22 @@ export default function ImagesPage() {
 	const servers = serversResult?.items ?? [];
 	const images = useMemo(() => imagesResult?.items ?? [], [imagesResult?.items]);
 	const totalImages = imagesResult?.totalItems ?? 0;
+
+	// Derive sort state from URL
+	const rawSort = filters.sort;
+	const isDesc = rawSort.startsWith("-");
+	const sortField = isDesc ? rawSort.slice(1) : rawSort;
+	const imageSortKey = (Object.entries(IMAGE_SORT_MAP).find(([, v]) => v === sortField)?.[0] ?? "created") as ImageSortKey;
+	const imageSortDir: SortDir = isDesc ? "desc" : "asc";
+
+	const handleSortChange = (key: ImageSortKey) => {
+		const pbField = IMAGE_SORT_MAP[key];
+		if (imageSortKey === key) {
+			setSort(imageSortDir === "asc" ? `-${pbField}` : pbField);
+		} else {
+			setSort(pbField);
+		}
+	};
 
 	const removeMut = useImageRemove();
 	const pruneMut = useImagePrune();
@@ -176,11 +201,11 @@ export default function ImagesPage() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead>Tags</TableHead>
+								<SortableHead label="Tags" sortKey="tags" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
 								<TableHead>Image ID</TableHead>
-								<TableHead className="text-right">Size</TableHead>
+								<SortableHead label="Size" sortKey="size" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} className="text-right" />
 								<TableHead>In Use</TableHead>
-								<TableHead>Created</TableHead>
+								<SortableHead label="Created" sortKey="created" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
 								<TableHead className="w-12" />
 							</TableRow>
 						</TableHeader>

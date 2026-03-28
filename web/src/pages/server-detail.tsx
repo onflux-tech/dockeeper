@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router";
-import { ArrowLeft, Pencil, Download } from "lucide-react";
+import { ArrowLeft, Pencil, Download, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -19,6 +20,7 @@ import { useServerMetrics, type TimeRange } from "@/hooks/use-server-metrics";
 import { ServerInfo } from "@/components/server/server-info";
 import { MetricsCharts } from "@/components/server/metrics-charts";
 import { ContainerTable } from "@/components/server/container-table";
+import { statusOptions } from "@/lib/container-constants";
 import { EditServerDialog } from "@/components/server/edit-server-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { TagSelector } from "@/components/tag-selector";
@@ -162,20 +164,42 @@ export default function ServerDetailPage() {
 				</TabsContent>
 
 				{/* Containers Tab */}
-				<TabsContent value="containers" className="mt-4">
+				<TabsContent value="containers" className="flex flex-col gap-4 mt-4">
+					<div className="flex items-center gap-3">
+						<Select
+							value={containerStatus}
+							onValueChange={(value) => {
+								setContainerStatus(value);
+								setContainersPage(1);
+							}}
+						>
+							<SelectTrigger className="w-36">
+								<SelectValue placeholder="Status" />
+							</SelectTrigger>
+							<SelectContent>
+								{statusOptions.map((s) => (
+									<SelectItem key={s} value={s}>
+										{s === "all" ? "All statuses" : s}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<div className="relative w-64">
+							<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+							<Input
+								placeholder="Search containers..."
+								className="pl-8"
+								value={containerSearch}
+								onChange={(e) => {
+									setContainerSearch(e.target.value);
+									setContainersPage(1);
+								}}
+							/>
+						</div>
+					</div>
 					<ContainerTable
 						containers={containers}
 						isLoading={loadingContainers}
-						search={containerSearch}
-						onSearchChange={(value) => {
-							setContainerSearch(value);
-							setContainersPage(1);
-						}}
-						statusFilter={containerStatus}
-						onStatusFilterChange={(value) => {
-							setContainerStatus(value);
-							setContainersPage(1);
-						}}
 					/>
 					<PaginationControls
 						className="mt-4 flex items-center justify-between gap-3"
