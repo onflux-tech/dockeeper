@@ -20,21 +20,21 @@ interface MultiLogViewerProps {
 }
 
 const COLORS = [
-	"text-blue-400",
-	"text-green-400",
-	"text-yellow-400",
-	"text-purple-400",
-	"text-pink-400",
-	"text-cyan-400",
+	"text-log-1",
+	"text-log-2",
+	"text-log-3",
+	"text-log-4",
+	"text-log-5",
+	"text-log-6",
 ];
 
 const BORDER_COLORS = [
-	"border-l-blue-400",
-	"border-l-green-400",
-	"border-l-yellow-400",
-	"border-l-purple-400",
-	"border-l-pink-400",
-	"border-l-cyan-400",
+	"border-l-log-1",
+	"border-l-log-2",
+	"border-l-log-3",
+	"border-l-log-4",
+	"border-l-log-5",
+	"border-l-log-6",
 ];
 
 export function MultiLogViewer({ containerIds, onClose }: MultiLogViewerProps) {
@@ -186,7 +186,7 @@ export function MultiLogViewer({ containerIds, onClose }: MultiLogViewerProps) {
 			<div className="flex items-center gap-2">
 				<h3 className="text-sm font-semibold">Multi-Container Logs</h3>
 				{connected && (
-					<Badge variant="outline" className="border-green-500 text-green-500 text-[10px]">
+					<Badge variant="outline" className="border-success text-success text-[10px]">
 						Live
 					</Badge>
 				)}

@@ -159,7 +159,7 @@ export default function TraefikPage() {
 									</TableCell>
 									<TableCell>
 										{route.tls ? (
-											<ShieldCheck className="h-4 w-4 text-green-500" />
+											<ShieldCheck className="h-4 w-4 text-success" />
 										) : (
 											<ShieldOff className="h-4 w-4 text-muted-foreground" />
 										)}

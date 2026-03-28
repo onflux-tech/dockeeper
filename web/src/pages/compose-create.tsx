@@ -231,7 +231,7 @@ export default function ComposeCreatePage() {
 										{validateMut.isPending ? (
 											<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
 										) : validationValid === true ? (
-											<CheckCircle className="mr-1.5 h-3.5 w-3.5 text-green-500" />
+											<CheckCircle className="mr-1.5 h-3.5 w-3.5 text-success" />
 										) : validationValid === false ? (
 											<AlertTriangle className="mr-1.5 h-3.5 w-3.5 text-destructive" />
 										) : null}
@@ -293,7 +293,7 @@ export default function ComposeCreatePage() {
 								<div className="space-y-1">
 									<span className="text-xs text-muted-foreground">Validation</span>
 									<div>
-										<Badge variant="default" className="bg-green-500/15 text-green-500">
+										<Badge variant="default" className="bg-success/15 text-success">
 											<CheckCircle className="mr-1 h-3 w-3" />
 											Valid
 										</Badge>

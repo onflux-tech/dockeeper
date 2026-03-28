@@ -274,7 +274,7 @@ function ImpactPreview({
 
 				{/* Volume in_use_by containers */}
 				{volumeInUseBy.length > 0 && (
-					<div className="mt-2 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-1.5 text-xs">
+					<div className="mt-2 rounded border border-warning/30 bg-warning/10 px-2 py-1.5 text-xs">
 						<span className="font-medium">In use by:</span> {volumeInUseBy.join(", ")}
 					</div>
 				)}

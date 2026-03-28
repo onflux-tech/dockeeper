@@ -58,7 +58,7 @@ import { relativeTime } from "@/lib/format";
 // ── Status helpers ────────────────────────────────────────
 
 const statusConfig: Record<string, { icon: typeof CheckCircle2; color: string; label: string }> = {
-	healthy: { icon: CheckCircle2, color: "text-emerald-500", label: "Healthy" },
+	healthy: { icon: CheckCircle2, color: "text-success", label: "Healthy" },
 	unhealthy: { icon: XCircle, color: "text-destructive", label: "Unhealthy" },
 	unknown: { icon: HelpCircle, color: "text-muted-foreground", label: "Unknown" },
 };
@@ -115,7 +115,7 @@ export default function HealthChecksPage() {
 				</Card>
 				<Card>
 					<CardContent className="flex items-center gap-3 py-0">
-						<CheckCircle2 className="h-5 w-5 text-emerald-500" />
+						<CheckCircle2 className="h-5 w-5 text-success" />
 						<div>
 							<p className="text-2xl font-bold">{healthy}</p>
 							<p className="text-xs text-muted-foreground">Healthy</p>
@@ -527,7 +527,7 @@ function LogsDialog({
 											</td>
 											<td className="px-3 py-2">
 												{log.success ? (
-													<CheckCircle2 className="h-4 w-4 text-emerald-500" />
+													<CheckCircle2 className="h-4 w-4 text-success" />
 												) : (
 													<XCircle className="h-4 w-4 text-destructive" />
 												)}

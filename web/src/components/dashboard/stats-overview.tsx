@@ -70,7 +70,7 @@ export function StatsOverview({ servers, containers, isLoading }: StatsOverviewP
 			<StatCard
 				label="Online"
 				value={online}
-				icon={<Activity className="h-5 w-5 text-emerald-500" />}
+				icon={<Activity className="h-5 w-5 text-success" />}
 			/>
 			<StatCard
 				label="Offline / Error"

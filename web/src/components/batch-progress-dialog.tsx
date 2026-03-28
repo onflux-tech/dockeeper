@@ -90,7 +90,7 @@ export function BatchProgressDialog({
 function StatusIcon({ status }: { status: string }) {
 	switch (status) {
 		case "success":
-			return <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />;
+			return <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />;
 		case "failed":
 			return <XCircle className="h-4 w-4 shrink-0 text-destructive" />;
 		case "cancelled":

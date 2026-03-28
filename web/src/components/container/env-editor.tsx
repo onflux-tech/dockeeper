@@ -258,7 +258,7 @@ export function EnvEditor({ container, isLoading }: EnvEditorProps) {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle className="flex items-center gap-2">
-							<AlertTriangle className="h-5 w-5 text-yellow-500" />
+							<AlertTriangle className="h-5 w-5 text-warning" />
 							Confirm Environment Update
 						</DialogTitle>
 						<DialogDescription>
@@ -290,7 +290,7 @@ export function EnvEditor({ container, isLoading }: EnvEditorProps) {
 												{item.oldValue}
 											</span>
 											<span className="text-muted-foreground">&rarr;</span>
-											<span className="text-green-500 truncate max-w-32">{item.newValue}</span>
+											<span className="text-success truncate max-w-32">{item.newValue}</span>
 										</>
 									)}
 								</div>

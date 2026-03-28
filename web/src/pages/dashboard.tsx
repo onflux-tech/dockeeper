@@ -470,7 +470,7 @@ function WidgetContent({
 					</div>
 					<div className="flex gap-4">
 						<div className="flex items-center gap-1.5">
-							<div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+							<div className="h-2.5 w-2.5 rounded-full bg-success" />
 							<span className="text-sm">{healthy} healthy</span>
 						</div>
 						<div className="flex items-center gap-1.5">

@@ -207,7 +207,7 @@ export default function ServerCreatePage() {
 											onClick={handleCopy}
 										>
 											{copied ? (
-												<Check className="h-3.5 w-3.5 text-green-500" />
+												<Check className="h-3.5 w-3.5 text-success" />
 											) : (
 												<Copy className="h-3.5 w-3.5" />
 											)}

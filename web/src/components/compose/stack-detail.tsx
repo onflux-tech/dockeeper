@@ -237,7 +237,7 @@ export function StackDetail({ stack, onDeleted }: StackDetailProps) {
 							{validateMut.isPending ? (
 								<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
 							) : validationValid === true ? (
-								<CheckCircle className="mr-1.5 h-3.5 w-3.5 text-green-500" />
+								<CheckCircle className="mr-1.5 h-3.5 w-3.5 text-success" />
 							) : validationValid === false ? (
 								<AlertTriangle className="mr-1.5 h-3.5 w-3.5 text-destructive" />
 							) : null}

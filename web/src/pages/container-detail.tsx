@@ -108,7 +108,7 @@ export default function ContainerDetailPage() {
 						<h1 className="text-2xl font-semibold">{container?.name || "Container"}</h1>
 						{container && <Badge variant={statusVariant}>{container.status}</Badge>}
 						{container?.update_digest && (
-							<Badge variant="outline" className="gap-1 border-amber-500 text-amber-500">
+							<Badge variant="outline" className="gap-1 border-warning text-warning">
 								<ArrowUpCircle className="h-3 w-3" />
 								Update Available
 							</Badge>
@@ -124,7 +124,7 @@ export default function ContainerDetailPage() {
 							container.desired_state !== "none" &&
 							((container.desired_state === "running" && container.status !== "running") ||
 								(container.desired_state === "stopped" && container.status === "running")) && (
-								<Badge variant="outline" className="gap-1 border-amber-500 text-amber-500">
+								<Badge variant="outline" className="gap-1 border-warning text-warning">
 									<AlertTriangle className="h-3 w-3" />
 									State Drift
 								</Badge>
