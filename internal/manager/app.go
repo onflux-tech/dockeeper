@@ -1,11 +1,14 @@
 package manager
 
 import (
+	"crypto/rand"
 	"embed"
+	"encoding/hex"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -79,8 +82,11 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		routes.RegisterUserRoutes(se, app, rbacStore, rbac)
 		routes.RegisterAPIKeyRoutes(se, app, apiKeyStore, rbac)
 
-		// Registry credentials routes (encryption key from env).
+		// Registry credentials routes (encryption key from env or auto-generated).
 		encKey := os.Getenv("DOCKEEPER_ENCRYPTION_KEY")
+		if encKey == "" {
+			encKey = ensureEncryptionKey(app.DataDir())
+		}
 		routes.RegisterRegistryCredentialRoutes(se, app, encKey, rbac)
 
 		// Container action routes.
@@ -340,4 +346,36 @@ func registerUpdateCron(app core.App, orch *services.UpdateOrchestrator) {
 	}); err != nil {
 		slog.Error("failed to register update check cron", "error", err)
 	}
+}
+
+// ensureEncryptionKey loads or generates a persistent encryption key in the data directory.
+func ensureEncryptionKey(dataDir string) string {
+	keyPath := filepath.Join(dataDir, ".encryption_key")
+
+	if data, err := os.ReadFile(keyPath); err == nil {
+		key := strings.TrimSpace(string(data))
+		if key != "" {
+			return key
+		}
+	}
+
+	// Generate a random 32-byte hex key.
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		slog.Error("failed to generate encryption key", "error", err)
+		return ""
+	}
+	key := hex.EncodeToString(buf)
+
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		slog.Error("failed to create data dir for encryption key", "error", err)
+		return key
+	}
+	if err := os.WriteFile(keyPath, []byte(key), 0o600); err != nil {
+		slog.Error("failed to persist encryption key", "error", err)
+	} else {
+		slog.Info("auto-generated encryption key", "path", keyPath)
+	}
+
+	return key
 }
