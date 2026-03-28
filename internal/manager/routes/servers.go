@@ -501,7 +501,6 @@ TOKEN="%s"
 MANAGER_HTTP_URL="%s"
 INSTALL_DIR="/usr/local/bin"
 DATA_DIR="/var/lib/dockeeper-agent"
-AGENT_PORT=50052
 
 echo "==> Installing Dockeeper Agent..."
 
@@ -534,29 +533,6 @@ chmod +x "${INSTALL_DIR}/dockeeper-agent"
 # Create data directory
 mkdir -p "${DATA_DIR}"
 
-# Open firewall port for agent gRPC server (manager → agent commands)
-echo "==> Configuring firewall for port ${AGENT_PORT}/tcp..."
-if command -v ufw &>/dev/null && ufw status | grep -q "active"; then
-  ufw allow "${AGENT_PORT}/tcp" comment "Dockeeper Agent gRPC" && echo "    ufw: allowed ${AGENT_PORT}/tcp"
-elif command -v firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld; then
-  firewall-cmd --permanent --add-port="${AGENT_PORT}/tcp" && firewall-cmd --reload && echo "    firewalld: allowed ${AGENT_PORT}/tcp"
-elif command -v iptables &>/dev/null; then
-  if ! iptables -C INPUT -p tcp --dport "${AGENT_PORT}" -j ACCEPT 2>/dev/null; then
-    iptables -I INPUT -p tcp --dport "${AGENT_PORT}" -j ACCEPT && echo "    iptables: allowed ${AGENT_PORT}/tcp"
-    # Persist iptables rules if possible
-    if command -v netfilter-persistent &>/dev/null; then
-      netfilter-persistent save 2>/dev/null || true
-    elif command -v iptables-save &>/dev/null && [ -d /etc/iptables ]; then
-      iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
-    fi
-  else
-    echo "    iptables: port ${AGENT_PORT}/tcp already allowed"
-  fi
-else
-  echo "    WARNING: No supported firewall detected (ufw, firewalld, iptables)."
-  echo "    Please manually open port ${AGENT_PORT}/tcp for the manager to reach this agent."
-fi
-
 # Create systemd service
 cat > /etc/systemd/system/dockeeper-agent.service << EOF
 [Unit]
@@ -580,5 +556,5 @@ systemctl enable --now dockeeper-agent
 
 echo "==> Dockeeper Agent installed and running!"
 echo "==> Check status: systemctl status dockeeper-agent"
-echo "==> Port ${AGENT_PORT}/tcp must be reachable from the manager for remote commands."`, grpcAddr, token, managerHTTPURL)
+echo "==> Agent uses outbound-only connections to the manager. No inbound ports required."`, grpcAddr, token, managerHTTPURL)
 }
