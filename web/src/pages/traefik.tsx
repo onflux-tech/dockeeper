@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Globe, ShieldCheck, ShieldOff, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -37,9 +38,66 @@ function extractPath(rule: string | undefined): string | null {
 }
 
 export default function TraefikPage() {
-	const [page, setPage] = useState(1);
-	const [serverFilter, setServerFilter] = useState<string>("all");
-	const [search, setSearch] = useState("");
+	const [searchParams, setSearchParams] = useSearchParams();
+	const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+	const page = Math.max(1, Number(searchParams.get("page")) || 1);
+	const serverFilter = searchParams.get("server") ?? "all";
+	const rawSearch = searchParams.get("search") ?? "";
+
+	// Local search state for immediate input feedback while debouncing URL updates.
+	const [localSearch, setLocalSearch] = useState(rawSearch);
+
+	// Sync local search when URL changes externally (e.g. back/forward, global search link).
+	useEffect(() => {
+		setLocalSearch(rawSearch);
+	}, [rawSearch]);
+
+	// Cleanup debounce on unmount.
+	useEffect(() => {
+		return () => {
+			if (debounceRef.current) clearTimeout(debounceRef.current);
+		};
+	}, []);
+
+	const updateParams = useCallback(
+		(updates: Record<string, string | null>) => {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					for (const [key, value] of Object.entries(updates)) {
+						if (value === null || value === "") {
+							next.delete(key);
+						} else {
+							next.set(key, value);
+						}
+					}
+					// Clean defaults
+					if (next.get("page") === "1") next.delete("page");
+					if (next.get("server") === "all") next.delete("server");
+					return next;
+				},
+				{ replace: true },
+			);
+		},
+		[setSearchParams],
+	);
+
+	function setPage(p: number) {
+		updateParams({ page: String(Math.max(1, p)) });
+	}
+
+	function setServerFilter(value: string) {
+		updateParams({ server: value === "all" ? null : value, page: null });
+	}
+
+	function setSearch(value: string) {
+		setLocalSearch(value);
+		if (debounceRef.current) clearTimeout(debounceRef.current);
+		debounceRef.current = setTimeout(() => {
+			updateParams({ search: value || null, page: null });
+		}, 500);
+	}
 
 	const serverId = serverFilter !== "all" ? serverFilter : undefined;
 
@@ -49,7 +107,7 @@ export default function TraefikPage() {
 		perPage: 25,
 		sort: "name",
 		serverId,
-		search: search || undefined,
+		search: localSearch || undefined,
 	});
 	useRealtime("traefik_routes");
 
@@ -76,10 +134,7 @@ export default function TraefikPage() {
 			<div className="flex items-center gap-3">
 				<Select
 					value={serverFilter}
-					onValueChange={(value) => {
-						setServerFilter(value);
-						setPage(1);
-					}}
+					onValueChange={setServerFilter}
 				>
 					<SelectTrigger className="w-48">
 						<SelectValue placeholder="All Servers" />
@@ -97,11 +152,8 @@ export default function TraefikPage() {
 					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
 						placeholder="Search routes..."
-						value={search}
-						onChange={(e) => {
-							setSearch(e.target.value);
-							setPage(1);
-						}}
+						value={localSearch}
+						onChange={(e) => setSearch(e.target.value)}
 						className="pl-8"
 					/>
 				</div>
