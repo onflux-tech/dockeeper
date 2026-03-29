@@ -35,12 +35,17 @@ import { formatUptime } from "@/lib/format";
 import { containsFilter, andFilters } from "@/lib/pocketbase-filters";
 import type { ServerRecord, ContainerRecord } from "@/types/pocketbase";
 
-type ServerSortKey = "name" | "status" | "last_seen";
+type ServerSortKey = "name" | "status" | "last_seen" | "hostname" | "uptime" | "cpu" | "ram" | "os";
 
 const SERVER_SORT_MAP: Record<ServerSortKey, string> = {
 	name: "name",
 	status: "status",
 	last_seen: "last_seen",
+	hostname: "hostname",
+	uptime: "uptime_seconds",
+	cpu: "current_cpu",
+	ram: "current_ram",
+	os: "os",
 };
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
@@ -235,12 +240,12 @@ export default function ServersPage() {
 						<TableRow>
 							<SortableHead label="Status" sortKey="status" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
 							<SortableHead label="Name" sortKey="name" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
-							<TableHead>Hostname</TableHead>
+							<SortableHead label="Hostname" sortKey="hostname" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
 							<TableHead>Containers</TableHead>
-							<TableHead>Uptime</TableHead>
-							<TableHead>CPU%</TableHead>
-							<TableHead>RAM%</TableHead>
-							<TableHead>OS / Version</TableHead>
+							<SortableHead label="Uptime" sortKey="uptime" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
+							<SortableHead label="CPU%" sortKey="cpu" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
+							<SortableHead label="RAM%" sortKey="ram" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
+							<SortableHead label="OS / Version" sortKey="os" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
 							<TableHead className="w-10" />
 						</TableRow>
 					</TableHeader>

@@ -27,6 +27,9 @@ const SORT_MAP: Record<SortKey, string> = {
 	status: "status",
 	image: "image",
 	created: "container_created_at",
+	uptime: "started_at",
+	cpu: "current_cpu",
+	ram: "current_ram",
 };
 
 export default function ContainersPage() {

@@ -75,12 +75,14 @@ function formatTags(tags: string[] | string | null): string {
 		.join(", ");
 }
 
-type ImageSortKey = "tags" | "size" | "created";
+type ImageSortKey = "tags" | "size" | "created" | "image_id" | "in_use";
 
 const IMAGE_SORT_MAP: Record<ImageSortKey, string> = {
 	tags: "tags",
 	size: "size",
 	created: "image_created_at",
+	image_id: "image_id",
+	in_use: "in_use",
 };
 
 export default function ImagesPage() {
@@ -202,9 +204,9 @@ export default function ImagesPage() {
 						<TableHeader>
 							<TableRow>
 								<SortableHead label="Tags" sortKey="tags" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
-								<TableHead>Image ID</TableHead>
+								<SortableHead label="Image ID" sortKey="image_id" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
 								<SortableHead label="Size" sortKey="size" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} className="text-right" />
-								<TableHead>In Use</TableHead>
+								<SortableHead label="In Use" sortKey="in_use" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
 								<SortableHead label="Created" sortKey="created" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
 								<TableHead className="w-12" />
 							</TableRow>

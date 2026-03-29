@@ -68,7 +68,7 @@ interface ContainerTableProps {
 	onSortChange?: (key: SortKey) => void;
 }
 
-export type SortKey = "name" | "status" | "image" | "created";
+export type SortKey = "name" | "status" | "image" | "created" | "uptime" | "cpu" | "ram";
 export type SortDir = "asc" | "desc";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -312,9 +312,27 @@ export function ContainerTable({
 								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
-							<TableHead>Uptime</TableHead>
-							<TableHead>CPU%</TableHead>
-							<TableHead>RAM</TableHead>
+						<SortableHead
+							label="Uptime"
+							sortKey="uptime"
+							currentKey={sortKey}
+							currentDir={sortDir}
+							onToggle={toggleSort}
+						/>
+						<SortableHead
+							label="CPU%"
+							sortKey="cpu"
+							currentKey={sortKey}
+							currentDir={sortDir}
+							onToggle={toggleSort}
+						/>
+						<SortableHead
+							label="RAM"
+							sortKey="ram"
+							currentKey={sortKey}
+							currentDir={sortDir}
+							onToggle={toggleSort}
+						/>
 							<SortableHead
 								label="Image"
 								sortKey="image"
