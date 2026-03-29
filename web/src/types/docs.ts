@@ -74,5 +74,7 @@ export interface ChangelogChange {
 export interface ChangelogEntry {
   version: string;
   date: string;
+  title?: string;
+  summary?: string;
   changes: ChangelogChange[];
 }
