@@ -486,10 +486,10 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 									className="text-muted-foreground"
 								/>
 								<Tooltip
-									formatter={(v: ValueType) => formatPercent(Number(v ?? 0))}
-									labelFormatter={(label: string) => {
-										const p = partitionData.find((d) => d.name === label);
-										return p ? `${label} (${p.device})` : label;
+									formatter={(v) => formatPercent(Number(v ?? 0))}
+									labelFormatter={(label) => {
+										const p = partitionData.find((d) => d.name === String(label));
+										return p ? `${String(label)} (${p.device})` : String(label);
 									}}
 									{...tooltipStyle}
 								/>
