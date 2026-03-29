@@ -7,7 +7,10 @@ import {
 import type { Layout, LayoutItem } from "react-grid-layout";
 import {
 	HeartPulse,
-	Bell,
+	Activity,
+	ShieldAlert,
+	CircleCheck,
+	CircleX,
 	ServerCog,
 	GripVertical,
 	Lock,
@@ -18,10 +21,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { useCollection } from "@/hooks/use-collection";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useHealthChecks } from "@/hooks/use-health-checks";
+import { useEvents, type EventRecord } from "@/hooks/use-events";
+import { useAlertRules } from "@/hooks/use-alerts";
+import { relativeTime } from "@/lib/format";
+import type { AlertRuleRecord } from "@/types/pocketbase";
 import {
 	useDashboardLayout,
 	useSaveDashboardLayout,
@@ -126,6 +132,8 @@ export default function DashboardPage() {
 		perPage: 500,
 	});
 	const { data: healthChecks } = useHealthChecks();
+	const { data: recentEvents } = useEvents({ limit: 10 });
+	const { data: alertRules } = useAlertRules();
 
 	useRealtime("servers");
 	useRealtime("server_metrics_raw");
@@ -298,6 +306,8 @@ export default function DashboardPage() {
 										<WidgetContent
 											id={item.i}
 											healthChecks={healthChecks ?? []}
+											events={recentEvents ?? []}
+											alertRules={alertRules ?? []}
 										/>
 									</WidgetWrapper>
 								</div>
@@ -444,7 +454,7 @@ function WidgetWrapper({
 					</span>
 				</div>
 			)}
-			<div className="min-h-0 flex-1 overflow-hidden p-3">{children}</div>
+			<div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
 		</Card>
 	);
 }
@@ -454,70 +464,172 @@ function WidgetWrapper({
 function WidgetContent({
 	id,
 	healthChecks,
+	events,
+	alertRules,
 }: {
 	id: string;
 	healthChecks: { status: string; name: string; last_check_at: string }[];
+	events: EventRecord[];
+	alertRules: AlertRuleRecord[];
 }) {
 	switch (id) {
 		case "health-status": {
 			const healthy = healthChecks.filter((c) => c.status === "healthy").length;
 			const unhealthy = healthChecks.filter((c) => c.status === "unhealthy").length;
+			const total = healthChecks.length;
+
+			if (total === 0) {
+				return (
+					<div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+						<HeartPulse className="h-8 w-8 opacity-30" />
+						<span className="text-xs">No health checks configured</span>
+					</div>
+				);
+			}
+
 			return (
 				<div className="flex flex-col gap-3">
-					<div className="flex items-center gap-2">
-						<HeartPulse className="h-4 w-4 text-muted-foreground" />
-						<span className="text-sm font-medium">Health Checks</span>
-					</div>
-					<div className="flex gap-4">
-						<div className="flex items-center gap-1.5">
-							<div className="h-2.5 w-2.5 rounded-full bg-success" />
-							<span className="text-sm">{healthy} healthy</span>
+					<div className="flex items-center gap-4">
+						<div className="flex items-center gap-2 rounded-md bg-success/10 px-2.5 py-1.5">
+							<CircleCheck className="h-3.5 w-3.5 text-success" />
+							<span className="text-sm font-semibold text-success">{healthy}</span>
+							<span className="text-xs text-success/80">healthy</span>
 						</div>
-						<div className="flex items-center gap-1.5">
-							<div className="h-2.5 w-2.5 rounded-full bg-destructive" />
-							<span className="text-sm">{unhealthy} unhealthy</span>
-						</div>
-					</div>
-					{healthChecks
-						.filter((c) => c.status === "unhealthy")
-						.slice(0, 3)
-						.map((c, i) => (
-							<div key={i} className="flex items-center justify-between text-xs">
-								<span className="truncate">{c.name}</span>
-								<Badge variant="destructive" className="text-[10px]">
-									Unhealthy
-								</Badge>
+						{unhealthy > 0 && (
+							<div className="flex items-center gap-2 rounded-md bg-destructive/10 px-2.5 py-1.5">
+								<CircleX className="h-3.5 w-3.5 text-destructive" />
+								<span className="text-sm font-semibold text-destructive">{unhealthy}</span>
+								<span className="text-xs text-destructive/80">unhealthy</span>
 							</div>
-						))}
+						)}
+					</div>
+					{unhealthy > 0 && (
+						<div className="flex flex-col gap-1">
+							{healthChecks
+								.filter((c) => c.status === "unhealthy")
+								.slice(0, 4)
+								.map((c, i) => (
+									<div
+										key={i}
+										className="flex items-center justify-between rounded-md border border-destructive/20 bg-destructive/5 px-2.5 py-1.5"
+									>
+										<span className="truncate text-xs font-medium">{c.name}</span>
+										<span className="text-[10px] text-muted-foreground">
+											{relativeTime(c.last_check_at)}
+										</span>
+									</div>
+								))}
+						</div>
+					)}
 				</div>
 			);
 		}
 
-		case "recent-events":
-			return (
-				<div className="flex flex-col gap-3">
-					<div className="flex items-center gap-2">
-						<Bell className="h-4 w-4 text-muted-foreground" />
-						<span className="text-sm font-medium">Recent Events</span>
+		case "recent-events": {
+			if (events.length === 0) {
+				return (
+					<div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+						<Activity className="h-8 w-8 opacity-30" />
+						<span className="text-xs">No events yet</span>
 					</div>
-					<p className="text-xs text-muted-foreground">
-						View events on the Events page.
-					</p>
-				</div>
-			);
+				);
+			}
 
-		case "alerts-summary":
 			return (
-				<div className="flex flex-col gap-3">
-					<div className="flex items-center gap-2">
-						<Bell className="h-4 w-4 text-muted-foreground" />
-						<span className="text-sm font-medium">Alerts</span>
-					</div>
-					<p className="text-xs text-muted-foreground">
-						View active alerts on the Alerts page.
-					</p>
+				<div className="flex flex-col gap-1 overflow-y-auto">
+					{events.map((ev) => (
+						<div
+							key={ev.id}
+							className="group flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/50"
+						>
+							<div
+								className={`h-2 w-2 shrink-0 rounded-full ${
+									ev.severity === "critical"
+										? "bg-destructive shadow-[0_0_6px] shadow-destructive/50"
+										: ev.severity === "warning"
+											? "bg-amber-500 shadow-[0_0_6px] shadow-amber-500/50"
+											: "bg-primary/60"
+								}`}
+							/>
+							<div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+								<div className="min-w-0">
+									<span className="block truncate text-xs font-medium">
+										{ev.event_type
+											.replace(".", " ")
+											.replace(/\b\w/g, (c) => c.toUpperCase())}
+									</span>
+									{ev.server_name && (
+										<span className="block truncate text-[10px] text-muted-foreground">
+											{ev.server_name}
+											{ev.container_name ? ` / ${ev.container_name}` : ""}
+										</span>
+									)}
+								</div>
+								<span className="shrink-0 text-[10px] text-muted-foreground">
+									{relativeTime(ev.created)}
+								</span>
+							</div>
+						</div>
+					))}
 				</div>
 			);
+		}
+
+		case "alerts-summary": {
+			const firing = alertRules.filter((r) => r.state === "firing");
+			const enabled = alertRules.filter((r) => r.enabled).length;
+			const total = alertRules.length;
+
+			if (total === 0) {
+				return (
+					<div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+						<ShieldAlert className="h-8 w-8 opacity-30" />
+						<span className="text-xs">No alert rules configured</span>
+					</div>
+				);
+			}
+
+			return (
+				<div className="flex flex-col gap-3">
+					<div className="flex items-center gap-4">
+						<div className="flex items-center gap-2 rounded-md bg-muted/50 px-2.5 py-1.5">
+							<span className="text-sm font-semibold">{enabled}</span>
+							<span className="text-xs text-muted-foreground">active</span>
+						</div>
+						{firing.length > 0 ? (
+							<div className="flex items-center gap-2 rounded-md bg-destructive/10 px-2.5 py-1.5">
+								<div className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
+								<span className="text-sm font-semibold text-destructive">{firing.length}</span>
+								<span className="text-xs text-destructive/80">firing</span>
+							</div>
+						) : (
+							<div className="flex items-center gap-2 rounded-md bg-success/10 px-2.5 py-1.5">
+								<CircleCheck className="h-3.5 w-3.5 text-success" />
+								<span className="text-xs text-success">All clear</span>
+							</div>
+						)}
+					</div>
+					{firing.length > 0 && (
+						<div className="flex flex-col gap-1">
+							{firing.slice(0, 4).map((rule) => (
+								<div
+									key={rule.id}
+									className="flex items-center justify-between rounded-md border border-destructive/20 bg-destructive/5 px-2.5 py-1.5"
+								>
+									<div className="flex items-center gap-2 min-w-0">
+										<div className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-destructive" />
+										<span className="truncate text-xs font-medium">{rule.name}</span>
+									</div>
+									<span className="text-[10px] text-muted-foreground">
+										{relativeTime(rule.last_triggered)}
+									</span>
+								</div>
+							))}
+						</div>
+					)}
+				</div>
+			);
+		}
 
 		default:
 			return <p className="text-sm text-muted-foreground">Unknown widget: {id}</p>;
