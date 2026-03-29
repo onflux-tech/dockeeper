@@ -25,7 +25,7 @@ import { EditServerDialog } from "@/components/server/edit-server-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { TagSelector } from "@/components/tag-selector";
 import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
-import { useUpdateCheck, useAgentUpdate } from "@/hooks/use-settings";
+import { useAgentUpdate } from "@/hooks/use-settings";
 
 const timeRangeLabels: Record<TimeRange, string> = {
 	"1h": "Last 1 hour",
@@ -41,7 +41,6 @@ export default function ServerDetailPage() {
 	const [containerSearch, setContainerSearch] = useState("");
 	const [containerStatus, setContainerStatus] = useState("all");
 	const [editOpen, setEditOpen] = useState(false);
-	const updateCheck = useUpdateCheck();
 	const agentUpdate = useAgentUpdate();
 
 	const { data: server, isLoading: loadingServer } = useRecord("servers", id);
@@ -104,27 +103,17 @@ export default function ServerDetailPage() {
 							<Button
 								variant="outline"
 								size="sm"
-								disabled={agentUpdate.isPending || updateCheck.isPending}
+								disabled={agentUpdate.isPending}
 								onClick={() => {
-									if (updateCheck.data?.available && id) {
+									if (id) {
 										agentUpdate.mutate(id);
-									} else {
-										updateCheck.mutate(undefined, {
-											onSuccess: (result) => {
-												if (result.available && id) {
-													agentUpdate.mutate(id);
-												}
-											},
-										});
 									}
 								}}
 							>
 								<Download className="mr-1.5 h-3.5 w-3.5" />
 								{agentUpdate.isPending
 									? "Updating..."
-									: updateCheck.isPending
-										? "Checking..."
-										: "Update Agent"}
+									: "Update Agent"}
 							</Button>
 						)}
 					</>
