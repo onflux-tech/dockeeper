@@ -295,6 +295,7 @@ export function useAgentUpdate() {
 
 					// Non-SSE response (already up to date).
 					if (!contentType.includes("text/event-stream")) {
+						toast.info("Agent already up to date");
 						resolve();
 						return;
 					}
