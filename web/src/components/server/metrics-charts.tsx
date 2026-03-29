@@ -78,9 +78,12 @@ const tooltipStyle = {
 	contentStyle: {
 		backgroundColor: "var(--color-popover)",
 		borderColor: "var(--color-border)",
+		borderRadius: "8px",
 		color: "var(--color-popover-foreground)",
 	},
+	itemStyle: { color: "var(--color-popover-foreground)" },
 	labelStyle: { color: "var(--color-muted-foreground)" },
+	wrapperStyle: { zIndex: 10 },
 };
 
 const chartColors = {
@@ -105,7 +108,8 @@ const TEMP_COLORS = [
 ];
 
 export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
-	// Extract unique temperature sensor names across all data points.
+	// Extract unique temperature sensor names and pick the most relevant ones.
+	// Group by hardware prefix (coretemp → max across cores, etc.) to avoid clutter.
 	const tempSensors = useMemo(() => {
 		const names = new Set<string>();
 		for (const p of data) {
@@ -116,16 +120,50 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 		return [...names];
 	}, [data]);
 
-	// Build temperature series data: flatten sensor readings to columns.
-	const tempData = useMemo(() => {
-		if (tempSensors.length === 0) return [];
-		return data.map((p) => {
+	// Aggregate sensors: keep one representative per hardware group.
+	// e.g. coretemp_core_0..N → "CPU Cores (max)" using the hottest core per tick.
+	const { aggregatedSensors, aggregatedTempData } = useMemo(() => {
+		if (tempSensors.length === 0) return { aggregatedSensors: [] as string[], aggregatedTempData: [] as Record<string, unknown>[] };
+
+		// Group sensors by prefix (everything before the last _N suffix).
+		const groups = new Map<string, string[]>();
+		for (const name of tempSensors) {
+			const match = name.match(/^(.+?)_\d+$/);
+			const prefix = match ? match[1] : name;
+			const existing = groups.get(prefix) ?? [];
+			existing.push(name);
+			groups.set(prefix, existing);
+		}
+
+		// Build display names: groups with >1 sensor get "(max)" label.
+		const displayMap = new Map<string, { label: string; members: string[] }>();
+		for (const [prefix, members] of groups) {
+			if (members.length > 1) {
+				displayMap.set(prefix, { label: `${prefix} (max)`, members });
+			} else {
+				displayMap.set(prefix, { label: members[0], members });
+			}
+		}
+
+		const sensors = [...displayMap.values()].map((v) => v.label);
+		const tempRows = data.map((p) => {
 			const row: Record<string, unknown> = { time: formatTime(p.timestamp, range) };
+			const tempMap = new Map<string, number>();
 			for (const t of p.temperatures ?? []) {
-				row[t.name] = t.celsius;
+				tempMap.set(t.name, t.celsius);
+			}
+			for (const [, { label, members }] of displayMap) {
+				if (members.length > 1) {
+					const vals = members.map((m) => tempMap.get(m)).filter((v): v is number => v !== undefined);
+					row[label] = vals.length > 0 ? Math.max(...vals) : undefined;
+				} else {
+					row[label] = tempMap.get(members[0]);
+				}
 			}
 			return row;
 		});
+
+		return { aggregatedSensors: sensors, aggregatedTempData: tempRows };
 	}, [data, tempSensors, range]);
 
 	// Build latest partitions data for bar chart.
@@ -160,7 +198,7 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 	// Check if we have data for the new charts.
 	const hasDiskIO = data.some((p) => p.disk_io_read > 0 || p.disk_io_write > 0);
 	const hasSwap = data.some((p) => p.swap_total > 0);
-	const hasTemps = tempSensors.length > 0;
+	const hasTemps = aggregatedSensors.length > 0;
 	const hasPartitions = partitionData.length > 0;
 
 	return (
@@ -432,18 +470,25 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 						<CardTitle className="text-sm">Temperature</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<ResponsiveContainer width="100%" height={200}>
-							<LineChart data={tempData}>
+						<ResponsiveContainer width="100%" height={250}>
+							<LineChart data={aggregatedTempData}>
 								<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 								<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
 								<YAxis
 									tick={{ fontSize: 11 }}
 									tickFormatter={formatTemp}
 									className="text-muted-foreground"
+									domain={["auto", "auto"]}
 								/>
-								<Tooltip formatter={tooltipTemp} {...tooltipStyle} />
-								<Legend />
-								{tempSensors.map((name, i) => (
+								<Tooltip
+									formatter={tooltipTemp}
+									{...tooltipStyle}
+									wrapperStyle={{ zIndex: 10 }}
+								/>
+								<Legend
+									wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+								/>
+								{aggregatedSensors.map((name, i) => (
 									<Line
 										key={name}
 										type="monotone"
@@ -486,7 +531,14 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 									className="text-muted-foreground"
 								/>
 								<Tooltip
-									formatter={(v) => formatPercent(Number(v ?? 0))}
+									cursor={{ fill: "var(--color-muted)", opacity: 0.15 }}
+									formatter={(v, _name, entry) => {
+										const p = entry?.payload;
+										if (p) {
+											return `${formatPercent(Number(v ?? 0))} (${formatBytes(p.usedBytes)} / ${formatBytes(p.total)})`;
+										}
+										return formatPercent(Number(v ?? 0));
+									}}
 									labelFormatter={(label) => {
 										const p = partitionData.find((d) => d.name === String(label));
 										return p ? `${String(label)} (${p.device})` : String(label);
