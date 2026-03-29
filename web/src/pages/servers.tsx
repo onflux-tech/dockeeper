@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink, Pencil, Copy, Check, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -26,16 +26,14 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { CascadeDeleteDialog } from "@/components/cascade-delete-dialog";
 import { EditServerDialog } from "@/components/server/edit-server-dialog";
-import { TagBadge } from "@/components/tag-badge";
 import { TagFilterSelect } from "@/components/tag-filter-select";
 import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useDeleteServer, useQuickInstallCommand } from "@/hooks/use-servers";
 import { useRealtime } from "@/hooks/use-realtime";
-import { useTags } from "@/hooks/use-tags";
-import { relativeTime } from "@/lib/format";
+import { formatUptime } from "@/lib/format";
 import { containsFilter, andFilters } from "@/lib/pocketbase-filters";
-import type { ServerRecord } from "@/types/pocketbase";
+import type { ServerRecord, ContainerRecord } from "@/types/pocketbase";
 
 type ServerSortKey = "name" | "status" | "last_seen";
 
@@ -56,6 +54,12 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 		default:
 			return "secondary";
 	}
+}
+
+function metricColor(value: number): string {
+	if (value >= 80) return "text-destructive";
+	if (value >= 50) return "text-yellow-500";
+	return "text-foreground";
 }
 
 export default function ServersPage() {
@@ -93,14 +97,20 @@ export default function ServersPage() {
 	const navigate = useNavigate();
 	useRealtime("servers");
 
-	const { data: tagsData } = useTags("server");
-	const allTags = tagsData?.items ?? [];
-	const tagsByServer = new Map<string, typeof allTags>();
-	for (const tag of allTags) {
-		const existing = tagsByServer.get(tag.resource_id) ?? [];
-		existing.push(tag);
-		tagsByServer.set(tag.resource_id, existing);
-	}
+	// Fetch all containers for running/total count per server.
+	const { data: containersResult } = useCollection("containers", { perPage: 500 });
+	useRealtime("containers");
+	const containerCounts = useMemo(() => {
+		const map = new Map<string, { running: number; total: number }>();
+		for (const c of containersResult?.items ?? []) {
+			const ct = (c as ContainerRecord);
+			const entry = map.get(ct.server) ?? { running: 0, total: 0 };
+			entry.total++;
+			if (ct.status === "running") entry.running++;
+			map.set(ct.server, entry);
+		}
+		return map;
+	}, [containersResult]);
 
 	const [deleteTarget, setDeleteTarget] = useState<ServerRecord | null>(null);
 	const [editTarget, setEditTarget] = useState<ServerRecord | null>(null);
@@ -223,14 +233,14 @@ export default function ServersPage() {
 				<Table>
 					<TableHeader>
 						<TableRow>
+							<SortableHead label="Status" sortKey="status" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
 							<SortableHead label="Name" sortKey="name" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
 							<TableHead>Hostname</TableHead>
-							<TableHead>IP Address</TableHead>
-							<TableHead>OS / Arch</TableHead>
-							<TableHead>Agent</TableHead>
-							<TableHead>Tags</TableHead>
-							<SortableHead label="Status" sortKey="status" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
-							<SortableHead label="Last Seen" sortKey="last_seen" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
+							<TableHead>Containers</TableHead>
+							<TableHead>Uptime</TableHead>
+							<TableHead>CPU%</TableHead>
+							<TableHead>RAM%</TableHead>
+							<TableHead>OS / Version</TableHead>
 							<TableHead className="w-10" />
 						</TableRow>
 					</TableHeader>
@@ -254,92 +264,103 @@ export default function ServersPage() {
 								</TableCell>
 							</TableRow>
 						) : (
-							servers.map((server) => (
-								<TableRow
-									key={server.id}
-									className="cursor-pointer"
-									onClick={() => navigate(`/servers/${server.id}`)}
-								>
-									<TableCell className="font-medium">
-										{server.name}
-										{server.description && (
-											<p className="text-xs text-muted-foreground truncate max-w-[200px]">
-												{server.description}
-											</p>
-										)}
-									</TableCell>
-									<TableCell className="font-mono text-xs">{server.hostname || "—"}</TableCell>
-									<TableCell className="font-mono text-xs">{server.ip_address || "—"}</TableCell>
-									<TableCell className="text-xs text-muted-foreground">
-										{server.os && server.arch ? `${server.os}/${server.arch}` : "—"}
-									</TableCell>
-									<TableCell className="text-xs text-muted-foreground">
-										{server.agent_version || "—"}
-									</TableCell>
-									<TableCell>
-										{(tagsByServer.get(server.id)?.length ?? 0) > 0 ? (
-											<div className="flex flex-wrap gap-1">
-												{tagsByServer.get(server.id)!.map((tag) => (
-													<TagBadge key={tag.id} name={tag.name} color={tag.color} />
-												))}
-											</div>
-										) : (
-											<span className="text-xs text-muted-foreground">—</span>
-										)}
-									</TableCell>
-									<TableCell>
-										<Badge variant={statusVariant(server.status)}>{server.status}</Badge>
-									</TableCell>
-									<TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-										{server.last_seen ? relativeTime(server.last_seen) : "never"}
-									</TableCell>
-									<TableCell>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button
-													variant="ghost"
-													size="icon"
-													className="h-8 w-8"
-													onClick={(e) => e.stopPropagation()}
-												>
-													<MoreHorizontal className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem
-													onClick={(e) => {
-														e.stopPropagation();
-														navigate(`/servers/${server.id}`);
-													}}
-												>
-													<ExternalLink className="mr-2 h-4 w-4" />
-													View Details
-												</DropdownMenuItem>
-												<DropdownMenuItem
-													onClick={(e) => {
-														e.stopPropagation();
-														setEditTarget(server);
-													}}
-												>
-													<Pencil className="mr-2 h-4 w-4" />
-													Edit
-												</DropdownMenuItem>
-												<DropdownMenuSeparator />
-												<DropdownMenuItem
-													className="text-destructive focus:text-destructive"
-													onClick={(e) => {
-														e.stopPropagation();
-														setDeleteTarget(server);
-													}}
-												>
-													<Trash2 className="mr-2 h-4 w-4" />
-													Delete Server
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
-									</TableCell>
-								</TableRow>
-							))
+							servers.map((server) => {
+								const counts = containerCounts.get(server.id);
+								return (
+									<TableRow
+										key={server.id}
+										className="cursor-pointer"
+										onClick={() => navigate(`/servers/${server.id}`)}
+									>
+										<TableCell>
+											<Badge variant={statusVariant(server.status)}>{server.status}</Badge>
+										</TableCell>
+										<TableCell className="font-medium">
+											{server.name}
+											{server.description && (
+												<p className="text-xs text-muted-foreground truncate max-w-[200px]">
+													{server.description}
+												</p>
+											)}
+										</TableCell>
+										<TableCell className="font-mono text-xs">{server.hostname || "—"}</TableCell>
+										<TableCell className="text-xs tabular-nums">
+											{counts ? (
+												<span>
+													<span className="font-medium">{counts.running}</span>
+													<span className="text-muted-foreground"> / {counts.total}</span>
+												</span>
+											) : (
+												"—"
+											)}
+										</TableCell>
+										<TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+											{server.uptime_seconds ? formatUptime(server.uptime_seconds) : "—"}
+										</TableCell>
+										<TableCell className={`text-xs tabular-nums font-medium ${metricColor(server.current_cpu ?? 0)}`}>
+											{server.current_cpu != null && server.current_cpu > 0
+												? `${server.current_cpu.toFixed(1)}%`
+												: "—"}
+										</TableCell>
+										<TableCell className={`text-xs tabular-nums font-medium ${metricColor(server.current_ram ?? 0)}`}>
+											{server.current_ram != null && server.current_ram > 0
+												? `${server.current_ram.toFixed(1)}%`
+												: "—"}
+										</TableCell>
+										<TableCell className="text-xs text-muted-foreground">
+											{server.os && server.arch ? `${server.os}/${server.arch}` : "—"}
+											{server.agent_version && (
+												<span className="ml-1 text-muted-foreground/70">v{server.agent_version}</span>
+											)}
+										</TableCell>
+										<TableCell>
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8"
+														onClick={(e) => e.stopPropagation()}
+													>
+														<MoreHorizontal className="h-4 w-4" />
+													</Button>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuItem
+														onClick={(e) => {
+															e.stopPropagation();
+															navigate(`/servers/${server.id}`);
+														}}
+													>
+														<ExternalLink className="mr-2 h-4 w-4" />
+														View Details
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														onClick={(e) => {
+															e.stopPropagation();
+															setEditTarget(server);
+														}}
+													>
+														<Pencil className="mr-2 h-4 w-4" />
+														Edit
+													</DropdownMenuItem>
+													<DropdownMenuSeparator />
+													<DropdownMenuItem
+														className="text-destructive focus:text-destructive"
+														onClick={(e) => {
+															e.stopPropagation();
+															setDeleteTarget(server);
+														}}
+													>
+														<Trash2 className="mr-2 h-4 w-4" />
+														Delete Server
+													</DropdownMenuItem>
+												</DropdownMenuContent>
+											</DropdownMenu>
+										</TableCell>
+									</TableRow>
+								);
+							})
 						)}
 					</TableBody>
 				</Table>

@@ -3,6 +3,40 @@ const HOUR = 3600;
 const DAY = 86_400;
 
 /**
+ * Format bytes into a human-readable string (e.g. "2.1 GB").
+ */
+export function formatBytes(bytes: number): string {
+	if (bytes === 0) return "0 B";
+	const units = ["B", "KB", "MB", "GB", "TB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(1024));
+	const val = bytes / 1024 ** i;
+	return `${val.toFixed(1)} ${units[i]}`;
+}
+
+/**
+ * Format seconds into human-readable uptime (e.g. "108d 12h" or "3h 45m").
+ */
+export function formatUptime(seconds: number): string {
+	if (!seconds || seconds <= 0) return "—";
+	const d = Math.floor(seconds / DAY);
+	const h = Math.floor((seconds % DAY) / HOUR);
+	const m = Math.floor((seconds % HOUR) / MINUTE);
+	if (d > 0) return `${d}d ${h}h`;
+	if (h > 0) return `${h}h ${m}m`;
+	return `${m}m`;
+}
+
+/**
+ * Format uptime from a started_at date string.
+ */
+export function formatUptimeFromDate(dateStr: string | undefined): string {
+	if (!dateStr) return "—";
+	const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+	if (diff <= 0) return "—";
+	return formatUptime(diff);
+}
+
+/**
  * Returns a human-readable relative time string (e.g. "2m ago" or "in 364d").
  * Handles both past and future dates.
  */

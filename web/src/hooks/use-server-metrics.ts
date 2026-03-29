@@ -1,6 +1,6 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import pb from "@/lib/pb";
-import type { CollectionName } from "@/types/pocketbase";
+import type { CollectionName, DiskPartition, TemperatureSensor } from "@/types/pocketbase";
 
 export type TimeRange = "1h" | "6h" | "24h" | "7d";
 
@@ -12,6 +12,13 @@ export interface MetricPoint {
 	disk_total: number;
 	net_rx: number;
 	net_tx: number;
+	disk_io_read: number;
+	disk_io_write: number;
+	swap_used: number;
+	swap_total: number;
+	mem_available: number;
+	partitions: DiskPartition[];
+	temperatures: TemperatureSensor[];
 }
 
 interface RangeConfig {
@@ -55,6 +62,13 @@ export function useServerMetrics(serverId: string | undefined, range: TimeRange)
 				disk_total: r.disk_total as number,
 				net_rx: r.net_rx as number,
 				net_tx: r.net_tx as number,
+				disk_io_read: (r.disk_io_read as number) ?? 0,
+				disk_io_write: (r.disk_io_write as number) ?? 0,
+				swap_used: (r.swap_used as number) ?? 0,
+				swap_total: (r.swap_total as number) ?? 0,
+				mem_available: (r.mem_available as number) ?? 0,
+				partitions: (r.partitions as DiskPartition[]) ?? [],
+				temperatures: (r.temperatures as TemperatureSensor[]) ?? [],
 			}));
 		},
 		enabled: !!serverId,

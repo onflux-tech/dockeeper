@@ -23,6 +23,13 @@ export interface ServerRecord extends BaseRecord {
 	cert_expires_at: string;
 	enrollment_token: string;
 	description: string;
+	cpu_model: string;
+	cpu_cores: number;
+	mem_total: number;
+	current_cpu: number;
+	current_ram: number;
+	current_disk: number;
+	uptime_seconds: number;
 }
 
 export interface ContainerRecord extends BaseRecord {
@@ -48,6 +55,9 @@ export interface ContainerRecord extends BaseRecord {
 	compose_service: string;
 	update_digest: string;
 	last_update_check: string;
+	current_cpu: number;
+	current_ram: number;
+	current_ram_limit: number;
 }
 
 export interface ImageRecord extends BaseRecord {
@@ -91,6 +101,21 @@ export interface ComposeStackRecord extends BaseRecord {
 	deployed_at: string;
 }
 
+export interface DiskPartition {
+	mountpoint: string;
+	device: string;
+	fstype: string;
+	total: number;
+	used: number;
+	available: number;
+	percent: number;
+}
+
+export interface TemperatureSensor {
+	name: string;
+	celsius: number;
+}
+
 export interface ServerMetricsRawRecord extends BaseRecord {
 	server: string;
 	timestamp: string;
@@ -105,6 +130,15 @@ export interface ServerMetricsRawRecord extends BaseRecord {
 	load_1m: number;
 	load_5m: number;
 	load_15m: number;
+	disk_io_read: number;
+	disk_io_write: number;
+	swap_used: number;
+	swap_total: number;
+	mem_available: number;
+	partitions: DiskPartition[];
+	temperatures: TemperatureSensor[];
+	cpu_cores: number;
+	uptime_seconds: number;
 }
 
 export interface ServerMetricsAggRecord extends BaseRecord {

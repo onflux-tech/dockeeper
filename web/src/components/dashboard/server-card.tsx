@@ -1,11 +1,11 @@
 import { Link } from "react-router";
-import { Cpu, MemoryStick, ChevronRight, GripVertical } from "lucide-react";
+import { Cpu, MemoryStick, HardDrive, Clock, ChevronRight, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TagBadge } from "@/components/tag-badge";
 import { SparklineChart, type SparklinePoint } from "@/components/dashboard/sparkline-chart";
-import { relativeTime } from "@/lib/format";
+import { formatBytes, formatUptime } from "@/lib/format";
 import type { ServerRecord } from "@/types/pocketbase";
 
 interface ServerCardProps {
@@ -27,6 +27,26 @@ const statusStyles: Record<
 
 export function ServerCard({ server, cpuData, memData, editing, tags }: ServerCardProps) {
 	const style = statusStyles[server.status] ?? statusStyles.offline;
+
+	const cpuLabel = server.current_cpu != null && server.current_cpu > 0
+		? `${server.current_cpu.toFixed(1)}%${server.cpu_cores ? ` (${server.cpu_cores} cores)` : ""}`
+		: "—";
+
+	const ramLabel = (() => {
+		if (server.current_ram == null || server.current_ram <= 0) return "—";
+		if (server.mem_total > 0) {
+			const used = (server.current_ram / 100) * server.mem_total;
+			return `${server.current_ram.toFixed(1)}% (${formatBytes(used)} / ${formatBytes(server.mem_total)})`;
+		}
+		return `${server.current_ram.toFixed(1)}%`;
+	})();
+
+	const diskLabel = (() => {
+		if (server.current_disk == null || server.current_disk <= 0) return "—";
+		return `${server.current_disk.toFixed(0)}%`;
+	})();
+
+	const uptimeLabel = server.uptime_seconds ? formatUptime(server.uptime_seconds) : "—";
 
 	const content = (
 		<Card className="overflow-visible transition-colors hover:border-primary/40">
@@ -52,6 +72,7 @@ export function ServerCard({ server, cpuData, memData, editing, tags }: ServerCa
 			</CardHeader>
 
 			<CardContent className="flex flex-col gap-3">
+				{/* Sparklines */}
 				<div className="flex items-center justify-between gap-4">
 					<div className="flex flex-1 flex-col gap-1">
 						<div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -69,10 +90,27 @@ export function ServerCard({ server, cpuData, memData, editing, tags }: ServerCa
 					</div>
 				</div>
 
+				{/* Capacity info */}
+				<div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+					<div className="flex items-center gap-1 text-muted-foreground">
+						<Cpu className="h-3 w-3 shrink-0" />
+						<span className="truncate">{cpuLabel}</span>
+					</div>
+					<div className="flex items-center gap-1 text-muted-foreground">
+						<MemoryStick className="h-3 w-3 shrink-0" />
+						<span className="truncate">{ramLabel}</span>
+					</div>
+					<div className="flex items-center gap-1 text-muted-foreground">
+						<HardDrive className="h-3 w-3 shrink-0" />
+						<span className="truncate">Disk {diskLabel}</span>
+					</div>
+					<div className="flex items-center gap-1 text-muted-foreground">
+						<Clock className="h-3 w-3 shrink-0" />
+						<span className="truncate">Up {uptimeLabel}</span>
+					</div>
+				</div>
+
 				<div className="flex items-center justify-between">
-					<span className="text-[11px] text-muted-foreground">
-						Last seen {relativeTime(server.last_seen)}
-					</span>
 					{tags && tags.length > 0 && (
 						<div className="flex flex-wrap justify-end gap-1">
 							{tags.map((tag) => (
@@ -119,7 +157,12 @@ export function ServerCardSkeleton() {
 						<Skeleton className="h-7 w-full" />
 					</div>
 				</div>
-				<Skeleton className="h-3 w-24" />
+				<div className="grid grid-cols-2 gap-2">
+					<Skeleton className="h-3 w-20" />
+					<Skeleton className="h-3 w-24" />
+					<Skeleton className="h-3 w-16" />
+					<Skeleton className="h-3 w-16" />
+				</div>
 			</CardContent>
 		</Card>
 	);

@@ -54,7 +54,7 @@ import {
 } from "@/hooks/use-container-actions";
 import { useBatchSubmit } from "@/hooks/use-batch";
 import { useTags } from "@/hooks/use-tags";
-import { relativeTime } from "@/lib/format";
+import { formatUptimeFromDate, formatBytes } from "@/lib/format";
 import type { ContainerRecord } from "@/types/pocketbase";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ export function ContainerTable({
 		);
 	}
 
-	const colCount = (showServer ? 8 : 7) + 1; // +1 for checkbox
+	const colCount = (showServer ? 10 : 9) + 1; // +1 for checkbox
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -299,12 +299,22 @@ export function ContainerTable({
 								<Checkbox checked={allSelected} onCheckedChange={toggleAll} />
 							</TableHead>
 							<SortableHead
+								label="Status"
+								sortKey="status"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={toggleSort}
+							/>
+							<SortableHead
 								label="Name"
 								sortKey="name"
 								currentKey={sortKey}
 								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
+							<TableHead>Uptime</TableHead>
+							<TableHead>CPU%</TableHead>
+							<TableHead>RAM</TableHead>
 							<SortableHead
 								label="Image"
 								sortKey="image"
@@ -312,22 +322,8 @@ export function ContainerTable({
 								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
-							<SortableHead
-								label="Status"
-								sortKey="status"
-								currentKey={sortKey}
-								currentDir={sortDir}
-								onToggle={toggleSort}
-							/>
 							<TableHead>Tags</TableHead>
 							{showServer && <TableHead>Server</TableHead>}
-							<SortableHead
-								label="Created"
-								sortKey="created"
-								currentKey={sortKey}
-								currentDir={sortDir}
-								onToggle={toggleSort}
-							/>
 							<TableHead className="w-10" />
 						</TableRow>
 					</TableHeader>
@@ -347,16 +343,29 @@ export function ContainerTable({
 											onCheckedChange={() => toggleOne(c.id)}
 										/>
 									</TableCell>
+									<TableCell>
+										<Badge variant={statusColors[c.status] ?? "secondary"}>{c.status}</Badge>
+									</TableCell>
 									<TableCell className="max-w-[250px] text-sm font-medium">
 										<Link to={`/containers/${c.id}`} className="truncate hover:underline">
 											{c.name}
 										</Link>
 									</TableCell>
+									<TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+										{c.status === "running" ? formatUptimeFromDate(c.started_at) : "—"}
+									</TableCell>
+									<TableCell className="text-xs tabular-nums font-medium">
+										{c.current_cpu != null && c.current_cpu > 0
+											? `${c.current_cpu.toFixed(1)}%`
+											: "—"}
+									</TableCell>
+									<TableCell className="text-xs tabular-nums text-muted-foreground">
+										{c.current_ram != null && c.current_ram > 0
+											? formatBytes(c.current_ram)
+											: "—"}
+									</TableCell>
 									<TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
 										{c.image}
-									</TableCell>
-									<TableCell>
-										<Badge variant={statusColors[c.status] ?? "secondary"}>{c.status}</Badge>
 									</TableCell>
 									<TableCell>
 										{(tagsByContainer.get(c.id)?.length ?? 0) > 0 ? (
@@ -372,9 +381,6 @@ export function ContainerTable({
 									{showServer && (
 										<TableCell className="text-sm text-muted-foreground">{c.server}</TableCell>
 									)}
-									<TableCell className="text-sm text-muted-foreground">
-										{relativeTime(c.container_created_at)}
-									</TableCell>
 									<TableCell>
 										<RowActions
 											container={c}

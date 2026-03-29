@@ -1,11 +1,17 @@
+import { useMemo } from "react";
 import {
 	AreaChart,
 	Area,
+	BarChart,
+	Bar,
+	LineChart,
+	Line,
 	XAxis,
 	YAxis,
 	CartesianGrid,
 	Tooltip,
 	ResponsiveContainer,
+	Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,12 +45,20 @@ function formatPercent(v: number): string {
 	return `${v.toFixed(1)}%`;
 }
 
+function formatTemp(v: number): string {
+	return `${v.toFixed(0)}°C`;
+}
+
 function tooltipPercent(v: ValueType | undefined): string {
 	return formatPercent(Number(v ?? 0));
 }
 
 function tooltipBytes(v: ValueType | undefined): string {
 	return formatBytes(Number(v ?? 0));
+}
+
+function tooltipTemp(v: ValueType | undefined): string {
+	return formatTemp(Number(v ?? 0));
 }
 
 function ChartSkeleton() {
@@ -60,19 +74,78 @@ function ChartSkeleton() {
 	);
 }
 
+const tooltipStyle = {
+	contentStyle: {
+		backgroundColor: "var(--color-popover)",
+		borderColor: "var(--color-border)",
+		color: "var(--color-popover-foreground)",
+	},
+	labelStyle: { color: "var(--color-muted-foreground)" },
+};
+
 const chartColors = {
 	cpu: "var(--color-primary)",
 	mem: "var(--color-chart-2)",
 	disk: "var(--color-chart-3)",
 	netRx: "var(--color-chart-4)",
 	netTx: "var(--color-chart-5)",
+	diskRead: "var(--color-chart-4)",
+	diskWrite: "var(--color-chart-5)",
+	swap: "var(--color-chart-3)",
+	swapTotal: "var(--color-muted-foreground)",
 };
 
+const TEMP_COLORS = [
+	"var(--color-primary)",
+	"var(--color-chart-2)",
+	"var(--color-chart-3)",
+	"var(--color-chart-4)",
+	"var(--color-chart-5)",
+	"var(--color-destructive)",
+];
+
 export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
+	// Extract unique temperature sensor names across all data points.
+	const tempSensors = useMemo(() => {
+		const names = new Set<string>();
+		for (const p of data) {
+			if (p.temperatures) {
+				for (const t of p.temperatures) names.add(t.name);
+			}
+		}
+		return [...names];
+	}, [data]);
+
+	// Build temperature series data: flatten sensor readings to columns.
+	const tempData = useMemo(() => {
+		if (tempSensors.length === 0) return [];
+		return data.map((p) => {
+			const row: Record<string, unknown> = { time: formatTime(p.timestamp, range) };
+			for (const t of p.temperatures ?? []) {
+				row[t.name] = t.celsius;
+			}
+			return row;
+		});
+	}, [data, tempSensors, range]);
+
+	// Build latest partitions data for bar chart.
+	const partitionData = useMemo(() => {
+		const last = data[data.length - 1];
+		if (!last?.partitions?.length) return [];
+		return last.partitions.map((p) => ({
+			name: p.mountpoint,
+			device: p.device,
+			used: p.percent,
+			total: p.total,
+			usedBytes: p.used,
+			available: p.available,
+		}));
+	}, [data]);
+
 	if (isLoading && data.length === 0) {
 		return (
 			<div className="grid gap-4 md:grid-cols-2">
-				{Array.from({ length: 4 }).map((_, i) => (
+				{Array.from({ length: 8 }).map((_, i) => (
 					<ChartSkeleton key={i} />
 				))}
 			</div>
@@ -82,8 +155,13 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 	const chartData = data.map((p) => ({
 		...p,
 		time: formatTime(p.timestamp, range),
-		mem_used_pct: p.disk_total > 0 ? (p.disk_used / p.disk_total) * 100 : 0,
 	}));
+
+	// Check if we have data for the new charts.
+	const hasDiskIO = data.some((p) => p.disk_io_read > 0 || p.disk_io_write > 0);
+	const hasSwap = data.some((p) => p.swap_total > 0);
+	const hasTemps = tempSensors.length > 0;
+	const hasPartitions = partitionData.length > 0;
 
 	return (
 		<div className="grid gap-4 md:grid-cols-2">
@@ -103,15 +181,7 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 								tickFormatter={formatPercent}
 								className="text-muted-foreground"
 							/>
-							<Tooltip
-								formatter={tooltipPercent}
-								contentStyle={{
-									backgroundColor: "var(--color-popover)",
-									borderColor: "var(--color-border)",
-									color: "var(--color-popover-foreground)",
-								}}
-								labelStyle={{ color: "var(--color-muted-foreground)" }}
-							/>
+							<Tooltip formatter={tooltipPercent} {...tooltipStyle} />
 							<defs>
 								<linearGradient id="fillCpu" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stopColor={chartColors.cpu} stopOpacity={0.3} />
@@ -148,15 +218,7 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 								tickFormatter={formatPercent}
 								className="text-muted-foreground"
 							/>
-							<Tooltip
-								formatter={tooltipPercent}
-								contentStyle={{
-									backgroundColor: "var(--color-popover)",
-									borderColor: "var(--color-border)",
-									color: "var(--color-popover-foreground)",
-								}}
-								labelStyle={{ color: "var(--color-muted-foreground)" }}
-							/>
+							<Tooltip formatter={tooltipPercent} {...tooltipStyle} />
 							<defs>
 								<linearGradient id="fillMem" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stopColor={chartColors.mem} stopOpacity={0.3} />
@@ -177,7 +239,7 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 				</CardContent>
 			</Card>
 
-			{/* Disk */}
+			{/* Disk Usage */}
 			<Card>
 				<CardHeader className="pb-2">
 					<CardTitle className="text-sm">Disk Usage</CardTitle>
@@ -192,15 +254,7 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 								tickFormatter={formatBytes}
 								className="text-muted-foreground"
 							/>
-							<Tooltip
-								formatter={tooltipBytes}
-								contentStyle={{
-									backgroundColor: "var(--color-popover)",
-									borderColor: "var(--color-border)",
-									color: "var(--color-popover-foreground)",
-								}}
-								labelStyle={{ color: "var(--color-muted-foreground)" }}
-							/>
+							<Tooltip formatter={tooltipBytes} {...tooltipStyle} />
 							<defs>
 								<linearGradient id="fillDisk" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stopColor={chartColors.disk} stopOpacity={0.3} />
@@ -236,15 +290,7 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 								tickFormatter={formatBytes}
 								className="text-muted-foreground"
 							/>
-							<Tooltip
-								formatter={tooltipBytes}
-								contentStyle={{
-									backgroundColor: "var(--color-popover)",
-									borderColor: "var(--color-border)",
-									color: "var(--color-popover-foreground)",
-								}}
-								labelStyle={{ color: "var(--color-muted-foreground)" }}
-							/>
+							<Tooltip formatter={tooltipBytes} {...tooltipStyle} />
 							<defs>
 								<linearGradient id="fillRx" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stopColor={chartColors.netRx} stopOpacity={0.3} />
@@ -277,6 +323,188 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 					</ResponsiveContainer>
 				</CardContent>
 			</Card>
+
+			{/* Disk I/O */}
+			{hasDiskIO && (
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm">Disk I/O</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<ResponsiveContainer width="100%" height={200}>
+							<AreaChart data={chartData}>
+								<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+								<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+								<YAxis
+									tick={{ fontSize: 11 }}
+									tickFormatter={formatBytes}
+									className="text-muted-foreground"
+								/>
+								<Tooltip formatter={tooltipBytes} {...tooltipStyle} />
+								<Legend />
+								<defs>
+									<linearGradient id="fillDiskRead" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stopColor={chartColors.diskRead} stopOpacity={0.3} />
+										<stop offset="100%" stopColor={chartColors.diskRead} stopOpacity={0} />
+									</linearGradient>
+									<linearGradient id="fillDiskWrite" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stopColor={chartColors.diskWrite} stopOpacity={0.3} />
+										<stop offset="100%" stopColor={chartColors.diskWrite} stopOpacity={0} />
+									</linearGradient>
+								</defs>
+								<Area
+									type="monotone"
+									dataKey="disk_io_read"
+									stroke={chartColors.diskRead}
+									fill="url(#fillDiskRead)"
+									strokeWidth={1.5}
+									isAnimationActive={false}
+									name="Read"
+								/>
+								<Area
+									type="monotone"
+									dataKey="disk_io_write"
+									stroke={chartColors.diskWrite}
+									fill="url(#fillDiskWrite)"
+									strokeWidth={1.5}
+									isAnimationActive={false}
+									name="Write"
+								/>
+							</AreaChart>
+						</ResponsiveContainer>
+					</CardContent>
+				</Card>
+			)}
+
+			{/* Swap */}
+			{hasSwap && (
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm">Swap Usage</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<ResponsiveContainer width="100%" height={200}>
+							<AreaChart data={chartData}>
+								<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+								<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+								<YAxis
+									tick={{ fontSize: 11 }}
+									tickFormatter={formatBytes}
+									className="text-muted-foreground"
+								/>
+								<Tooltip formatter={tooltipBytes} {...tooltipStyle} />
+								<Legend />
+								<defs>
+									<linearGradient id="fillSwap" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stopColor={chartColors.swap} stopOpacity={0.3} />
+										<stop offset="100%" stopColor={chartColors.swap} stopOpacity={0} />
+									</linearGradient>
+								</defs>
+								<Area
+									type="monotone"
+									dataKey="swap_used"
+									stroke={chartColors.swap}
+									fill="url(#fillSwap)"
+									strokeWidth={1.5}
+									isAnimationActive={false}
+									name="Used"
+								/>
+								<Area
+									type="monotone"
+									dataKey="swap_total"
+									stroke={chartColors.swapTotal}
+									fill="none"
+									strokeWidth={1}
+									strokeDasharray="4 4"
+									isAnimationActive={false}
+									name="Total"
+								/>
+							</AreaChart>
+						</ResponsiveContainer>
+					</CardContent>
+				</Card>
+			)}
+
+			{/* Temperature */}
+			{hasTemps && (
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm">Temperature</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<ResponsiveContainer width="100%" height={200}>
+							<LineChart data={tempData}>
+								<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+								<XAxis dataKey="time" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+								<YAxis
+									tick={{ fontSize: 11 }}
+									tickFormatter={formatTemp}
+									className="text-muted-foreground"
+								/>
+								<Tooltip formatter={tooltipTemp} {...tooltipStyle} />
+								<Legend />
+								{tempSensors.map((name, i) => (
+									<Line
+										key={name}
+										type="monotone"
+										dataKey={name}
+										stroke={TEMP_COLORS[i % TEMP_COLORS.length]}
+										strokeWidth={1.5}
+										dot={false}
+										isAnimationActive={false}
+										name={name}
+									/>
+								))}
+							</LineChart>
+						</ResponsiveContainer>
+					</CardContent>
+				</Card>
+			)}
+
+			{/* Partitions */}
+			{hasPartitions && (
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm">Disk Partitions</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<ResponsiveContainer width="100%" height={200}>
+							<BarChart data={partitionData} layout="vertical">
+								<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+								<XAxis
+									type="number"
+									domain={[0, 100]}
+									tick={{ fontSize: 11 }}
+									tickFormatter={formatPercent}
+									className="text-muted-foreground"
+								/>
+								<YAxis
+									type="category"
+									dataKey="name"
+									tick={{ fontSize: 10 }}
+									width={80}
+									className="text-muted-foreground"
+								/>
+								<Tooltip
+									formatter={(v: ValueType) => formatPercent(Number(v ?? 0))}
+									labelFormatter={(label: string) => {
+										const p = partitionData.find((d) => d.name === label);
+										return p ? `${label} (${p.device})` : label;
+									}}
+									{...tooltipStyle}
+								/>
+								<Bar
+									dataKey="used"
+									fill={chartColors.disk}
+									radius={[0, 4, 4, 0]}
+									isAnimationActive={false}
+									name="Used %"
+								/>
+							</BarChart>
+						</ResponsiveContainer>
+					</CardContent>
+				</Card>
+			)}
 		</div>
 	);
 }
