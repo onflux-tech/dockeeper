@@ -41,7 +41,13 @@ func (c *Client) handleDataStreamSignal(ctx context.Context, signal *agentpb.Ope
 	// Start cancellation listener.
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go c.listenForCancel(cancelCtx, cancel, stream)
+
+	// Start cancel listener only for stream types where the agent SENDS data.
+	// For AGENT_UPDATE the agent RECEIVES data via Recv(), so a concurrent
+	// listenForCancel (which also calls Recv) would race and corrupt the stream.
+	if signal.StreamType != agentpb.DataStreamType_DATA_STREAM_TYPE_AGENT_UPDATE {
+		go c.listenForCancel(cancelCtx, cancel, stream)
+	}
 
 	var streamErr error
 	switch signal.StreamType {
