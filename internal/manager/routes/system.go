@@ -122,6 +122,7 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 		serverIP := server.GetString("ip_address")
 		serverOS := server.GetString("os")
 		serverArch := server.GetString("arch")
+		agentVersion := server.GetString("agent_version")
 		if serverIP == "" {
 			return e.JSON(http.StatusBadRequest, map[string]string{"error": "server has no IP address"})
 		}
@@ -132,12 +133,18 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 			serverArch = "amd64"
 		}
 
-		release, isNewer, err := svc.CheckForUpdate()
+		release, _, err := svc.CheckForUpdate()
 		if err != nil {
 			return e.JSON(http.StatusBadGateway, map[string]string{"error": err.Error()})
 		}
-		if !isNewer || release == nil {
-			return e.JSON(http.StatusOK, map[string]string{"message": "already up to date"})
+		if release == nil {
+			return e.JSON(http.StatusOK, map[string]string{"message": "no release found"})
+		}
+
+		// Compare the AGENT's version against the latest release, not the manager's.
+		agentNeedsUpdate := services.IsNewerThan(agentVersion, release.TagName)
+		if !agentNeedsUpdate {
+			return e.JSON(http.StatusOK, map[string]string{"message": "agent already up to date"})
 		}
 
 		// SSE progress stream.

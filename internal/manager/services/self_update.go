@@ -437,8 +437,13 @@ func isNewerVersion(current, latest string) bool {
 	current = strings.TrimPrefix(current, "v")
 	latest = strings.TrimPrefix(latest, "v")
 
-	if current == "" || latest == "" || current == "dev" {
+	if latest == "" {
 		return false
+	}
+
+	// Non-release builds (dev, develop, empty) are always older than any release.
+	if current == "" || current == "dev" || current == "develop" || !isSemver(current) {
+		return latest != "" && isSemver(latest)
 	}
 
 	cParts := strings.Split(current, ".")
@@ -460,4 +465,28 @@ func isNewerVersion(current, latest string) bool {
 		}
 	}
 	return false
+}
+
+// isSemver checks if a string looks like a semver version (e.g. "1.2.3").
+func isSemver(s string) bool {
+	parts := strings.Split(s, ".")
+	if len(parts) < 2 || len(parts) > 3 {
+		return false
+	}
+	for _, p := range parts {
+		if p == "" {
+			return false
+		}
+		var n int
+		if _, err := fmt.Sscanf(p, "%d", &n); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// IsNewerThan compares two versions and returns true if latest is newer than current.
+// Exported for use by other packages (e.g. agent update handler).
+func IsNewerThan(current, latest string) bool {
+	return isNewerVersion(current, latest)
 }

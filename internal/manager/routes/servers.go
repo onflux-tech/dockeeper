@@ -3,10 +3,16 @@ package routes
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -187,6 +193,9 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 	})
 }
 
+// agentBinaryCache prevents concurrent downloads of the same agent binary.
+var agentBinaryCache sync.Mutex
+
 func handleAgentDownload(e *core.RequestEvent) error {
 	arch := e.Request.URL.Query().Get("arch")
 	if arch != "amd64" && arch != "arm64" {
@@ -195,28 +204,192 @@ func handleAgentDownload(e *core.RequestEvent) error {
 
 	filename := fmt.Sprintf("dockeeper-agent-linux-%s", arch)
 
-	// Docker runtime path, then local dev fallback.
+	// Docker runtime path, then local dev fallback, then cached download.
+	cacheDir := "/tmp/dockeeper-agent-cache"
 	paths := []string{
 		fmt.Sprintf("/app/agents/%s", filename),
 		fmt.Sprintf("./bin/%s", filename),
+		filepath.Join(cacheDir, filename),
 	}
 
 	var filePath string
 	for _, p := range paths {
-		if _, err := os.Stat(p); err == nil {
+		info, err := os.Stat(p)
+		if err == nil && info.Size() > 1024 {
 			filePath = p
 			break
 		}
 	}
 
+	// Fallback: download from GitHub Releases and cache locally.
 	if filePath == "" {
-		return e.JSON(http.StatusNotFound, map[string]string{"error": "agent binary not found for arch " + arch})
+		cached, err := downloadAgentFromGitHub(arch, cacheDir, filename)
+		if err != nil {
+			slog.Error("failed to download agent binary from GitHub", "arch", arch, "error", err)
+			return e.JSON(http.StatusNotFound, map[string]string{"error": "agent binary not found for arch " + arch})
+		}
+		filePath = cached
 	}
 
 	e.Response.Header().Set("Content-Type", "application/octet-stream")
 	e.Response.Header().Set("Content-Disposition", "attachment; filename=dockeeper-agent")
 	http.ServeFile(e.Response, e.Request, filePath)
 	return nil
+}
+
+// downloadAgentFromGitHub fetches the latest agent binary from GitHub Releases.
+func downloadAgentFromGitHub(arch, cacheDir, filename string) (string, error) {
+	agentBinaryCache.Lock()
+	defer agentBinaryCache.Unlock()
+
+	// Double-check after acquiring lock (another request may have cached it).
+	cachedPath := filepath.Join(cacheDir, filename)
+	if info, err := os.Stat(cachedPath); err == nil && info.Size() > 1024 {
+		return cachedPath, nil
+	}
+
+	// Fetch latest release metadata from GitHub.
+	client := &http.Client{Timeout: 30 * 1000000000} // 30s
+	apiURL := "https://api.github.com/repos/onflux-tech/dockeeper/releases/latest"
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "Dockeeper-Manager")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("github api: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("github api returned %d", resp.StatusCode)
+	}
+
+	var release struct {
+		Assets []struct {
+			Name               string `json:"name"`
+			BrowserDownloadURL string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", fmt.Errorf("decode release: %w", err)
+	}
+
+	// Find the matching agent archive (tar.gz).
+	prefix := "dockeeper-agent_"
+	suffix := fmt.Sprintf("_linux_%s", arch)
+	var downloadURL string
+	for _, a := range release.Assets {
+		name := strings.ToLower(a.Name)
+		if strings.HasPrefix(name, prefix) && strings.Contains(name, suffix) && !strings.HasSuffix(name, ".sha256") {
+			downloadURL = a.BrowserDownloadURL
+			break
+		}
+	}
+	if downloadURL == "" {
+		return "", fmt.Errorf("no agent asset found for linux/%s", arch)
+	}
+
+	// Download the archive.
+	slog.Info("downloading agent binary from GitHub", "url", downloadURL, "arch", arch)
+	dlResp, err := client.Get(downloadURL)
+	if err != nil {
+		return "", fmt.Errorf("download: %w", err)
+	}
+	defer dlResp.Body.Close()
+
+	if dlResp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("download returned %d", dlResp.StatusCode)
+	}
+
+	// Create cache directory.
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return "", fmt.Errorf("create cache dir: %w", err)
+	}
+
+	// Write to temp file first, then extract the binary from the tar.gz.
+	tmpFile, err := os.CreateTemp(cacheDir, "agent-download-*")
+	if err != nil {
+		return "", fmt.Errorf("create temp: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := io.Copy(tmpFile, dlResp.Body); err != nil {
+		tmpFile.Close()
+		return "", fmt.Errorf("write download: %w", err)
+	}
+	tmpFile.Close()
+
+	// Extract the binary from the tar.gz archive.
+	extractedPath, err := extractAgentBinary(tmpPath, cacheDir, filename)
+	if err != nil {
+		return "", fmt.Errorf("extract binary: %w", err)
+	}
+
+	slog.Info("agent binary cached", "path", extractedPath, "arch", arch)
+	return extractedPath, nil
+}
+
+// extractAgentBinary extracts the dockeeper-agent binary from a tar.gz archive.
+func extractAgentBinary(archivePath, destDir, destFilename string) (string, error) {
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	// Use tar command for simplicity (available on Alpine/Linux).
+	destPath := filepath.Join(destDir, destFilename)
+	tmpExtractDir, err := os.MkdirTemp(destDir, "extract-*")
+	if err != nil {
+		return "", fmt.Errorf("create extract dir: %w", err)
+	}
+	defer os.RemoveAll(tmpExtractDir)
+
+	// Extract using command line tar (handles both gzip and tar).
+	cmd := fmt.Sprintf("tar -xzf %s -C %s", archivePath, tmpExtractDir)
+	if execErr := execCommand(cmd); execErr != nil {
+		return "", fmt.Errorf("tar extract: %w", execErr)
+	}
+
+	// Find the binary in the extracted directory.
+	entries, err := os.ReadDir(tmpExtractDir)
+	if err != nil {
+		return "", fmt.Errorf("read extract dir: %w", err)
+	}
+
+	var binaryPath string
+	for _, entry := range entries {
+		if entry.Name() == "dockeeper-agent" {
+			binaryPath = filepath.Join(tmpExtractDir, entry.Name())
+			break
+		}
+	}
+	if binaryPath == "" {
+		return "", fmt.Errorf("dockeeper-agent binary not found in archive")
+	}
+
+	// Move to final cache location.
+	data, err := os.ReadFile(binaryPath)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(destPath, data, 0o755); err != nil {
+		return "", err
+	}
+
+	return destPath, nil
+}
+
+// execCommand runs a shell command and returns any error.
+func execCommand(cmd string) error {
+	c := exec.Command("sh", "-c", cmd)
+	c.Stderr = os.Stderr
+	return c.Run()
 }
 
 func handleInstallScript(e *core.RequestEvent, app core.App, version string) error {
@@ -504,18 +677,6 @@ DATA_DIR="/var/lib/dockeeper-agent"
 
 echo "==> Installing Dockeeper Agent..."
 
-# Clean up any previous installation to avoid "Text file busy" errors
-if systemctl is-active --quiet dockeeper-agent 2>/dev/null; then
-  echo "==> Stopping existing Dockeeper Agent..."
-  systemctl stop dockeeper-agent || true
-fi
-if systemctl is-enabled --quiet dockeeper-agent 2>/dev/null; then
-  systemctl disable dockeeper-agent || true
-fi
-rm -f /etc/systemd/system/dockeeper-agent.service
-rm -f "${INSTALL_DIR}/dockeeper-agent"
-systemctl daemon-reload 2>/dev/null || true
-
 # Detect architecture
 ARCH=$(uname -m)
 case "${ARCH}" in
@@ -524,10 +685,47 @@ case "${ARCH}" in
   *) echo "Unsupported architecture: ${ARCH}"; exit 1 ;;
 esac
 
-# Download agent binary from manager
+# Download agent binary to a temp file first (validate before replacing).
 DOWNLOAD_URL="${MANAGER_HTTP_URL}/api/dk/agent/download?arch=${ARCH}"
 echo "==> Downloading from ${DOWNLOAD_URL}"
-curl -sSL -o "${INSTALL_DIR}/dockeeper-agent" "${DOWNLOAD_URL}"
+TMPBIN=$(mktemp /tmp/dockeeper-agent-download.XXXXXX)
+trap "rm -f ${TMPBIN}" EXIT
+
+HTTP_CODE=$(curl -sSL -o "${TMPBIN}" -w "%%{http_code}" "${DOWNLOAD_URL}")
+if [ "${HTTP_CODE}" != "200" ]; then
+  echo "ERROR: Download failed with HTTP status ${HTTP_CODE}"
+  cat "${TMPBIN}" 2>/dev/null || true
+  exit 1
+fi
+
+# Validate the downloaded file is a real binary (not a JSON error).
+FILE_SIZE=$(stat -c%%s "${TMPBIN}" 2>/dev/null || stat -f%%z "${TMPBIN}" 2>/dev/null || echo "0")
+if [ "${FILE_SIZE}" -lt 1048576 ]; then
+  echo "ERROR: Downloaded file is too small (${FILE_SIZE} bytes). Expected a binary."
+  head -c 200 "${TMPBIN}" 2>/dev/null || true
+  exit 1
+fi
+
+# Stop existing service if running.
+if systemctl is-active --quiet dockeeper-agent 2>/dev/null; then
+  echo "==> Stopping existing Dockeeper Agent..."
+  systemctl stop dockeeper-agent || true
+fi
+if systemctl is-enabled --quiet dockeeper-agent 2>/dev/null; then
+  systemctl disable dockeeper-agent || true
+fi
+
+# Backup existing binary if present and functional.
+if [ -f "${INSTALL_DIR}/dockeeper-agent" ]; then
+  cp -f "${INSTALL_DIR}/dockeeper-agent" "${INSTALL_DIR}/dockeeper-agent.backup" 2>/dev/null || true
+fi
+
+# Install the validated binary.
+rm -f /etc/systemd/system/dockeeper-agent.service
+rm -f "${INSTALL_DIR}/dockeeper-agent"
+systemctl daemon-reload 2>/dev/null || true
+
+mv "${TMPBIN}" "${INSTALL_DIR}/dockeeper-agent"
 chmod +x "${INSTALL_DIR}/dockeeper-agent"
 
 # Create data directory

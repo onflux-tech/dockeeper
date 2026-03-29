@@ -1,8 +1,10 @@
 FROM alpine:3.21
+ARG TARGETARCH
 RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -S dockeeper \
     && adduser -S -G dockeeper dockeeper
 COPY dockeeper-manager /usr/local/bin/dockeeper-manager
+COPY dockeeper-agent /app/agents/dockeeper-agent-linux-${TARGETARCH}
 RUN mkdir -p /home/dockeeper/pb_data && chown -R dockeeper:dockeeper /home/dockeeper
 USER dockeeper
 WORKDIR /home/dockeeper
