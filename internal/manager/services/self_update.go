@@ -1,6 +1,9 @@
 package services
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -163,25 +166,15 @@ func (s *SelfUpdateService) ExecuteManagerUpdate(release *Release) error {
 		Timestamp: time.Now(),
 	})
 
-	// Find the correct asset
-	asset := s.findAsset(release, "manager", runtime.GOOS, runtime.GOARCH)
-	if asset == nil {
-		return fmt.Errorf("no binary asset found for %s/%s", runtime.GOOS, runtime.GOARCH)
-	}
-
-	// Download binary
-	slog.Info("downloading update", "url", asset.BrowserDownloadURL, "size", asset.Size)
-	resp, err := s.httpClient.Get(asset.BrowserDownloadURL)
+	// Download and extract the manager binary from the tar.gz archive.
+	binaryData, checksum, err := s.DownloadAsset(release, "manager", runtime.GOOS, runtime.GOARCH)
 	if err != nil {
-		return fmt.Errorf("download: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download returned %d", resp.StatusCode)
+		return fmt.Errorf("download manager asset: %w", err)
 	}
 
-	// Write to temp file + compute checksum
+	slog.Info("manager binary downloaded", "size", len(binaryData), "checksum", checksum)
+
+	// Write extracted binary to temp file.
 	tmpFile, err := os.CreateTemp("", "dockeeper-manager-update-*")
 	if err != nil {
 		return fmt.Errorf("create temp: %w", err)
@@ -189,24 +182,11 @@ func (s *SelfUpdateService) ExecuteManagerUpdate(release *Release) error {
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
-	hasher := sha256.New()
-	writer := io.MultiWriter(tmpFile, hasher)
-	if _, err := io.Copy(writer, resp.Body); err != nil {
+	if _, err := tmpFile.Write(binaryData); err != nil {
 		tmpFile.Close()
-		return fmt.Errorf("download write: %w", err)
+		return fmt.Errorf("write temp: %w", err)
 	}
 	tmpFile.Close()
-
-	checksum := hex.EncodeToString(hasher.Sum(nil))
-	slog.Info("download complete", "checksum", checksum)
-
-	// Find and verify checksum from assets
-	checksumAsset := s.findChecksumAsset(release)
-	if checksumAsset != nil {
-		if err := s.verifyChecksum(checksumAsset, asset.Name, checksum); err != nil {
-			return err
-		}
-	}
 
 	// Atomic binary replacement
 	currentBinary, err := os.Executable()
@@ -316,7 +296,8 @@ func (s *SelfUpdateService) UpdateAgent(ctx context.Context, serverID, version s
 	}
 }
 
-// DownloadAsset downloads a release asset and returns its bytes and SHA256 checksum.
+// DownloadAsset downloads a release asset (.tar.gz), extracts the binary,
+// and returns its bytes and SHA256 checksum.
 func (s *SelfUpdateService) DownloadAsset(release *Release, component, goos, goarch string) ([]byte, string, error) {
 	asset := s.findAsset(release, component, goos, goarch)
 	if asset == nil {
@@ -337,24 +318,67 @@ func (s *SelfUpdateService) DownloadAsset(release *Release, component, goos, goa
 		return nil, "", fmt.Errorf("download returned %d", resp.StatusCode)
 	}
 
-	hasher := sha256.New()
-	reader := io.TeeReader(resp.Body, hasher)
-	data, err := io.ReadAll(reader)
+	// Read the full archive into memory.
+	archiveData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, "", fmt.Errorf("read body: %w", err)
 	}
 
-	checksum := hex.EncodeToString(hasher.Sum(nil))
-
-	// Verify checksum if available.
+	// Verify archive checksum if available.
+	archiveHash := sha256.Sum256(archiveData)
+	archiveChecksum := hex.EncodeToString(archiveHash[:])
 	checksumAsset := s.findChecksumAsset(release)
 	if checksumAsset != nil {
-		if err := s.verifyChecksum(checksumAsset, asset.Name, checksum); err != nil {
+		if err := s.verifyChecksum(checksumAsset, asset.Name, archiveChecksum); err != nil {
 			return nil, "", err
 		}
 	}
 
+	// Extract the binary from the tar.gz archive.
+	binaryName := fmt.Sprintf("dockeeper-%s", component)
+	data, err := extractFromTarGz(archiveData, binaryName)
+	if err != nil {
+		return nil, "", fmt.Errorf("extract binary from archive: %w", err)
+	}
+
+	// Compute checksum of the extracted binary.
+	binHash := sha256.Sum256(data)
+	checksum := hex.EncodeToString(binHash[:])
+
+	slog.Info("asset extracted", "binary", binaryName, "archive_size", len(archiveData), "binary_size", len(data))
 	return data, checksum, nil
+}
+
+// extractFromTarGz extracts a single file by name from a tar.gz archive in memory.
+func extractFromTarGz(archive []byte, targetName string) ([]byte, error) {
+	gr, err := gzip.NewReader(bytes.NewReader(archive))
+	if err != nil {
+		return nil, fmt.Errorf("gzip open: %w", err)
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("tar read: %w", err)
+		}
+
+		// Match by base name — archives may include path prefixes.
+		base := filepath.Base(hdr.Name)
+		if base == targetName && hdr.Typeflag == tar.TypeReg {
+			data, err := io.ReadAll(tr)
+			if err != nil {
+				return nil, fmt.Errorf("read %s: %w", targetName, err)
+			}
+			return data, nil
+		}
+	}
+
+	return nil, fmt.Errorf("binary %q not found in archive", targetName)
 }
 
 // CurrentVersion returns the running version.
