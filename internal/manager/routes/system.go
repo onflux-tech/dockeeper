@@ -1,9 +1,11 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -183,8 +185,10 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 			"message": fmt.Sprintf("Streaming binary to agent (%d bytes)...", len(binaryData)),
 		})
 
-		// Stream the binary to the agent via gRPC.
-		ctx := e.Request.Context()
+		// Use a detached context for the gRPC stream — the HTTP/SSE context
+		// may be canceled by proxies or browsers before the transfer completes.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
 		if err := svc.UpdateAgent(ctx, serverID, release.TagName, binaryData, checksum); err != nil {
 			sendSSE("error", map[string]any{"message": err.Error()})
 			return nil
