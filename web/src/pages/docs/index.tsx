@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiGroups } from "@/data/api-reference";
 import { useScrollSpy } from "@/hooks/use-scroll-spy";
 import { DocsLayout } from "./docs-layout";
@@ -11,6 +11,7 @@ import "./print.css";
 export default function DocsPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Collect all section IDs for scroll-spy (group ids + endpoint ids)
   const sectionIds = useMemo(() => {
@@ -28,7 +29,7 @@ export default function DocsPage() {
     return ids;
   }, []);
 
-  const { activeId, scrollTo } = useScrollSpy(sectionIds);
+  const { activeId, scrollTo } = useScrollSpy(sectionIds, scrollRef);
 
   // SEO meta tags
   useEffect(() => {
@@ -75,7 +76,7 @@ export default function DocsPage() {
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
       />
-      <DocsContent groups={apiGroups} />
+      <DocsContent ref={scrollRef} groups={apiGroups} />
     </DocsLayout>
   );
 }

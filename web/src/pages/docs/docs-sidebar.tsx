@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { ApiGroup, HttpMethod } from "@/types/docs";
@@ -42,6 +41,18 @@ function SidebarNav({
   search: string;
   onSearchChange: (value: string) => void;
 }) {
+  const navRef = useRef<HTMLElement>(null);
+
+  // Auto-scroll sidebar to keep the active item visible
+  useEffect(() => {
+    if (!activeId || !navRef.current) return;
+    const activeBtn = navRef.current.querySelector<HTMLElement>(
+      `[data-sidebar-id="${activeId}"]`,
+    );
+    if (!activeBtn) return;
+    activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [activeId]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return groups;
@@ -82,8 +93,8 @@ function SidebarNav({
       </div>
 
       {/* Groups */}
-      <ScrollArea className="flex-1">
-        <nav className="p-3">
+      <div className="flex-1 overflow-y-auto">
+        <nav ref={navRef} className="p-3">
           {filtered.length === 0 && (
             <p className="px-3 py-8 text-center text-xs text-muted-foreground">
               No results found
@@ -106,9 +117,10 @@ function SidebarNav({
                       return (
                         <button
                           key={ep.id}
+                          data-sidebar-id={ep.id}
                           onClick={() => onNavigate(ep.id)}
                           className={cn(
-                            "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-sm transition-all duration-150",
+                            "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-sm",
                             isActive
                               ? "bg-primary/10 font-medium text-primary"
                               : "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
@@ -136,9 +148,10 @@ function SidebarNav({
               ) : (
                 /* Group with no endpoints (Getting Started) → clickable item */
                 <button
+                  data-sidebar-id={group.id}
                   onClick={() => onNavigate(group.id)}
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-sm transition-all duration-150",
+                    "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-sm transition-all duration-500 ease-in-out",
                     activeId === group.id
                       ? "bg-primary/10 font-medium text-primary"
                       : "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
@@ -154,7 +167,7 @@ function SidebarNav({
             </div>
           ))}
         </nav>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -178,16 +191,14 @@ export function DocsSidebar({
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="docs-sidebar hidden w-72 shrink-0 border-r border-border lg:block">
-        <div className="sticky top-16 h-[calc(100vh-4rem)]">
-          <SidebarNav
-            groups={groups}
-            activeId={activeId}
-            onNavigate={onNavigate}
-            search={search}
-            onSearchChange={setSearch}
-          />
-        </div>
+      <aside className="docs-sidebar hidden w-72 shrink-0 border-r border-border lg:flex lg:flex-col lg:overflow-hidden">
+        <SidebarNav
+          groups={groups}
+          activeId={activeId}
+          onNavigate={onNavigate}
+          search={search}
+          onSearchChange={setSearch}
+        />
       </aside>
 
       {/* Mobile sidebar */}

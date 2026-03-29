@@ -82,7 +82,7 @@ export function EndpointSection({ endpoint }: EndpointSectionProps) {
   const authInfo = AUTH_LABEL[endpoint.auth];
 
   return (
-    <section id={endpoint.id} className="scroll-mt-24">
+    <section id={endpoint.id} className="scroll-mt-28 pt-4">
       <div className="flex flex-col xl:flex-row gap-8 xl:gap-12">
         {/* Left column — description */}
         <div className="flex-1 min-w-0">
