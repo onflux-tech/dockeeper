@@ -41,6 +41,7 @@ export function CodeBlock({ curlCode, jsCode }: CodeBlockProps) {
             variant="ghost"
             size="icon-xs"
             onClick={handleCopy}
+            className="docs-copy-btn"
             aria-label={copied ? "Copied" : "Copy code"}
           >
             {copied ? (

@@ -1,13 +1,22 @@
 import {
+  Activity,
   Archive,
+  Bell,
   BookOpen,
   Box,
+  Cog,
   HardDrive,
   Key,
   Layers,
   Network,
   Database,
+  Search,
+  Send,
   Server,
+  Settings,
+  Shield,
+  Tag,
+  Zap,
 } from "lucide-react";
 
 import type { ApiGroup } from "@/types/docs";
@@ -1246,6 +1255,1418 @@ const { deleted } = await res.json();`,
 
 // ── Export ──────────────────────────────────────────────────────────────────
 
+// ── Group 10: Alerts & Blackout ─────────────────────────────────────────────
+
+const alertsBlackout: ApiGroup = {
+  id: "alerts-blackout",
+  title: "Alerts & Blackout",
+  description: "Alert rule management, toggle, and blackout window scheduling.",
+  icon: Bell,
+  endpoints: [
+    {
+      id: "alerts-list",
+      method: "GET",
+      path: "/api/dk/alerts",
+      title: "List Alert Rules",
+      description: "Retrieve all configured alert rules with their current state (OK, FIRING, RESOLVED).",
+      auth: "required",
+      capability: "alerts.view",
+      responseExample: json([
+        { id: "alr_01", name: "High CPU", metric: "cpu_percent", threshold: 90, state: "OK", enabled: true },
+      ]),
+      curlExample: `curl http://localhost:8090/api/dk/alerts \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const rules = await res.json();`,
+    },
+    {
+      id: "alerts-create",
+      method: "POST",
+      path: "/api/dk/alerts",
+      title: "Create Alert Rule",
+      description: "Create a new alert rule with metric, threshold, and notification channel.",
+      auth: "required",
+      capability: "alerts.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "name", type: "string", required: true, description: "Alert rule name." },
+          { name: "metric", type: "string", required: true, description: "Metric to monitor (cpu_percent, memory_percent, disk_percent)." },
+          { name: "operator", type: "string", required: true, description: "Comparison operator (gt, lt, gte, lte, eq)." },
+          { name: "threshold", type: "number", required: true, description: "Threshold value to trigger alert." },
+          { name: "server_id", type: "string", required: false, description: "Target server (omit for all servers)." },
+          { name: "channel_ids", type: "string[]", required: false, description: "Notification channel IDs." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/alerts \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "High CPU", "metric": "cpu_percent", "operator": "gt", "threshold": 90}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "High CPU",
+    metric: "cpu_percent",
+    operator: "gt",
+    threshold: 90,
+  }),
+});`,
+    },
+    {
+      id: "alerts-update",
+      method: "PUT",
+      path: "/api/dk/alerts/{id}",
+      title: "Update Alert Rule",
+      description: "Update an existing alert rule's metric, threshold, or channels.",
+      auth: "required",
+      capability: "alerts.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Alert rule record ID." },
+      ],
+      curlExample: `curl -X PUT http://localhost:8090/api/dk/alerts/ALERT_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"threshold": 95}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts/ALERT_ID", {
+  method: "PUT",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ threshold: 95 }),
+});`,
+    },
+    {
+      id: "alerts-delete",
+      method: "DELETE",
+      path: "/api/dk/alerts/{id}",
+      title: "Delete Alert Rule",
+      description: "Delete an alert rule permanently.",
+      auth: "required",
+      capability: "alerts.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Alert rule record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/alerts/ALERT_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts/ALERT_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "alerts-toggle",
+      method: "POST",
+      path: "/api/dk/alerts/{id}/toggle",
+      title: "Toggle Alert Rule",
+      description: "Enable or disable an alert rule without deleting it.",
+      auth: "required",
+      capability: "alerts.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Alert rule record ID." },
+      ],
+      curlExample: `curl -X POST http://localhost:8090/api/dk/alerts/ALERT_ID/toggle \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts/ALERT_ID/toggle", {
+  method: "POST",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "blackout-list",
+      method: "GET",
+      path: "/api/dk/blackout-windows",
+      title: "List Blackout Windows",
+      description: "Retrieve all blackout windows. During blackout, alerts are suppressed.",
+      auth: "required",
+      capability: "alerts.view",
+      curlExample: `curl http://localhost:8090/api/dk/blackout-windows \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/blackout-windows", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const windows = await res.json();`,
+    },
+    {
+      id: "blackout-create",
+      method: "POST",
+      path: "/api/dk/blackout-windows",
+      title: "Create Blackout Window",
+      description: "Create a blackout window to suppress alerts during maintenance.",
+      auth: "required",
+      capability: "alerts.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "name", type: "string", required: true, description: "Blackout window name." },
+          { name: "start", type: "string", required: true, description: "Start time (ISO 8601)." },
+          { name: "end", type: "string", required: true, description: "End time (ISO 8601)." },
+          { name: "server_ids", type: "string[]", required: false, description: "Affected servers (omit for all)." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/blackout-windows \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "Deploy window", "start": "2026-04-01T02:00:00Z", "end": "2026-04-01T04:00:00Z"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/blackout-windows", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "Deploy window",
+    start: "2026-04-01T02:00:00Z",
+    end: "2026-04-01T04:00:00Z",
+  }),
+});`,
+    },
+    {
+      id: "blackout-update",
+      method: "PUT",
+      path: "/api/dk/blackout-windows/{id}",
+      title: "Update Blackout Window",
+      description: "Update the schedule or scope of a blackout window.",
+      auth: "required",
+      capability: "alerts.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Blackout window record ID." },
+      ],
+      curlExample: `curl -X PUT http://localhost:8090/api/dk/blackout-windows/BLACKOUT_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"end": "2026-04-01T06:00:00Z"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/blackout-windows/BLACKOUT_ID", {
+  method: "PUT",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ end: "2026-04-01T06:00:00Z" }),
+});`,
+    },
+    {
+      id: "blackout-delete",
+      method: "DELETE",
+      path: "/api/dk/blackout-windows/{id}",
+      title: "Delete Blackout Window",
+      description: "Delete a blackout window.",
+      auth: "required",
+      capability: "alerts.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Blackout window record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/blackout-windows/BLACKOUT_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/blackout-windows/BLACKOUT_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+  ],
+};
+
+// ── Group 11: Notifications ────────────────────────────────────────────────
+
+const notifications: ApiGroup = {
+  id: "notifications",
+  title: "Notifications",
+  description: "Notification channel management (WhatsApp, Telegram, Webhook) and delivery logs.",
+  icon: Send,
+  endpoints: [
+    {
+      id: "notifications-channels-list",
+      method: "GET",
+      path: "/api/dk/notifications/channels",
+      title: "List Channels",
+      description: "Retrieve all configured notification channels.",
+      auth: "required",
+      capability: "notifications.view",
+      curlExample: `curl http://localhost:8090/api/dk/notifications/channels \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const channels = await res.json();`,
+    },
+    {
+      id: "notifications-channels-create",
+      method: "POST",
+      path: "/api/dk/notifications/channels",
+      title: "Create Channel",
+      description: "Create a new notification channel (WhatsApp, Telegram, or Webhook).",
+      auth: "required",
+      capability: "notifications.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "name", type: "string", required: true, description: "Channel display name." },
+          { name: "type", type: "string", required: true, description: "Channel type: whatsapp, telegram, or webhook." },
+          { name: "config", type: "object", required: true, description: "Type-specific configuration (e.g. phone, bot_token, url)." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/notifications/channels \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "Ops Webhook", "type": "webhook", "config": {"url": "https://hooks.example.com/alert"}}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "Ops Webhook",
+    type: "webhook",
+    config: { url: "https://hooks.example.com/alert" },
+  }),
+});`,
+    },
+    {
+      id: "notifications-channels-update",
+      method: "PUT",
+      path: "/api/dk/notifications/channels/{id}",
+      title: "Update Channel",
+      description: "Update a notification channel's name or configuration.",
+      auth: "required",
+      capability: "notifications.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Channel record ID." },
+      ],
+      curlExample: `curl -X PUT http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "Ops Webhook v2"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID", {
+  method: "PUT",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ name: "Ops Webhook v2" }),
+});`,
+    },
+    {
+      id: "notifications-channels-delete",
+      method: "DELETE",
+      path: "/api/dk/notifications/channels/{id}",
+      title: "Delete Channel",
+      description: "Delete a notification channel. Active alert rules referencing this channel will stop receiving notifications.",
+      auth: "required",
+      capability: "notifications.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Channel record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "notifications-channels-test",
+      method: "POST",
+      path: "/api/dk/notifications/channels/{id}/test",
+      title: "Test Channel",
+      description: "Send a test notification to verify channel configuration.",
+      auth: "required",
+      capability: "notifications.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Channel record ID." },
+      ],
+      curlExample: `curl -X POST http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID/test \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID/test", {
+  method: "POST",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "notifications-logs",
+      method: "GET",
+      path: "/api/dk/notifications/logs",
+      title: "Notification Logs",
+      description: "Retrieve notification delivery logs with status, channel, and timestamp.",
+      auth: "required",
+      capability: "notifications.view",
+      responseExample: json([
+        { id: "nl_01", channel_id: "ch_01", alert_rule_id: "alr_01", status: "delivered", sent_at: "2026-03-29T02:00:00Z" },
+      ]),
+      curlExample: `curl http://localhost:8090/api/dk/notifications/logs \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/logs", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const logs = await res.json();`,
+    },
+  ],
+};
+
+// ── Group 12: Health Checks ────────────────────────────────────────────────
+
+const healthChecks: ApiGroup = {
+  id: "health-checks",
+  title: "Health Checks",
+  description: "HTTP/TCP health check configuration, execution logs, and manual triggers.",
+  icon: Activity,
+  endpoints: [
+    {
+      id: "health-checks-list",
+      method: "GET",
+      path: "/api/dk/health-checks",
+      title: "List Health Checks",
+      description: "Retrieve all health check configurations with their last status.",
+      auth: "required",
+      capability: "health.view",
+      curlExample: `curl http://localhost:8090/api/dk/health-checks \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const checks = await res.json();`,
+    },
+    {
+      id: "health-checks-create",
+      method: "POST",
+      path: "/api/dk/health-checks",
+      title: "Create Health Check",
+      description: "Create a new health check with URL, interval, and expected status.",
+      auth: "required",
+      capability: "health.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "name", type: "string", required: true, description: "Health check name." },
+          { name: "url", type: "string", required: true, description: "URL to check.", example: "http://10.0.1.10:8080/health" },
+          { name: "method", type: "string", required: false, description: "HTTP method (default: GET)." },
+          { name: "interval_seconds", type: "number", required: false, description: "Check interval in seconds (default: 60)." },
+          { name: "timeout_seconds", type: "number", required: false, description: "Request timeout (default: 10)." },
+          { name: "expected_status", type: "number", required: false, description: "Expected HTTP status (default: 200)." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/health-checks \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "API Health", "url": "http://10.0.1.10:8080/health", "interval_seconds": 30}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "API Health",
+    url: "http://10.0.1.10:8080/health",
+    interval_seconds: 30,
+  }),
+});`,
+    },
+    {
+      id: "health-checks-update",
+      method: "PUT",
+      path: "/api/dk/health-checks/{id}",
+      title: "Update Health Check",
+      description: "Update a health check's URL, interval, or expected status.",
+      auth: "required",
+      capability: "health.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Health check record ID." },
+      ],
+      curlExample: `curl -X PUT http://localhost:8090/api/dk/health-checks/CHECK_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"interval_seconds": 15}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks/CHECK_ID", {
+  method: "PUT",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ interval_seconds: 15 }),
+});`,
+    },
+    {
+      id: "health-checks-delete",
+      method: "DELETE",
+      path: "/api/dk/health-checks/{id}",
+      title: "Delete Health Check",
+      description: "Delete a health check and its execution logs.",
+      auth: "required",
+      capability: "health.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Health check record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/health-checks/CHECK_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks/CHECK_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "health-checks-logs",
+      method: "GET",
+      path: "/api/dk/health-checks/{id}/logs",
+      title: "Get Execution Logs",
+      description: "Retrieve execution history for a specific health check.",
+      auth: "required",
+      capability: "health.view",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Health check record ID." },
+      ],
+      curlExample: `curl http://localhost:8090/api/dk/health-checks/CHECK_ID/logs \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks/CHECK_ID/logs", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const logs = await res.json();`,
+    },
+    {
+      id: "health-checks-trigger",
+      method: "POST",
+      path: "/api/dk/health-checks/{id}/trigger",
+      title: "Trigger Health Check",
+      description: "Manually trigger a health check execution, bypassing the interval schedule.",
+      auth: "required",
+      capability: "health.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Health check record ID." },
+      ],
+      curlExample: `curl -X POST http://localhost:8090/api/dk/health-checks/CHECK_ID/trigger \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks/CHECK_ID/trigger", {
+  method: "POST",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+  ],
+};
+
+// ── Group 13: Users & Access ───────────────────────────────────────────────
+
+const usersAccess: ApiGroup = {
+  id: "users-access",
+  title: "Users & Access",
+  description: "User management, RBAC groups, group membership, and API key operations.",
+  icon: Shield,
+  endpoints: [
+    {
+      id: "users-list",
+      method: "GET",
+      path: "/api/dk/users",
+      title: "List Users",
+      description: "Retrieve all user accounts with their group memberships.",
+      auth: "required",
+      capability: "users.view",
+      curlExample: `curl http://localhost:8090/api/dk/users \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/users", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const users = await res.json();`,
+    },
+    {
+      id: "users-create",
+      method: "POST",
+      path: "/api/dk/users",
+      title: "Create User",
+      description: "Create a new user account.",
+      auth: "required",
+      capability: "users.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "email", type: "string", required: true, description: "User email address." },
+          { name: "password", type: "string", required: true, description: "User password (min 8 chars)." },
+          { name: "passwordConfirm", type: "string", required: true, description: "Password confirmation." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/users \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"email": "user@example.com", "password": "securepass", "passwordConfirm": "securepass"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/users", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    email: "user@example.com",
+    password: "securepass",
+    passwordConfirm: "securepass",
+  }),
+});`,
+    },
+    {
+      id: "users-update",
+      method: "PATCH",
+      path: "/api/dk/users/{id}",
+      title: "Update User",
+      description: "Update a user's email or verified status.",
+      auth: "required",
+      capability: "users.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "User record ID." },
+      ],
+      curlExample: `curl -X PATCH http://localhost:8090/api/dk/users/USER_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"verified": true}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/users/USER_ID", {
+  method: "PATCH",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ verified: true }),
+});`,
+    },
+    {
+      id: "users-delete",
+      method: "DELETE",
+      path: "/api/dk/users/{id}",
+      title: "Delete User",
+      description: "Delete a user account and remove all group memberships.",
+      auth: "required",
+      capability: "users.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "User record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/users/USER_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/users/USER_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "groups-list",
+      method: "GET",
+      path: "/api/dk/groups",
+      title: "List Groups",
+      description: "Retrieve all RBAC groups with their capabilities.",
+      auth: "required",
+      capability: "users.view",
+      responseExample: json([
+        { id: "grp_01", name: "Operators", capabilities: ["servers.view", "containers.view", "containers.manage"] },
+      ]),
+      curlExample: `curl http://localhost:8090/api/dk/groups \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const groups = await res.json();`,
+    },
+    {
+      id: "groups-create",
+      method: "POST",
+      path: "/api/dk/groups",
+      title: "Create Group",
+      description: "Create a new RBAC group with a set of capabilities.",
+      auth: "required",
+      capability: "users.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "name", type: "string", required: true, description: "Group name." },
+          { name: "capabilities", type: "string[]", required: true, description: "List of capability strings." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/groups \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "Read Only", "capabilities": ["servers.view", "containers.view"]}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "Read Only",
+    capabilities: ["servers.view", "containers.view"],
+  }),
+});`,
+    },
+    {
+      id: "groups-update",
+      method: "PUT",
+      path: "/api/dk/groups/{id}",
+      title: "Update Group",
+      description: "Update a group's name or capabilities.",
+      auth: "required",
+      capability: "users.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Group record ID." },
+      ],
+      curlExample: `curl -X PUT http://localhost:8090/api/dk/groups/GROUP_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"capabilities": ["servers.view", "containers.view", "images.view"]}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups/GROUP_ID", {
+  method: "PUT",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    capabilities: ["servers.view", "containers.view", "images.view"],
+  }),
+});`,
+    },
+    {
+      id: "groups-delete",
+      method: "DELETE",
+      path: "/api/dk/groups/{id}",
+      title: "Delete Group",
+      description: "Delete a group and remove all member associations.",
+      auth: "required",
+      capability: "users.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Group record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/groups/GROUP_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups/GROUP_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "groups-add-member",
+      method: "POST",
+      path: "/api/dk/groups/{id}/members",
+      title: "Add Group Member",
+      description: "Add a user to a group, granting them the group's capabilities.",
+      auth: "required",
+      capability: "users.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Group record ID." },
+      ],
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "user_id", type: "string", required: true, description: "User record ID to add." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/groups/GROUP_ID/members \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"user_id": "USER_ID"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups/GROUP_ID/members", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ user_id: "USER_ID" }),
+});`,
+    },
+    {
+      id: "groups-remove-member",
+      method: "DELETE",
+      path: "/api/dk/groups/{id}/members/{userId}",
+      title: "Remove Group Member",
+      description: "Remove a user from a group, revoking the group's capabilities.",
+      auth: "required",
+      capability: "users.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Group record ID." },
+        { name: "userId", type: "string", required: true, description: "User record ID to remove." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/groups/GROUP_ID/members/USER_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups/GROUP_ID/members/USER_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "api-keys-list",
+      method: "GET",
+      path: "/api/dk/api-keys",
+      title: "List API Keys",
+      description: "Retrieve all API keys (hashed, not the raw key value).",
+      auth: "required",
+      capability: "users.view",
+      curlExample: `curl http://localhost:8090/api/dk/api-keys \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/api-keys", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const keys = await res.json();`,
+    },
+    {
+      id: "api-keys-create",
+      method: "POST",
+      path: "/api/dk/api-keys",
+      title: "Create API Key",
+      description: "Generate a new API key linked to a group. The raw key is returned only once.",
+      auth: "required",
+      capability: "users.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "name", type: "string", required: true, description: "Key display name." },
+          { name: "group_id", type: "string", required: true, description: "Group that defines the key's capabilities." },
+        ],
+      },
+      responseExample: json({ id: "ak_01", name: "CI Pipeline", key: "dk_abc123...", group_id: "grp_01" }),
+      curlExample: `curl -X POST http://localhost:8090/api/dk/api-keys \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "CI Pipeline", "group_id": "GROUP_ID"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/api-keys", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ name: "CI Pipeline", group_id: "GROUP_ID" }),
+});
+const { key } = await res.json(); // Save this — shown only once`,
+    },
+    {
+      id: "api-keys-delete",
+      method: "DELETE",
+      path: "/api/dk/api-keys/{id}",
+      title: "Delete API Key",
+      description: "Revoke and delete an API key permanently.",
+      auth: "required",
+      capability: "users.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "API key record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/api-keys/KEY_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/api-keys/KEY_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+  ],
+};
+
+// ── Group 14: Tags ─────────────────────────────────────────────────────────
+
+const tags: ApiGroup = {
+  id: "tags",
+  title: "Tags",
+  description: "Container tagging for organization, filtering, and batch operations.",
+  icon: Tag,
+  endpoints: [
+    {
+      id: "tags-list",
+      method: "GET",
+      path: "/api/dk/tags",
+      title: "List Tag Assignments",
+      description: "Retrieve all tag-to-container assignments.",
+      auth: "required",
+      capability: "containers.view",
+      curlExample: `curl http://localhost:8090/api/dk/tags \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const tags = await res.json();`,
+    },
+    {
+      id: "tags-names",
+      method: "GET",
+      path: "/api/dk/tags/names",
+      title: "List Tag Names",
+      description: "Retrieve all unique tag names for autocomplete and filtering.",
+      auth: "required",
+      capability: "containers.view",
+      curlExample: `curl http://localhost:8090/api/dk/tags/names \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags/names", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const names = await res.json();`,
+    },
+    {
+      id: "tags-create",
+      method: "POST",
+      path: "/api/dk/tags",
+      title: "Assign Tag",
+      description: "Assign a tag to a container.",
+      auth: "required",
+      capability: "containers.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "container_id", type: "string", required: true, description: "Container record ID." },
+          { name: "tag", type: "string", required: true, description: "Tag name." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/tags \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"container_id": "CONTAINER_ID", "tag": "production"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ container_id: "CONTAINER_ID", tag: "production" }),
+});`,
+    },
+    {
+      id: "tags-delete",
+      method: "DELETE",
+      path: "/api/dk/tags/{id}",
+      title: "Remove Tag",
+      description: "Remove a tag assignment from a container.",
+      auth: "required",
+      capability: "containers.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Tag assignment record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/tags/TAG_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags/TAG_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "tags-bulk-assign",
+      method: "POST",
+      path: "/api/dk/tags/bulk",
+      title: "Bulk Assign Tags",
+      description: "Assign a tag to multiple containers at once.",
+      auth: "required",
+      capability: "containers.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "container_ids", type: "string[]", required: true, description: "Container record IDs." },
+          { name: "tag", type: "string", required: true, description: "Tag name to assign." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/tags/bulk \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"container_ids": ["CTR_1", "CTR_2"], "tag": "staging"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags/bulk", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ container_ids: ["CTR_1", "CTR_2"], tag: "staging" }),
+});`,
+    },
+    {
+      id: "tags-bulk-remove",
+      method: "DELETE",
+      path: "/api/dk/tags/bulk",
+      title: "Bulk Remove Tags",
+      description: "Remove a tag from multiple containers at once.",
+      auth: "required",
+      capability: "containers.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "container_ids", type: "string[]", required: true, description: "Container record IDs." },
+          { name: "tag", type: "string", required: true, description: "Tag name to remove." },
+        ],
+      },
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/tags/bulk \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"container_ids": ["CTR_1", "CTR_2"], "tag": "staging"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags/bulk", {
+  method: "DELETE",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ container_ids: ["CTR_1", "CTR_2"], tag: "staging" }),
+});`,
+    },
+  ],
+};
+
+// ── Group 15: Batch Operations ─────────────────────────────────────────────
+
+const batchOperations: ApiGroup = {
+  id: "batch-operations",
+  title: "Batch Operations",
+  description: "Bulk container actions (start, stop, restart, remove) with job tracking.",
+  icon: Zap,
+  endpoints: [
+    {
+      id: "batch-submit",
+      method: "POST",
+      path: "/api/dk/batch",
+      title: "Submit Batch Job",
+      description: "Submit a batch operation to run an action on multiple containers.",
+      auth: "required",
+      capability: "containers.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "action", type: "string", required: true, description: "Action: start, stop, restart, or remove." },
+          { name: "container_ids", type: "string[]", required: true, description: "Container record IDs." },
+          { name: "tag_filter", type: "string", required: false, description: "Alternative: target all containers with this tag." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/batch \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"action": "restart", "container_ids": ["CTR_1", "CTR_2", "CTR_3"]}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    action: "restart",
+    container_ids: ["CTR_1", "CTR_2", "CTR_3"],
+  }),
+});
+const { job_id } = await res.json();`,
+    },
+    {
+      id: "batch-list",
+      method: "GET",
+      path: "/api/dk/batch",
+      title: "List Batch Jobs",
+      description: "Retrieve all batch jobs with their status and progress.",
+      auth: "required",
+      capability: "containers.view",
+      curlExample: `curl http://localhost:8090/api/dk/batch \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const jobs = await res.json();`,
+    },
+    {
+      id: "batch-get",
+      method: "GET",
+      path: "/api/dk/batch/{id}",
+      title: "Get Batch Job",
+      description: "Retrieve a specific batch job with detailed per-container results.",
+      auth: "required",
+      capability: "containers.view",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Batch job record ID." },
+      ],
+      responseExample: json({
+        id: "job_01", action: "restart", status: "completed",
+        total: 3, succeeded: 3, failed: 0,
+      }),
+      curlExample: `curl http://localhost:8090/api/dk/batch/JOB_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch/JOB_ID", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const job = await res.json();`,
+    },
+    {
+      id: "batch-progress",
+      method: "GET",
+      path: "/api/dk/batch/{id}/progress",
+      title: "Get Batch Progress",
+      description: "Get real-time progress updates for a running batch job.",
+      auth: "required",
+      capability: "containers.view",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Batch job record ID." },
+      ],
+      curlExample: `curl http://localhost:8090/api/dk/batch/JOB_ID/progress \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch/JOB_ID/progress", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const progress = await res.json();`,
+    },
+    {
+      id: "batch-cancel",
+      method: "POST",
+      path: "/api/dk/batch/{id}/cancel",
+      title: "Cancel Batch Job",
+      description: "Cancel a running batch job. Already-completed actions are not reverted.",
+      auth: "required",
+      capability: "containers.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Batch job record ID." },
+      ],
+      curlExample: `curl -X POST http://localhost:8090/api/dk/batch/JOB_ID/cancel \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch/JOB_ID/cancel", {
+  method: "POST",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+  ],
+};
+
+// ── Group 16: Monitoring ───────────────────────────────────────────────────
+
+const monitoring: ApiGroup = {
+  id: "monitoring",
+  title: "Monitoring",
+  description: "Traefik routes, global search, and audit log access.",
+  icon: Search,
+  endpoints: [
+    {
+      id: "traefik-routes",
+      method: "GET",
+      path: "/api/dk/traefik/routes",
+      title: "List Traefik Routes",
+      description: "Retrieve all discovered Traefik routes (HTTP routers, services, middleware).",
+      auth: "required",
+      capability: "traefik.view",
+      curlExample: `curl http://localhost:8090/api/dk/traefik/routes \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/traefik/routes", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const routes = await res.json();`,
+    },
+    {
+      id: "global-search",
+      method: "GET",
+      path: "/api/dk/search",
+      title: "Global Search",
+      description: "Search across servers, containers, images, and compose stacks.",
+      auth: "required",
+      capability: "containers.view",
+      queryParams: [
+        { name: "q", type: "string", required: true, description: "Search query (min 2 chars)." },
+      ],
+      curlExample: `curl "http://localhost:8090/api/dk/search?q=nginx" \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/search?q=nginx", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const results = await res.json();`,
+    },
+    {
+      id: "audit-logs",
+      method: "GET",
+      path: "/api/dk/audit-logs",
+      title: "List Audit Logs",
+      description: "Retrieve audit log entries with pagination and filtering. Supports filter by collection, action, and user.",
+      auth: "required",
+      capability: "audit.view",
+      queryParams: [
+        { name: "page", type: "number", required: false, description: "Page number (default: 1)." },
+        { name: "perPage", type: "number", required: false, description: "Items per page (default: 20, max: 100)." },
+        { name: "collection", type: "string", required: false, description: "Filter by collection name." },
+        { name: "action", type: "string", required: false, description: "Filter by action (create, update, delete)." },
+      ],
+      curlExample: `curl "http://localhost:8090/api/dk/audit-logs?page=1&perPage=20" \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/audit-logs?page=1&perPage=20", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const logs = await res.json();`,
+    },
+  ],
+};
+
+// ── Group 17: Settings ─────────────────────────────────────────────────────
+
+const settings: ApiGroup = {
+  id: "settings",
+  title: "Settings",
+  description: "Data retention policies and Docker registry credential management.",
+  icon: Settings,
+  endpoints: [
+    {
+      id: "settings-retention-get",
+      method: "GET",
+      path: "/api/dk/settings/retention",
+      title: "Get Retention Settings",
+      description: "Retrieve current data retention periods for raw, hourly, and daily metrics.",
+      auth: "required",
+      capability: "settings.view",
+      responseExample: json({ raw_hours: 48, hourly_days: 30, daily_days: 365 }),
+      curlExample: `curl http://localhost:8090/api/dk/settings/retention \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/settings/retention", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const retention = await res.json();`,
+    },
+    {
+      id: "settings-retention-update",
+      method: "PUT",
+      path: "/api/dk/settings/retention",
+      title: "Update Retention Settings",
+      description: "Update data retention periods. Changes take effect on the next cleanup cycle.",
+      auth: "required",
+      capability: "settings.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "raw_hours", type: "number", required: false, description: "Hours to keep raw metrics (default: 48)." },
+          { name: "hourly_days", type: "number", required: false, description: "Days to keep hourly aggregates (default: 30)." },
+          { name: "daily_days", type: "number", required: false, description: "Days to keep daily aggregates (default: 365)." },
+        ],
+      },
+      curlExample: `curl -X PUT http://localhost:8090/api/dk/settings/retention \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"raw_hours": 72, "hourly_days": 60}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/settings/retention", {
+  method: "PUT",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ raw_hours: 72, hourly_days: 60 }),
+});`,
+    },
+    {
+      id: "registry-credentials-list",
+      method: "GET",
+      path: "/api/dk/registry-credentials",
+      title: "List Registry Credentials",
+      description: "Retrieve all stored Docker registry credentials (passwords are masked).",
+      auth: "required",
+      capability: "settings.view",
+      curlExample: `curl http://localhost:8090/api/dk/registry-credentials \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/registry-credentials", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const creds = await res.json();`,
+    },
+    {
+      id: "registry-credentials-create",
+      method: "POST",
+      path: "/api/dk/registry-credentials",
+      title: "Add Registry Credential",
+      description: "Store a Docker registry credential. The password is encrypted with AES-256-GCM.",
+      auth: "required",
+      capability: "settings.manage",
+      requestBody: {
+        contentType: "application/json",
+        fields: [
+          { name: "registry", type: "string", required: true, description: "Registry URL.", example: "ghcr.io" },
+          { name: "username", type: "string", required: true, description: "Registry username." },
+          { name: "password", type: "string", required: true, description: "Registry password or access token." },
+        ],
+      },
+      curlExample: `curl -X POST http://localhost:8090/api/dk/registry-credentials \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"registry": "ghcr.io", "username": "user", "password": "ghp_token"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/registry-credentials", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    registry: "ghcr.io",
+    username: "user",
+    password: "ghp_token",
+  }),
+});`,
+    },
+    {
+      id: "registry-credentials-update",
+      method: "PUT",
+      path: "/api/dk/registry-credentials/{id}",
+      title: "Update Registry Credential",
+      description: "Update an existing registry credential's username or password.",
+      auth: "required",
+      capability: "settings.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Credential record ID." },
+      ],
+      curlExample: `curl -X PUT http://localhost:8090/api/dk/registry-credentials/CRED_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"password": "new_ghp_token"}'`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/registry-credentials/CRED_ID", {
+  method: "PUT",
+  headers: {
+    Authorization: "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ password: "new_ghp_token" }),
+});`,
+    },
+    {
+      id: "registry-credentials-delete",
+      method: "DELETE",
+      path: "/api/dk/registry-credentials/{id}",
+      title: "Delete Registry Credential",
+      description: "Delete a stored registry credential.",
+      auth: "required",
+      capability: "settings.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Credential record ID." },
+      ],
+      curlExample: `curl -X DELETE http://localhost:8090/api/dk/registry-credentials/CRED_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/registry-credentials/CRED_ID", {
+  method: "DELETE",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+  ],
+};
+
+// ── Group 18: System ───────────────────────────────────────────────────────
+
+const system: ApiGroup = {
+  id: "system",
+  title: "System",
+  description: "Version info, update management, cascade previews, and dashboard layout persistence.",
+  icon: Cog,
+  endpoints: [
+    {
+      id: "system-version",
+      method: "GET",
+      path: "/api/dk/system/version",
+      title: "Get Version",
+      description: "Retrieve the manager's version and build commit hash. Public endpoint.",
+      auth: "public",
+      responseExample: json({ version: "0.1.0", commit: "abc1234" }),
+      curlExample: `curl http://localhost:8090/api/dk/system/version`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/system/version");
+const { version, commit } = await res.json();`,
+    },
+    {
+      id: "system-update-check",
+      method: "GET",
+      path: "/api/dk/system/update/check",
+      title: "Check for Updates",
+      description: "Check if newer versions are available for the manager or agents.",
+      auth: "required",
+      capability: "settings.view",
+      curlExample: `curl http://localhost:8090/api/dk/system/update/check \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/system/update/check", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const updates = await res.json();`,
+    },
+    {
+      id: "system-update-manager",
+      method: "POST",
+      path: "/api/dk/system/update/manager",
+      title: "Update Manager",
+      description: "Trigger a self-update of the manager binary. The process will restart.",
+      auth: "required",
+      capability: "settings.manage",
+      curlExample: `curl -X POST http://localhost:8090/api/dk/system/update/manager \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/system/update/manager", {
+  method: "POST",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "system-update-agent",
+      method: "POST",
+      path: "/api/dk/system/update/agent/{id}",
+      title: "Update Agent",
+      description: "Push an update to a specific agent. Uses the saga pattern (snapshot → replace → verify → rollback on failure).",
+      auth: "required",
+      capability: "settings.manage",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Server record ID." },
+      ],
+      curlExample: `curl -X POST http://localhost:8090/api/dk/system/update/agent/SERVER_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/system/update/agent/SERVER_ID", {
+  method: "POST",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});`,
+    },
+    {
+      id: "cascade-preview-container",
+      method: "GET",
+      path: "/api/dk/containers/{id}/cascade-preview",
+      title: "Container Cascade Preview",
+      description: "Preview what will be deleted when removing a container (linked tags, backups, metrics).",
+      auth: "required",
+      capability: "containers.view",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Container record ID." },
+      ],
+      curlExample: `curl http://localhost:8090/api/dk/containers/CONTAINER_ID/cascade-preview \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/cascade-preview", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const preview = await res.json();`,
+    },
+    {
+      id: "cascade-preview-volume",
+      method: "GET",
+      path: "/api/dk/volumes/{id}/cascade-preview",
+      title: "Volume Cascade Preview",
+      description: "Preview what will be affected when removing a volume.",
+      auth: "required",
+      capability: "containers.view",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Volume record ID." },
+      ],
+      curlExample: `curl http://localhost:8090/api/dk/volumes/VOLUME_ID/cascade-preview \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/volumes/VOLUME_ID/cascade-preview", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const preview = await res.json();`,
+    },
+    {
+      id: "cascade-preview-server",
+      method: "GET",
+      path: "/api/dk/servers/{id}/cascade-preview",
+      title: "Server Cascade Preview",
+      description: "Preview all resources that will be deleted when removing a server.",
+      auth: "required",
+      capability: "servers.view",
+      parameters: [
+        { name: "id", type: "string", required: true, description: "Server record ID." },
+      ],
+      responseExample: json({ containers: 5, images: 12, volumes: 3, networks: 2, backups: 8 }),
+      curlExample: `curl http://localhost:8090/api/dk/servers/SERVER_ID/cascade-preview \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/servers/SERVER_ID/cascade-preview", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const preview = await res.json();`,
+    },
+    {
+      id: "dashboard-layout-get",
+      method: "GET",
+      path: "/api/dk/dashboard/layout",
+      title: "Get Dashboard Layout",
+      description: "Retrieve the saved dashboard widget layout for the current user.",
+      auth: "required",
+      capability: "containers.view",
+      curlExample: `curl http://localhost:8090/api/dk/dashboard/layout \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      jsExample: `const res = await fetch("http://localhost:8090/api/dk/dashboard/layout", {
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+});
+const layout = await res.json();`,
+    },
+  ],
+};
+
 export const apiGroups: ApiGroup[] = [
   gettingStarted,
   authentication,
@@ -1256,4 +2677,13 @@ export const apiGroups: ApiGroup[] = [
   networks,
   volumes,
   backups,
+  alertsBlackout,
+  notifications,
+  healthChecks,
+  usersAccess,
+  tags,
+  batchOperations,
+  monitoring,
+  settings,
+  system,
 ];

@@ -26,6 +26,7 @@ const AuditLogsPage = lazy(() => import("@/pages/audit-logs"));
 const UsersPage = lazy(() => import("@/pages/users"));
 const EventsPage = lazy(() => import("@/pages/events"));
 const HealthChecksPage = lazy(() => import("@/pages/health-checks"));
+const DocsPage = lazy(() => import("@/pages/docs"));
 
 function RouteFallback() {
 	return (
@@ -41,6 +42,7 @@ function App() {
 			<Suspense fallback={<RouteFallback />}>
 				<Routes>
 					<Route path="/login" element={<LoginPage />} />
+					<Route path="/docs" element={<DocsPage />} />
 					<Route element={<ProtectedRoute />}>
 						<Route element={<AppLayout />}>
 							<Route index element={<DashboardPage />} />
