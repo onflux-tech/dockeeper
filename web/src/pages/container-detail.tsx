@@ -240,7 +240,7 @@ export default function ContainerDetailPage() {
 				</TabsContent>
 
 				<TabsContent value="logs" className="mt-4">
-					{id && <LogViewer containerId={id} />}
+					{id && <LogViewer containerId={id} containerName={container?.name} />}
 				</TabsContent>
 			</Tabs>
 

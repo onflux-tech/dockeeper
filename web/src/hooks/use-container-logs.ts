@@ -7,18 +7,18 @@ export interface LogEntry {
 	message: string;
 }
 
-const MAX_LINES = 5000;
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
 
 export function useContainerLogs(
 	containerId: string | undefined,
-	options: { follow?: boolean; tail?: number } = {},
+	options: { follow?: boolean; tail?: number; maxLines?: number } = {},
 ) {
-	const { follow = true, tail = 100 } = options;
+	const { follow = true, tail = 100, maxLines = 5000 } = options;
 	const [lines, setLines] = useState<LogEntry[]>([]);
 	const [connected, setConnected] = useState(false);
 	const [paused, setPaused] = useState(false);
+	const [bufferedCount, setBufferedCount] = useState(0);
 	const abortRef = useRef<AbortController | null>(null);
 	const pausedRef = useRef(paused);
 	pausedRef.current = paused;
@@ -27,6 +27,10 @@ export function useContainerLogs(
 	const retriesRef = useRef(0);
 	const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const mountedRef = useRef(true);
+	const maxLinesRef = useRef(maxLines);
+	maxLinesRef.current = maxLines;
+	// Track line count when paused to show buffered delta.
+	const pausedAtRef = useRef(0);
 
 	const connect = useCallback(() => {
 		if (!containerId) return;
@@ -51,15 +55,15 @@ export function useContainerLogs(
 
 				const reader = res.body.getReader();
 				const decoder = new TextDecoder();
-				let buffer = "";
+				let sseBuffer = "";
 
 				for (;;) {
 					const { done, value } = await reader.read();
 					if (done) break;
 
-					buffer += decoder.decode(value, { stream: true });
-					const parts = buffer.split("\n\n");
-					buffer = parts.pop() ?? "";
+					sseBuffer += decoder.decode(value, { stream: true });
+					const parts = sseBuffer.split("\n\n");
+					sseBuffer = parts.pop() ?? "";
 
 					for (const part of parts) {
 						if (!part.trim()) continue;
@@ -87,10 +91,16 @@ export function useContainerLogs(
 
 						try {
 							const entry = JSON.parse(dataLine.slice(6)) as LogEntry;
-							bufferRef.current = [...bufferRef.current, entry].slice(-MAX_LINES);
+							bufferRef.current = [...bufferRef.current, entry].slice(
+								-maxLinesRef.current,
+							);
 
 							if (!pausedRef.current) {
 								setLines([...bufferRef.current]);
+							} else {
+								setBufferedCount(
+									bufferRef.current.length - pausedAtRef.current,
+								);
 							}
 						} catch {
 							// skip malformed lines
@@ -119,6 +129,10 @@ export function useContainerLogs(
 
 	useEffect(() => {
 		mountedRef.current = true;
+		// Reset state when tail changes (reconnects).
+		bufferRef.current = [];
+		setLines([]);
+		setBufferedCount(0);
 		connect();
 		return () => {
 			mountedRef.current = false;
@@ -132,16 +146,20 @@ export function useContainerLogs(
 	const resume = useCallback(() => {
 		setPaused(false);
 		setLines([...bufferRef.current]);
+		setBufferedCount(0);
 	}, []);
 
 	const pause = useCallback(() => {
 		setPaused(true);
+		pausedAtRef.current = bufferRef.current.length;
+		setBufferedCount(0);
 	}, []);
 
 	const clear = useCallback(() => {
 		bufferRef.current = [];
 		setLines([]);
+		setBufferedCount(0);
 	}, []);
 
-	return { lines, connected, paused, pause, resume, clear };
+	return { lines, connected, paused, bufferedCount, pause, resume, clear };
 }
