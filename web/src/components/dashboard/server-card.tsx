@@ -61,7 +61,7 @@ export function ServerCard({ server, cpuData, memData, editing, tags }: ServerCa
 					<div className="flex flex-col gap-1">
 						<CardTitle className="text-sm">{server.name || server.hostname}</CardTitle>
 						<span className="text-xs text-muted-foreground">
-							{server.os}/{server.arch} &middot; v{server.agent_version}
+							{server.os}/{server.arch} &middot; {server.agent_version}
 						</span>
 					</div>
 					<div className="flex items-center gap-1">
