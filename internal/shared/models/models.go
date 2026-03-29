@@ -19,6 +19,13 @@ type Server struct {
 	EnrolledAt    types.DateTime `json:"enrolled_at"`
 	Labels        types.JSONRaw  `json:"labels"`
 	CertExpiresAt types.DateTime `json:"cert_expires_at"`
+	CPUModel      string         `json:"cpu_model"`
+	CPUCores      float64        `json:"cpu_cores"`
+	MemTotal      float64        `json:"mem_total"`
+	CurrentCPU    float64        `json:"current_cpu"`
+	CurrentRAM    float64        `json:"current_ram"`
+	CurrentDisk   float64        `json:"current_disk"`
+	UptimeSeconds float64        `json:"uptime_seconds"`
 	Created       types.DateTime `json:"created"`
 	Updated       types.DateTime `json:"updated"`
 }
@@ -44,6 +51,9 @@ type Container struct {
 	ContainerCreatedAt types.DateTime `json:"container_created_at"`
 	StartedAt          types.DateTime `json:"started_at"`
 	ComposeStack       string         `json:"compose_stack"`
+	CurrentCPU         float64        `json:"current_cpu"`
+	CurrentRAM         float64        `json:"current_ram"`
+	CurrentRAMLimit    float64        `json:"current_ram_limit"`
 	Created            types.DateTime `json:"created"`
 	Updated            types.DateTime `json:"updated"`
 }
@@ -107,21 +117,30 @@ type ComposeStack struct {
 
 // ServerMetricsRaw holds raw server metrics collected every 10s.
 type ServerMetricsRaw struct {
-	ID         string         `json:"id"`
-	Server     string         `json:"server"`
-	Timestamp  types.DateTime `json:"timestamp"`
-	CPUPercent float64        `json:"cpu_percent"`
-	MemPercent float64        `json:"mem_percent"`
-	MemUsed    float64        `json:"mem_used"`
-	MemTotal   float64        `json:"mem_total"`
-	DiskUsed   float64        `json:"disk_used"`
-	DiskTotal  float64        `json:"disk_total"`
-	NetRx      float64        `json:"net_rx"`
-	NetTx      float64        `json:"net_tx"`
-	Load1m     float64        `json:"load_1m"`
-	Load5m     float64        `json:"load_5m"`
-	Load15m    float64        `json:"load_15m"`
-	Created    types.DateTime `json:"created"`
+	ID            string         `json:"id"`
+	Server        string         `json:"server"`
+	Timestamp     types.DateTime `json:"timestamp"`
+	CPUPercent    float64        `json:"cpu_percent"`
+	MemPercent    float64        `json:"mem_percent"`
+	MemUsed       float64        `json:"mem_used"`
+	MemTotal      float64        `json:"mem_total"`
+	DiskUsed      float64        `json:"disk_used"`
+	DiskTotal     float64        `json:"disk_total"`
+	NetRx         float64        `json:"net_rx"`
+	NetTx         float64        `json:"net_tx"`
+	Load1m        float64        `json:"load_1m"`
+	Load5m        float64        `json:"load_5m"`
+	Load15m       float64        `json:"load_15m"`
+	DiskIORead    float64        `json:"disk_io_read"`
+	DiskIOWrite   float64        `json:"disk_io_write"`
+	SwapUsed      float64        `json:"swap_used"`
+	SwapTotal     float64        `json:"swap_total"`
+	MemAvailable  float64        `json:"mem_available"`
+	Partitions    types.JSONRaw  `json:"partitions"`
+	Temperatures  types.JSONRaw  `json:"temperatures"`
+	CPUCores      float64        `json:"cpu_cores"`
+	UptimeSeconds float64        `json:"uptime_seconds"`
+	Created       types.DateTime `json:"created"`
 }
 
 // ServerMetricsAggregated holds hourly/daily aggregated server metrics.

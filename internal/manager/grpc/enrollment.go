@@ -83,6 +83,9 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 	server.Set("last_seen", time.Now().UTC())
 	server.Set("enrolled_at", time.Now().UTC())
 	server.Set("enrollment_token", "") // clear token after use
+	server.Set("cpu_model", info.GetCpuModel())
+	server.Set("cpu_cores", info.GetCpuCores())
+	server.Set("mem_total", info.GetMemTotal())
 
 	if err := h.app.Save(server); err != nil {
 		slog.Error("failed to save server record", "error", err)

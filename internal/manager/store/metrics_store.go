@@ -42,10 +42,63 @@ func (s *MetricsStore) SaveServerMetrics(serverID string, req *agentpb.StreamMet
 	rec.Set("load_1m", req.GetLoad_1M())
 	rec.Set("load_5m", req.GetLoad_5M())
 	rec.Set("load_15m", req.GetLoad_15M())
+	rec.Set("disk_io_read", req.GetDiskIoRead())
+	rec.Set("disk_io_write", req.GetDiskIoWrite())
+	rec.Set("swap_used", req.GetSwapUsed())
+	rec.Set("swap_total", req.GetSwapTotal())
+	rec.Set("mem_available", req.GetMemAvailable())
+	rec.Set("cpu_cores", req.GetCpuCores())
+	rec.Set("uptime_seconds", req.GetUptimeSeconds())
+
+	// Map partitions to JSON.
+	if parts := req.GetPartitions(); len(parts) > 0 {
+		type partJSON struct {
+			Mountpoint string  `json:"mountpoint"`
+			Device     string  `json:"device"`
+			FSType     string  `json:"fstype"`
+			Total      uint64  `json:"total"`
+			Used       uint64  `json:"used"`
+			Available  uint64  `json:"available"`
+			Percent    float64 `json:"percent"`
+		}
+		plist := make([]partJSON, 0, len(parts))
+		for _, p := range parts {
+			plist = append(plist, partJSON{
+				Mountpoint: p.GetMountpoint(),
+				Device:     p.GetDevice(),
+				FSType:     p.GetFstype(),
+				Total:      p.GetTotal(),
+				Used:       p.GetUsed(),
+				Available:  p.GetAvailable(),
+				Percent:    p.GetPercent(),
+			})
+		}
+		rec.Set("partitions", plist)
+	}
+
+	// Map temperatures to JSON.
+	if temps := req.GetTemperatures(); len(temps) > 0 {
+		type tempJSON struct {
+			Name    string  `json:"name"`
+			Celsius float64 `json:"celsius"`
+		}
+		tlist := make([]tempJSON, 0, len(temps))
+		for _, t := range temps {
+			tlist = append(tlist, tempJSON{
+				Name:    t.GetName(),
+				Celsius: t.GetCelsius(),
+			})
+		}
+		rec.Set("temperatures", tlist)
+	}
 
 	if err := s.app.Save(rec); err != nil {
 		return fmt.Errorf("save server metric: %w", err)
 	}
+
+	// Denormalize current metrics to the server record for fast table queries.
+	s.denormalizeServerMetrics(serverID, req)
+
 	return nil
 }
 
@@ -87,7 +140,45 @@ func (s *MetricsStore) SaveContainerMetrics(serverID string, req *agentpb.Stream
 	if err := s.app.Save(rec); err != nil {
 		return fmt.Errorf("save container metric: %w", err)
 	}
+
+	// Denormalize current metrics to the container record for fast table queries.
+	s.denormalizeContainerMetrics(containerRecID, req)
+
 	return nil
+}
+
+// denormalizeServerMetrics updates the server record with current live metrics.
+func (s *MetricsStore) denormalizeServerMetrics(serverID string, req *agentpb.StreamMetricsRequest) {
+	server, err := s.app.FindRecordById(constants.CollServers, serverID)
+	if err != nil {
+		slog.Debug("metrics: denormalize server failed to find record", "server_id", serverID, "error", err)
+		return
+	}
+	server.Set("current_cpu", req.GetCpuPercent())
+	server.Set("current_ram", req.GetMemPercent())
+	if req.GetDiskTotal() > 0 {
+		server.Set("current_disk", float64(req.GetDiskUsed())/float64(req.GetDiskTotal())*100)
+	}
+	server.Set("uptime_seconds", req.GetUptimeSeconds())
+	server.Set("last_seen", time.Now().UTC())
+	if err := s.app.Save(server); err != nil {
+		slog.Error("metrics: denormalize server metrics failed", "server_id", serverID, "error", err)
+	}
+}
+
+// denormalizeContainerMetrics updates the container record with current live metrics.
+func (s *MetricsStore) denormalizeContainerMetrics(containerRecID string, req *agentpb.StreamContainerMetricsRequest) {
+	container, err := s.app.FindRecordById(constants.CollContainers, containerRecID)
+	if err != nil {
+		slog.Debug("metrics: denormalize container failed to find record", "container_id", containerRecID, "error", err)
+		return
+	}
+	container.Set("current_cpu", req.GetCpuPercent())
+	container.Set("current_ram", req.GetMemUsed())
+	container.Set("current_ram_limit", req.GetMemLimit())
+	if err := s.app.Save(container); err != nil {
+		slog.Error("metrics: denormalize container metrics failed", "container_id", containerRecID, "error", err)
+	}
 }
 
 // resolveContainerID looks up the PB record ID for a container by server + container_id.
