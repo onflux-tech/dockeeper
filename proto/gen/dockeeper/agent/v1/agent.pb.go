@@ -6392,7 +6392,8 @@ func (*OpenDataStreamResponse_Data) isOpenDataStreamResponse_Payload() {}
 type DataStreamText struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Line          string                 `protobuf:"bytes,1,opt,name=line,proto3" json:"line,omitempty"`
-	Stream        string                 `protobuf:"bytes,2,opt,name=stream,proto3" json:"stream,omitempty"` // "stdout", "stderr"
+	Stream        string                 `protobuf:"bytes,2,opt,name=stream,proto3" json:"stream,omitempty"`       // "stdout", "stderr"
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // Original source timestamp (e.g. Docker log time)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6439,6 +6440,13 @@ func (x *DataStreamText) GetStream() string {
 		return x.Stream
 	}
 	return ""
+}
+
+func (x *DataStreamText) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
 }
 
 // Progress payload for image pull, backup, etc.
@@ -7518,10 +7526,11 @@ const file_dockeeper_agent_v1_agent_proto_rawDesc = "" +
 	"\tstream_id\x18\x01 \x01(\tR\bstreamId\x12>\n" +
 	"\x06cancel\x18\x02 \x01(\v2$.dockeeper.agent.v1.DataStreamCancelH\x00R\x06cancel\x12\x14\n" +
 	"\x04data\x18\x03 \x01(\fH\x00R\x04dataB\t\n" +
-	"\apayload\"<\n" +
+	"\apayload\"v\n" +
 	"\x0eDataStreamText\x12\x12\n" +
 	"\x04line\x18\x01 \x01(\tR\x04line\x12\x16\n" +
-	"\x06stream\x18\x02 \x01(\tR\x06stream\"\x86\x01\n" +
+	"\x06stream\x18\x02 \x01(\tR\x06stream\x128\n" +
+	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x86\x01\n" +
 	"\x12DataStreamProgress\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x0e\n" +
@@ -7827,84 +7836,85 @@ var file_dockeeper_agent_v1_agent_proto_depIdxs = []int32{
 	87,  // 72: dockeeper.agent.v1.OpenDataStreamRequest.complete:type_name -> dockeeper.agent.v1.DataStreamComplete
 	88,  // 73: dockeeper.agent.v1.OpenDataStreamRequest.error:type_name -> dockeeper.agent.v1.DataStreamError
 	89,  // 74: dockeeper.agent.v1.OpenDataStreamResponse.cancel:type_name -> dockeeper.agent.v1.DataStreamCancel
-	94,  // 75: dockeeper.agent.v1.OpenExecStreamRequest.exit:type_name -> dockeeper.agent.v1.ExecStreamExit
-	92,  // 76: dockeeper.agent.v1.OpenExecStreamResponse.resize:type_name -> dockeeper.agent.v1.ExecStreamResize
-	93,  // 77: dockeeper.agent.v1.OpenExecStreamResponse.close:type_name -> dockeeper.agent.v1.ExecStreamClose
-	3,   // 78: dockeeper.agent.v1.AgentEnrollmentService.Enroll:input_type -> dockeeper.agent.v1.EnrollRequest
-	5,   // 79: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:input_type -> dockeeper.agent.v1.RenewCertRequest
-	7,   // 80: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:input_type -> dockeeper.agent.v1.StreamMetricsRequest
-	11,  // 81: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:input_type -> dockeeper.agent.v1.StreamContainerMetricsRequest
-	15,  // 82: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:input_type -> dockeeper.agent.v1.ReportContainersRequest
-	18,  // 83: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:input_type -> dockeeper.agent.v1.ReportImagesRequest
-	21,  // 84: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:input_type -> dockeeper.agent.v1.ReportNetworksRequest
-	24,  // 85: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:input_type -> dockeeper.agent.v1.ReportVolumesRequest
-	26,  // 86: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:input_type -> dockeeper.agent.v1.ExecuteCommandRequest
-	30,  // 87: dockeeper.agent.v1.AgentExecService.Exec:input_type -> dockeeper.agent.v1.ExecRequest
-	32,  // 88: dockeeper.agent.v1.AgentLogsService.StreamLogs:input_type -> dockeeper.agent.v1.StreamLogsRequest
-	34,  // 89: dockeeper.agent.v1.AgentImageService.PullImage:input_type -> dockeeper.agent.v1.ImagePullRequest
-	36,  // 90: dockeeper.agent.v1.AgentImageService.RemoveImage:input_type -> dockeeper.agent.v1.ImageRemoveRequest
-	38,  // 91: dockeeper.agent.v1.AgentImageService.PruneImages:input_type -> dockeeper.agent.v1.ImagePruneRequest
-	40,  // 92: dockeeper.agent.v1.AgentComposeService.ComposeUp:input_type -> dockeeper.agent.v1.ComposeRequest
-	40,  // 93: dockeeper.agent.v1.AgentComposeService.ComposeDown:input_type -> dockeeper.agent.v1.ComposeRequest
-	40,  // 94: dockeeper.agent.v1.AgentComposeService.ComposePull:input_type -> dockeeper.agent.v1.ComposeRequest
-	42,  // 95: dockeeper.agent.v1.AgentComposeService.ComposeConfig:input_type -> dockeeper.agent.v1.ComposeConfigRequest
-	44,  // 96: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:input_type -> dockeeper.agent.v1.CreateNetworkRequest
-	46,  // 97: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:input_type -> dockeeper.agent.v1.RemoveNetworkRequest
-	48,  // 98: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:input_type -> dockeeper.agent.v1.NetworkConnectRequest
-	50,  // 99: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:input_type -> dockeeper.agent.v1.NetworkDisconnectRequest
-	52,  // 100: dockeeper.agent.v1.AgentVolumeService.CreateVolume:input_type -> dockeeper.agent.v1.CreateVolumeRequest
-	54,  // 101: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:input_type -> dockeeper.agent.v1.RemoveVolumeRequest
-	56,  // 102: dockeeper.agent.v1.AgentVolumeService.InspectVolume:input_type -> dockeeper.agent.v1.InspectVolumeRequest
-	59,  // 103: dockeeper.agent.v1.AgentBackupService.BackupVolume:input_type -> dockeeper.agent.v1.BackupVolumeRequest
-	60,  // 104: dockeeper.agent.v1.AgentBackupService.RestoreVolume:input_type -> dockeeper.agent.v1.RestoreVolumeRequest
-	63,  // 105: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:input_type -> dockeeper.agent.v1.ReportTraefikRoutesRequest
-	65,  // 106: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:input_type -> dockeeper.agent.v1.CheckImageDigestRequest
-	67,  // 107: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:input_type -> dockeeper.agent.v1.ExecuteContainerUpdateRequest
-	69,  // 108: dockeeper.agent.v1.AgentUpdateService.UpdateAgentBinary:input_type -> dockeeper.agent.v1.UpdateBinaryChunk
-	71,  // 109: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:input_type -> dockeeper.agent.v1.ExecuteHealthCheckRequest
-	73,  // 110: dockeeper.agent.v1.AgentCommandChannelService.OpenChannel:input_type -> dockeeper.agent.v1.OpenChannelRequest
-	83,  // 111: dockeeper.agent.v1.AgentDataStreamService.OpenDataStream:input_type -> dockeeper.agent.v1.OpenDataStreamRequest
-	90,  // 112: dockeeper.agent.v1.AgentExecStreamService.OpenExecStream:input_type -> dockeeper.agent.v1.OpenExecStreamRequest
-	4,   // 113: dockeeper.agent.v1.AgentEnrollmentService.Enroll:output_type -> dockeeper.agent.v1.EnrollResponse
-	6,   // 114: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:output_type -> dockeeper.agent.v1.RenewCertResponse
-	10,  // 115: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:output_type -> dockeeper.agent.v1.StreamMetricsResponse
-	12,  // 116: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:output_type -> dockeeper.agent.v1.StreamContainerMetricsResponse
-	16,  // 117: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:output_type -> dockeeper.agent.v1.ReportContainersResponse
-	19,  // 118: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:output_type -> dockeeper.agent.v1.ReportImagesResponse
-	22,  // 119: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:output_type -> dockeeper.agent.v1.ReportNetworksResponse
-	25,  // 120: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:output_type -> dockeeper.agent.v1.ReportVolumesResponse
-	27,  // 121: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:output_type -> dockeeper.agent.v1.ExecuteCommandResponse
-	31,  // 122: dockeeper.agent.v1.AgentExecService.Exec:output_type -> dockeeper.agent.v1.ExecResponse
-	33,  // 123: dockeeper.agent.v1.AgentLogsService.StreamLogs:output_type -> dockeeper.agent.v1.StreamLogsResponse
-	35,  // 124: dockeeper.agent.v1.AgentImageService.PullImage:output_type -> dockeeper.agent.v1.ImagePullProgress
-	37,  // 125: dockeeper.agent.v1.AgentImageService.RemoveImage:output_type -> dockeeper.agent.v1.ImageRemoveResponse
-	39,  // 126: dockeeper.agent.v1.AgentImageService.PruneImages:output_type -> dockeeper.agent.v1.ImagePruneResponse
-	41,  // 127: dockeeper.agent.v1.AgentComposeService.ComposeUp:output_type -> dockeeper.agent.v1.ComposeOutput
-	41,  // 128: dockeeper.agent.v1.AgentComposeService.ComposeDown:output_type -> dockeeper.agent.v1.ComposeOutput
-	41,  // 129: dockeeper.agent.v1.AgentComposeService.ComposePull:output_type -> dockeeper.agent.v1.ComposeOutput
-	43,  // 130: dockeeper.agent.v1.AgentComposeService.ComposeConfig:output_type -> dockeeper.agent.v1.ComposeConfigResponse
-	45,  // 131: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:output_type -> dockeeper.agent.v1.CreateNetworkResponse
-	47,  // 132: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:output_type -> dockeeper.agent.v1.RemoveNetworkResponse
-	49,  // 133: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:output_type -> dockeeper.agent.v1.NetworkConnectResponse
-	51,  // 134: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:output_type -> dockeeper.agent.v1.NetworkDisconnectResponse
-	53,  // 135: dockeeper.agent.v1.AgentVolumeService.CreateVolume:output_type -> dockeeper.agent.v1.CreateVolumeResponse
-	55,  // 136: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:output_type -> dockeeper.agent.v1.RemoveVolumeResponse
-	57,  // 137: dockeeper.agent.v1.AgentVolumeService.InspectVolume:output_type -> dockeeper.agent.v1.InspectVolumeResponse
-	61,  // 138: dockeeper.agent.v1.AgentBackupService.BackupVolume:output_type -> dockeeper.agent.v1.BackupProgress
-	61,  // 139: dockeeper.agent.v1.AgentBackupService.RestoreVolume:output_type -> dockeeper.agent.v1.BackupProgress
-	64,  // 140: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:output_type -> dockeeper.agent.v1.ReportTraefikRoutesResponse
-	66,  // 141: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:output_type -> dockeeper.agent.v1.CheckImageDigestResponse
-	68,  // 142: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:output_type -> dockeeper.agent.v1.ContainerUpdateProgress
-	70,  // 143: dockeeper.agent.v1.AgentUpdateService.UpdateAgentBinary:output_type -> dockeeper.agent.v1.UpdateBinaryResponse
-	72,  // 144: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:output_type -> dockeeper.agent.v1.ExecuteHealthCheckResponse
-	74,  // 145: dockeeper.agent.v1.AgentCommandChannelService.OpenChannel:output_type -> dockeeper.agent.v1.OpenChannelResponse
-	84,  // 146: dockeeper.agent.v1.AgentDataStreamService.OpenDataStream:output_type -> dockeeper.agent.v1.OpenDataStreamResponse
-	91,  // 147: dockeeper.agent.v1.AgentExecStreamService.OpenExecStream:output_type -> dockeeper.agent.v1.OpenExecStreamResponse
-	113, // [113:148] is the sub-list for method output_type
-	78,  // [78:113] is the sub-list for method input_type
-	78,  // [78:78] is the sub-list for extension type_name
-	78,  // [78:78] is the sub-list for extension extendee
-	0,   // [0:78] is the sub-list for field type_name
+	99,  // 75: dockeeper.agent.v1.DataStreamText.timestamp:type_name -> google.protobuf.Timestamp
+	94,  // 76: dockeeper.agent.v1.OpenExecStreamRequest.exit:type_name -> dockeeper.agent.v1.ExecStreamExit
+	92,  // 77: dockeeper.agent.v1.OpenExecStreamResponse.resize:type_name -> dockeeper.agent.v1.ExecStreamResize
+	93,  // 78: dockeeper.agent.v1.OpenExecStreamResponse.close:type_name -> dockeeper.agent.v1.ExecStreamClose
+	3,   // 79: dockeeper.agent.v1.AgentEnrollmentService.Enroll:input_type -> dockeeper.agent.v1.EnrollRequest
+	5,   // 80: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:input_type -> dockeeper.agent.v1.RenewCertRequest
+	7,   // 81: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:input_type -> dockeeper.agent.v1.StreamMetricsRequest
+	11,  // 82: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:input_type -> dockeeper.agent.v1.StreamContainerMetricsRequest
+	15,  // 83: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:input_type -> dockeeper.agent.v1.ReportContainersRequest
+	18,  // 84: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:input_type -> dockeeper.agent.v1.ReportImagesRequest
+	21,  // 85: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:input_type -> dockeeper.agent.v1.ReportNetworksRequest
+	24,  // 86: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:input_type -> dockeeper.agent.v1.ReportVolumesRequest
+	26,  // 87: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:input_type -> dockeeper.agent.v1.ExecuteCommandRequest
+	30,  // 88: dockeeper.agent.v1.AgentExecService.Exec:input_type -> dockeeper.agent.v1.ExecRequest
+	32,  // 89: dockeeper.agent.v1.AgentLogsService.StreamLogs:input_type -> dockeeper.agent.v1.StreamLogsRequest
+	34,  // 90: dockeeper.agent.v1.AgentImageService.PullImage:input_type -> dockeeper.agent.v1.ImagePullRequest
+	36,  // 91: dockeeper.agent.v1.AgentImageService.RemoveImage:input_type -> dockeeper.agent.v1.ImageRemoveRequest
+	38,  // 92: dockeeper.agent.v1.AgentImageService.PruneImages:input_type -> dockeeper.agent.v1.ImagePruneRequest
+	40,  // 93: dockeeper.agent.v1.AgentComposeService.ComposeUp:input_type -> dockeeper.agent.v1.ComposeRequest
+	40,  // 94: dockeeper.agent.v1.AgentComposeService.ComposeDown:input_type -> dockeeper.agent.v1.ComposeRequest
+	40,  // 95: dockeeper.agent.v1.AgentComposeService.ComposePull:input_type -> dockeeper.agent.v1.ComposeRequest
+	42,  // 96: dockeeper.agent.v1.AgentComposeService.ComposeConfig:input_type -> dockeeper.agent.v1.ComposeConfigRequest
+	44,  // 97: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:input_type -> dockeeper.agent.v1.CreateNetworkRequest
+	46,  // 98: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:input_type -> dockeeper.agent.v1.RemoveNetworkRequest
+	48,  // 99: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:input_type -> dockeeper.agent.v1.NetworkConnectRequest
+	50,  // 100: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:input_type -> dockeeper.agent.v1.NetworkDisconnectRequest
+	52,  // 101: dockeeper.agent.v1.AgentVolumeService.CreateVolume:input_type -> dockeeper.agent.v1.CreateVolumeRequest
+	54,  // 102: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:input_type -> dockeeper.agent.v1.RemoveVolumeRequest
+	56,  // 103: dockeeper.agent.v1.AgentVolumeService.InspectVolume:input_type -> dockeeper.agent.v1.InspectVolumeRequest
+	59,  // 104: dockeeper.agent.v1.AgentBackupService.BackupVolume:input_type -> dockeeper.agent.v1.BackupVolumeRequest
+	60,  // 105: dockeeper.agent.v1.AgentBackupService.RestoreVolume:input_type -> dockeeper.agent.v1.RestoreVolumeRequest
+	63,  // 106: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:input_type -> dockeeper.agent.v1.ReportTraefikRoutesRequest
+	65,  // 107: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:input_type -> dockeeper.agent.v1.CheckImageDigestRequest
+	67,  // 108: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:input_type -> dockeeper.agent.v1.ExecuteContainerUpdateRequest
+	69,  // 109: dockeeper.agent.v1.AgentUpdateService.UpdateAgentBinary:input_type -> dockeeper.agent.v1.UpdateBinaryChunk
+	71,  // 110: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:input_type -> dockeeper.agent.v1.ExecuteHealthCheckRequest
+	73,  // 111: dockeeper.agent.v1.AgentCommandChannelService.OpenChannel:input_type -> dockeeper.agent.v1.OpenChannelRequest
+	83,  // 112: dockeeper.agent.v1.AgentDataStreamService.OpenDataStream:input_type -> dockeeper.agent.v1.OpenDataStreamRequest
+	90,  // 113: dockeeper.agent.v1.AgentExecStreamService.OpenExecStream:input_type -> dockeeper.agent.v1.OpenExecStreamRequest
+	4,   // 114: dockeeper.agent.v1.AgentEnrollmentService.Enroll:output_type -> dockeeper.agent.v1.EnrollResponse
+	6,   // 115: dockeeper.agent.v1.AgentEnrollmentService.RenewCert:output_type -> dockeeper.agent.v1.RenewCertResponse
+	10,  // 116: dockeeper.agent.v1.AgentMetricsService.StreamMetrics:output_type -> dockeeper.agent.v1.StreamMetricsResponse
+	12,  // 117: dockeeper.agent.v1.AgentMetricsService.StreamContainerMetrics:output_type -> dockeeper.agent.v1.StreamContainerMetricsResponse
+	16,  // 118: dockeeper.agent.v1.AgentDiscoveryService.ReportContainers:output_type -> dockeeper.agent.v1.ReportContainersResponse
+	19,  // 119: dockeeper.agent.v1.AgentDiscoveryService.ReportImages:output_type -> dockeeper.agent.v1.ReportImagesResponse
+	22,  // 120: dockeeper.agent.v1.AgentDiscoveryService.ReportNetworks:output_type -> dockeeper.agent.v1.ReportNetworksResponse
+	25,  // 121: dockeeper.agent.v1.AgentDiscoveryService.ReportVolumes:output_type -> dockeeper.agent.v1.ReportVolumesResponse
+	27,  // 122: dockeeper.agent.v1.AgentCommandsService.ExecuteCommand:output_type -> dockeeper.agent.v1.ExecuteCommandResponse
+	31,  // 123: dockeeper.agent.v1.AgentExecService.Exec:output_type -> dockeeper.agent.v1.ExecResponse
+	33,  // 124: dockeeper.agent.v1.AgentLogsService.StreamLogs:output_type -> dockeeper.agent.v1.StreamLogsResponse
+	35,  // 125: dockeeper.agent.v1.AgentImageService.PullImage:output_type -> dockeeper.agent.v1.ImagePullProgress
+	37,  // 126: dockeeper.agent.v1.AgentImageService.RemoveImage:output_type -> dockeeper.agent.v1.ImageRemoveResponse
+	39,  // 127: dockeeper.agent.v1.AgentImageService.PruneImages:output_type -> dockeeper.agent.v1.ImagePruneResponse
+	41,  // 128: dockeeper.agent.v1.AgentComposeService.ComposeUp:output_type -> dockeeper.agent.v1.ComposeOutput
+	41,  // 129: dockeeper.agent.v1.AgentComposeService.ComposeDown:output_type -> dockeeper.agent.v1.ComposeOutput
+	41,  // 130: dockeeper.agent.v1.AgentComposeService.ComposePull:output_type -> dockeeper.agent.v1.ComposeOutput
+	43,  // 131: dockeeper.agent.v1.AgentComposeService.ComposeConfig:output_type -> dockeeper.agent.v1.ComposeConfigResponse
+	45,  // 132: dockeeper.agent.v1.AgentNetworkService.CreateNetwork:output_type -> dockeeper.agent.v1.CreateNetworkResponse
+	47,  // 133: dockeeper.agent.v1.AgentNetworkService.RemoveNetwork:output_type -> dockeeper.agent.v1.RemoveNetworkResponse
+	49,  // 134: dockeeper.agent.v1.AgentNetworkService.ConnectContainer:output_type -> dockeeper.agent.v1.NetworkConnectResponse
+	51,  // 135: dockeeper.agent.v1.AgentNetworkService.DisconnectContainer:output_type -> dockeeper.agent.v1.NetworkDisconnectResponse
+	53,  // 136: dockeeper.agent.v1.AgentVolumeService.CreateVolume:output_type -> dockeeper.agent.v1.CreateVolumeResponse
+	55,  // 137: dockeeper.agent.v1.AgentVolumeService.RemoveVolume:output_type -> dockeeper.agent.v1.RemoveVolumeResponse
+	57,  // 138: dockeeper.agent.v1.AgentVolumeService.InspectVolume:output_type -> dockeeper.agent.v1.InspectVolumeResponse
+	61,  // 139: dockeeper.agent.v1.AgentBackupService.BackupVolume:output_type -> dockeeper.agent.v1.BackupProgress
+	61,  // 140: dockeeper.agent.v1.AgentBackupService.RestoreVolume:output_type -> dockeeper.agent.v1.BackupProgress
+	64,  // 141: dockeeper.agent.v1.AgentTraefikService.ReportTraefikRoutes:output_type -> dockeeper.agent.v1.ReportTraefikRoutesResponse
+	66,  // 142: dockeeper.agent.v1.AgentUpdateService.CheckImageDigest:output_type -> dockeeper.agent.v1.CheckImageDigestResponse
+	68,  // 143: dockeeper.agent.v1.AgentUpdateService.ExecuteContainerUpdate:output_type -> dockeeper.agent.v1.ContainerUpdateProgress
+	70,  // 144: dockeeper.agent.v1.AgentUpdateService.UpdateAgentBinary:output_type -> dockeeper.agent.v1.UpdateBinaryResponse
+	72,  // 145: dockeeper.agent.v1.AgentHealthService.ExecuteHealthCheck:output_type -> dockeeper.agent.v1.ExecuteHealthCheckResponse
+	74,  // 146: dockeeper.agent.v1.AgentCommandChannelService.OpenChannel:output_type -> dockeeper.agent.v1.OpenChannelResponse
+	84,  // 147: dockeeper.agent.v1.AgentDataStreamService.OpenDataStream:output_type -> dockeeper.agent.v1.OpenDataStreamResponse
+	91,  // 148: dockeeper.agent.v1.AgentExecStreamService.OpenExecStream:output_type -> dockeeper.agent.v1.OpenExecStreamResponse
+	114, // [114:149] is the sub-list for method output_type
+	79,  // [79:114] is the sub-list for method input_type
+	79,  // [79:79] is the sub-list for extension type_name
+	79,  // [79:79] is the sub-list for extension extendee
+	0,   // [0:79] is the sub-list for field type_name
 }
 
 func init() { file_dockeeper_agent_v1_agent_proto_init() }

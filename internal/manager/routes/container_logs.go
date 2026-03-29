@@ -168,10 +168,14 @@ func handleLogStream(e *core.RequestEvent, app core.App, registry *channel.Regis
 
 			// Handle text messages (log lines).
 			if text := res.entry.GetText(); text != nil {
+				ts := time.Now().UTC()
+				if text.GetTimestamp() != nil {
+					ts = text.GetTimestamp().AsTime()
+				}
 				ev := logEvent{
 					Stream:    text.GetStream(),
 					Message:   text.GetLine(),
-					Timestamp: time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+					Timestamp: ts.Format("2006-01-02T15:04:05.000Z"),
 				}
 				data, _ := json.Marshal(ev)
 				_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)
@@ -377,12 +381,16 @@ func handleMultiLogStream(e *core.RequestEvent, app core.App, registry *channel.
 
 			// Handle text messages (log lines).
 			if text := res.entry.GetText(); text != nil {
+				ts := time.Now().UTC()
+				if text.GetTimestamp() != nil {
+					ts = text.GetTimestamp().AsTime()
+				}
 				ev := multiLogEvent{
 					ContainerID:   res.containerID,
 					ContainerName: res.containerName,
 					Stream:        text.GetStream(),
 					Message:       text.GetLine(),
-					Timestamp:     time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+					Timestamp:     ts.Format("2006-01-02T15:04:05.000Z"),
 				}
 				data, _ := json.Marshal(ev)
 				_, _ = fmt.Fprintf(w, "event: log\ndata: %s\n\n", data)

@@ -151,14 +151,14 @@ func (c *Client) forwardTTYLogs(reader io.Reader, stream agentpb.AgentDataStream
 	for scanner.Scan() {
 		line := scanner.Text()
 		ts, msg := parseTimestampedLine(line)
-		_ = ts // timestamp embedded in the text line for DataStream
 
 		if err := stream.Send(&agentpb.OpenDataStreamRequest{
 			StreamId: streamID,
 			Payload: &agentpb.OpenDataStreamRequest_Text{
 				Text: &agentpb.DataStreamText{
-					Line:   msg,
-					Stream: "stdout",
+					Line:      msg,
+					Stream:    "stdout",
+					Timestamp: ts,
 				},
 			},
 		}); err != nil {
@@ -198,13 +198,14 @@ func (c *Client) forwardMuxLogs(reader io.Reader, stream agentpb.AgentDataStream
 			if line == "" {
 				continue
 			}
-			_, msg := parseTimestampedLine(line)
+			ts, msg := parseTimestampedLine(line)
 			if err := stream.Send(&agentpb.OpenDataStreamRequest{
 				StreamId: streamID,
 				Payload: &agentpb.OpenDataStreamRequest_Text{
 					Text: &agentpb.DataStreamText{
-						Line:   msg,
-						Stream: streamType,
+						Line:      msg,
+						Stream:    streamType,
+						Timestamp: ts,
 					},
 				},
 			}); err != nil {

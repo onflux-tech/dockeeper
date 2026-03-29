@@ -797,6 +797,7 @@ message OpenDataStreamResponse {
 message DataStreamText {
   string line = 1;
   string stream = 2; // "stdout", "stderr"
+  google.protobuf.Timestamp timestamp = 3; // Original source timestamp (e.g. Docker log time)
 }
 
 // Progress payload for image pull, backup, etc.
