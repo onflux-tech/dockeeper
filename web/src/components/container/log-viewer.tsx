@@ -284,7 +284,7 @@ export function LogViewer({ containerId, containerName }: LogViewerProps) {
 
 				{/* Tail selector */}
 				<Select value={String(tail)} onValueChange={(v) => setTail(Number(v))}>
-					<SelectTrigger className="h-7 w-24 text-xs">
+					<SelectTrigger size="sm" className="w-24 text-xs">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
