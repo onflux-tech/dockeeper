@@ -100,7 +100,7 @@ export function useScrollSpy(
     requestAnimationFrame(() => {
       isScrollingRef.current = false;
     });
-  }, [scrollContainerRef]);
+  }, []);
 
   return { activeId, scrollTo };
 }

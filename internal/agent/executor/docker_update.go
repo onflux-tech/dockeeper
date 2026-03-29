@@ -28,23 +28,38 @@ func ParseResourceUpdate(data string) (*ResourceUpdate, error) {
 	return &ru, nil
 }
 
-// UpdateResources applies resource limits to a running container without restart.
+// UpdateResources applies resource limits to a running container.
+// When all values are positive, Docker's ContainerUpdate is used (no restart).
+// When any value is zero (unlimited), the container is recreated because
+// Docker's ContainerUpdate ignores zero values for NanoCPUs and Memory.
 func (e *DockerExecutor) UpdateResources(ctx context.Context, containerID string, update *ResourceUpdate) Result {
+	needsRecreate := update.CPULimit == 0 || update.MemLimit == 0
+
+	if needsRecreate {
+		return e.recreateWithResources(ctx, containerID, update)
+	}
+	return e.hotUpdateResources(ctx, containerID, update)
+}
+
+// hotUpdateResources uses Docker ContainerUpdate for live resource changes (no restart).
+// Only called when all resource values are positive.
+func (e *DockerExecutor) hotUpdateResources(ctx context.Context, containerID string, update *ResourceUpdate) Result {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
+	pidsVal := update.PidsLimit
+	if pidsVal == 0 {
+		pidsVal = -1
+	}
+
 	resources := container.Resources{
-		NanoCPUs: int64(update.CPULimit * 1e9),
-		Memory:   update.MemLimit,
+		NanoCPUs:   int64(update.CPULimit * 1e9),
+		Memory:     update.MemLimit,
+		MemorySwap: update.MemLimit,
+		PidsLimit:  &pidsVal,
 	}
 
-	if update.PidsLimit > 0 {
-		resources.PidsLimit = &update.PidsLimit
-	}
-
-	_, err := e.cli.ContainerUpdate(ctx, containerID, container.UpdateConfig{
-		Resources: resources,
-	})
+	_, err := e.cli.ContainerUpdate(ctx, containerID, container.UpdateConfig{Resources: resources})
 	if err != nil {
 		return errResult(err, containerID)
 	}
@@ -52,6 +67,117 @@ func (e *DockerExecutor) UpdateResources(ctx context.Context, containerID string
 	return Result{
 		Success: true,
 		Output:  fmt.Sprintf("container %s resources updated", containerID),
+	}
+}
+
+// recreateWithResources recreates the container with new resource limits.
+// Required when clearing limits to zero/unlimited because Docker's ContainerUpdate
+// treats zero as "no change" for NanoCPUs and Memory.
+func (e *DockerExecutor) recreateWithResources(ctx context.Context, containerID string, update *ResourceUpdate) Result {
+	ctx, cancel := context.WithTimeout(ctx, 3*defaultTimeout)
+	defer cancel()
+
+	inspect, err := e.cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return errResult(err, containerID)
+	}
+
+	wasRunning := inspect.State != nil && inspect.State.Running
+	containerName := strings.TrimPrefix(inspect.Name, "/")
+
+	// Apply new resource limits to the host config.
+	hc := inspect.HostConfig
+
+	if update.CPULimit > 0 {
+		hc.NanoCPUs = int64(update.CPULimit * 1e9)
+	} else {
+		hc.NanoCPUs = 0
+		hc.CPUQuota = 0
+		hc.CPUPeriod = 0
+	}
+
+	if update.MemLimit > 0 {
+		hc.Memory = update.MemLimit
+		hc.MemorySwap = update.MemLimit
+	} else {
+		hc.Memory = 0
+		hc.MemorySwap = 0
+		hc.MemoryReservation = 0
+	}
+
+	if update.PidsLimit > 0 {
+		hc.PidsLimit = &update.PidsLimit
+	} else {
+		var unlimited int64
+		hc.PidsLimit = &unlimited
+	}
+
+	if wasRunning {
+		if stopErr := e.cli.ContainerStop(ctx, containerID, container.StopOptions{}); stopErr != nil {
+			return Result{Error: fmt.Sprintf("stop before resource recreate: %s", stopErr.Error())}
+		}
+	}
+
+	if removeErr := e.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{}); removeErr != nil {
+		if wasRunning {
+			_ = e.cli.ContainerStart(ctx, containerID, container.StartOptions{})
+		}
+		return Result{Error: fmt.Sprintf("remove before resource recreate: %s", removeErr.Error())}
+	}
+
+	slog.Info("container removed for resource reset",
+		"container_id", containerID,
+		"name", containerName,
+	)
+
+	config := inspect.Config
+	if config.ExposedPorts == nil {
+		config.ExposedPorts = nat.PortSet{}
+	}
+
+	var networkConfig *network.NetworkingConfig
+	if inspect.NetworkSettings != nil && len(inspect.NetworkSettings.Networks) > 0 {
+		endpoints := make(map[string]*network.EndpointSettings)
+		for name, ep := range inspect.NetworkSettings.Networks {
+			endpoints[name] = &network.EndpointSettings{
+				IPAMConfig: ep.IPAMConfig,
+				Aliases:    ep.Aliases,
+				NetworkID:  ep.NetworkID,
+				IPAddress:  ep.IPAddress,
+				MacAddress: ep.MacAddress,
+			}
+		}
+		networkConfig = &network.NetworkingConfig{EndpointsConfig: endpoints}
+	}
+
+	resp, createErr := e.cli.ContainerCreate(ctx, config, hc, networkConfig, nil, containerName)
+	if createErr != nil {
+		return Result{Error: fmt.Sprintf("recreate container %q: %s", containerName, createErr.Error())}
+	}
+
+	newID := resp.ID
+	if len(newID) > 12 {
+		newID = newID[:12]
+	}
+
+	if wasRunning {
+		if startErr := e.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); startErr != nil {
+			return Result{
+				Success: true,
+				Output:  fmt.Sprintf("container %s recreated but failed to start: %s", newID, startErr.Error()),
+			}
+		}
+	}
+
+	slog.Info("container recreated with updated resources",
+		"old_id", containerID,
+		"new_id", newID,
+		"name", containerName,
+	)
+
+	return Result{
+		Success: true,
+		Output:  fmt.Sprintf("container %s resources reset (new ID: %s)", containerName, newID),
 	}
 }
 

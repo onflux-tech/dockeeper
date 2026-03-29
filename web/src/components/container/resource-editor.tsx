@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Cpu, HardDrive, Users, Save } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Cpu, HardDrive, Users, Save, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -76,8 +76,25 @@ export function ResourceEditor({ container, isLoading }: ResourceEditorProps) {
 		setDirty(false);
 	}, [container]);
 
+	// Detect if any limit is being reset to unlimited while currently set.
+	const currentLimits = useMemo(
+		() => (container ? parseResourceLimits(container.resource_limits) : null),
+		[container],
+	);
+
+	const willRestart = useMemo(() => {
+		if (!currentLimits) return false;
+		const cpuReset = cpu === 0 && currentLimits.cpu_limit > 0;
+		const memReset = memMb === 0 && currentLimits.mem_limit > 0;
+		return cpuReset || memReset;
+	}, [cpu, memMb, currentLimits]);
+
 	const handleSave = useCallback(async () => {
 		if (!container) return;
+		if (memMb > 0 && memMb < 6) {
+			toast.error("Memory limit must be at least 6 MB or 0 (no limit)");
+			return;
+		}
 		setSaving(true);
 		try {
 			const token = getAccessToken();
@@ -99,14 +116,23 @@ export function ResourceEditor({ container, isLoading }: ResourceEditorProps) {
 				throw new Error(body.error || "Failed to update resources");
 			}
 
-			toast.success("Resource limits updated (applied without restart)");
+			const result = await res.json().catch(() => ({ success: true }));
+			if (result.success === false) {
+				throw new Error(result.error || "Agent failed to apply resource limits");
+			}
+
+			toast.success(
+				willRestart
+					? "Resource limits reset (container was briefly restarted)"
+					: "Resource limits updated (applied without restart)",
+			);
 			setDirty(false);
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : "Failed to update resources");
 		} finally {
 			setSaving(false);
 		}
-	}, [container, cpu, memMb, pids]);
+	}, [container, cpu, memMb, pids, willRestart]);
 
 	if (isLoading || !container) {
 		return (
@@ -131,7 +157,11 @@ export function ResourceEditor({ container, isLoading }: ResourceEditorProps) {
 			<CardHeader className="flex flex-row items-center justify-between">
 				<CardTitle className="text-sm">Resource Limits</CardTitle>
 				<Button size="sm" onClick={handleSave} disabled={!dirty || saving}>
-					<Save className="mr-1.5 h-3.5 w-3.5" />
+					{willRestart ? (
+						<RotateCw className="mr-1.5 h-3.5 w-3.5" />
+					) : (
+						<Save className="mr-1.5 h-3.5 w-3.5" />
+					)}
 					{saving ? "Applying..." : "Apply"}
 				</Button>
 			</CardHeader>
@@ -246,8 +276,12 @@ export function ResourceEditor({ container, isLoading }: ResourceEditorProps) {
 				</div>
 
 				<p className="text-xs text-muted-foreground">
-					Resource limits are applied immediately without restarting the container (Docker
-					hot-update). Set to 0 to remove the limit.
+					Set to 0 to remove the limit. Positive values are applied live via Docker hot-update.
+					{willRestart && (
+						<span className="mt-1 block font-medium text-yellow-600 dark:text-yellow-400">
+							Resetting CPU or Memory to unlimited requires a brief container restart.
+						</span>
+					)}
 				</p>
 			</CardContent>
 		</Card>

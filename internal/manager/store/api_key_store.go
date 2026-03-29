@@ -105,6 +105,12 @@ func (s *APIKeyStore) ValidateKey(plaintext string) (*core.Record, []string, err
 						caps = append(caps, str)
 					}
 				}
+			default:
+				// PocketBase may return types.JsonArray or similar;
+				// marshal+unmarshal as a fallback.
+				if b, err := json.Marshal(raw); err == nil {
+					_ = json.Unmarshal(b, &caps)
+				}
 			}
 
 			return rec, caps, nil

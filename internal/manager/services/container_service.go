@@ -334,3 +334,13 @@ func (s *ContainerService) InspectContainer(containerID string) (*core.Record, e
 	}
 	return record, nil
 }
+
+// This avoids a stale read between the Docker hot-update and the next agent sync.
+func (s *ContainerService) UpdateResourceLimits(containerID string, limits map[string]any) error {
+	record, err := s.app.FindRecordById(constants.CollContainers, containerID)
+	if err != nil {
+		return ErrContainerNotFound
+	}
+	record.Set("resource_limits", limits)
+	return s.app.Save(record)
+}

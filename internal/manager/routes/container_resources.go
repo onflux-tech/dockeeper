@@ -2,6 +2,7 @@ package routes
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -54,6 +55,11 @@ func handleGetResources(svc *services.ContainerService) func(e *core.RequestEven
 			}
 		case string:
 			_ = json.Unmarshal([]byte(v), &resp)
+		default:
+			// PocketBase may return types.JsonMap or similar; marshal+unmarshal as fallback.
+			if b, err := json.Marshal(raw); err == nil {
+				_ = json.Unmarshal(b, &resp)
+			}
 		}
 
 		return e.JSON(http.StatusOK, resp)
@@ -79,16 +85,36 @@ func handleUpdateResources(svc *services.ContainerService) func(e *core.RequestE
 		// Serialize to JSON for the params map.
 		resJSON, _ := json.Marshal(body)
 
+		// Get user ID from PB auth or API key context.
+		userID := ""
+		if e.Auth != nil {
+			userID = e.Auth.Id
+		} else {
+			userID = middleware.GetUserIDFromContext(e.Request.Context())
+		}
+
 		result, err := svc.ExecuteAction(
 			e.Request.Context(),
 			id,
 			agentpb.CommandType_COMMAND_TYPE_UPDATE_RESOURCES,
 			map[string]string{"resources": string(resJSON)},
-			e.Auth.Id,
+			userID,
 			e.RealIP(),
 		)
 		if err != nil {
 			return mapServiceError(e, err)
+		}
+
+		// Persist the new limits immediately so the UI reflects them before the next agent sync.
+		// Only persist when Docker actually applied the update.
+		if result.Success {
+			if err := svc.UpdateResourceLimits(id, map[string]any{
+				"cpu_limit":  body.CPULimit,
+				"mem_limit":  body.MemLimit,
+				"pids_limit": body.PidsLimit,
+			}); err != nil {
+				slog.Warn("failed to persist resource limits", "container_id", id, "error", err)
+			}
 		}
 
 		return e.JSON(http.StatusOK, result)
