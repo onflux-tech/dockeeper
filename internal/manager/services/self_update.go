@@ -287,6 +287,15 @@ func (s *SelfUpdateService) UpdateAgent(ctx context.Context, serverID, version s
 			}
 			if complete := msg.GetComplete(); complete != nil {
 				slog.Info("agent binary updated", "server", serverID, "version", version)
+
+				// Update agent_version in the server record.
+				if server, err := s.app.FindRecordById("servers", serverID); err == nil {
+					server.Set("agent_version", version)
+					if saveErr := s.app.Save(server); saveErr != nil {
+						slog.Warn("failed to update agent_version", "server", serverID, "error", saveErr)
+					}
+				}
+
 				return nil
 			}
 			if errPayload := msg.GetError(); errPayload != nil {
