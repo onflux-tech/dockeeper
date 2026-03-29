@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { DocsHeader } from "./docs-header";
+import { ChangelogDialog } from "./changelog-dialog";
 
 interface DocsLayoutProps {
   children: ReactNode;
@@ -25,12 +26,7 @@ export function DocsLayout({
 
       <div className="flex flex-1 overflow-hidden">{children}</div>
 
-      {/* ChangelogDialog will be wired here once built (Task 9) */}
-      {changelogOpen && (
-        <div className="hidden" data-changelog-placeholder>
-          <button onClick={() => onChangelogOpenChange(false)} />
-        </div>
-      )}
+      <ChangelogDialog open={changelogOpen} onOpenChange={onChangelogOpenChange} />
     </div>
   );
 }
