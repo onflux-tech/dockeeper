@@ -31,6 +31,10 @@ func NewGRPCClient(addr string, tlsCfg *tls.Config) (*GRPCClient, error) {
 	conn, err := grpc.NewClient(
 		addr,
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(16*1024*1024), // 16MB for binary update chunks
+			grpc.MaxCallSendMsgSize(16*1024*1024), // 16MB for large uploads
+		),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("dial manager: %w", err)

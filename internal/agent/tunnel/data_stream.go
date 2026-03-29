@@ -541,7 +541,8 @@ func (c *Client) streamAgentUpdate(ctx context.Context, params *agentpb.DataStre
 
 		data := msg.GetData()
 		if len(data) == 0 {
-			continue
+			// Empty data message = EOF sentinel from manager.
+			break
 		}
 
 		n, writeErr := tmpFile.Write(data)
@@ -599,6 +600,16 @@ func (c *Client) streamAgentUpdate(ctx context.Context, params *agentpb.DataStre
 			},
 		},
 	})
+
+	// Trigger graceful restart so the new binary takes effect.
+	// Short delay allows the complete message to be sent first.
+	if c.onShutdown != nil {
+		go func() {
+			time.Sleep(1 * time.Second)
+			c.logger.Info("restarting agent after binary update")
+			c.onShutdown()
+		}()
+	}
 
 	return nil
 }

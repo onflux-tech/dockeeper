@@ -290,6 +290,15 @@ func (s *SelfUpdateService) UpdateAgent(ctx context.Context, serverID, version s
 			}
 		}
 
+		// Signal end-of-data with an empty data message.
+		// gRPC server-side streams cannot CloseSend(), so we use empty data as EOF sentinel.
+		if sendErr := stream.Send(&agentpb.OpenDataStreamResponse{
+			StreamId: streamID,
+			Payload:  &agentpb.OpenDataStreamResponse_Data{Data: nil},
+		}); sendErr != nil {
+			return fmt.Errorf("send EOF signal: %w", sendErr)
+		}
+
 		// Wait for completion.
 		for {
 			msg, recvErr := stream.Recv()

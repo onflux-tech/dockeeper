@@ -34,6 +34,8 @@ func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr stri
 
 	gs := grpc.NewServer(
 		grpc.Creds(credentials.NewTLS(tlsCfg)),
+		grpc.MaxRecvMsgSize(16*1024*1024), // 16MB for large agent messages
+		grpc.MaxSendMsgSize(16*1024*1024), // 16MB for binary update chunks
 		grpc.ChainUnaryInterceptor(ChainUnaryInterceptors(tlsCfg)...),
 		grpc.ChainStreamInterceptor(ChainStreamInterceptors(tlsCfg)...),
 	)

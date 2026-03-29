@@ -49,7 +49,8 @@ type Client struct {
 	exec executor.Executor
 	orch collector.OrchestratorClient
 
-	logger *slog.Logger
+	onShutdown func() // triggers graceful agent restart (e.g. after binary update)
+	logger     *slog.Logger
 }
 
 // NewClient creates a tunnel client wired to the existing handlers.
@@ -82,6 +83,7 @@ func NewClient(
 
 		exec:   exec,
 		orch:   orch,
+		onShutdown: onShutdown,
 		logger: logger,
 	}
 
