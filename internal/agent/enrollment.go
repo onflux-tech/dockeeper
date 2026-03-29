@@ -11,6 +11,8 @@ import (
 
 	dockerclient "github.com/docker/docker/client"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -111,6 +113,19 @@ func collectServerInfo() (*agentpb.ServerInfo, error) {
 			info.DockerVersion = sv.Version
 		}
 		cli.Close()
+	}
+
+	// CPU model and core count.
+	if infos, cpuErr := cpu.Info(); cpuErr == nil && len(infos) > 0 {
+		info.CpuModel = infos[0].ModelName
+	}
+	if cores, cpuErr := cpu.Counts(true); cpuErr == nil {
+		info.CpuCores = uint32(cores)
+	}
+
+	// Total RAM.
+	if vm, memErr := mem.VirtualMemory(); memErr == nil {
+		info.MemTotal = vm.Total
 	}
 
 	return info, nil

@@ -21,6 +21,9 @@ message ServerInfo {
   string docker_version = 5;
   string agent_version = 6;
   string orchestrator = 7; // docker, podman, kubernetes
+  string cpu_model = 8;       // e.g. "Intel Core i7-12700K"
+  uint32 cpu_cores = 9;       // logical core count
+  uint64 mem_total = 10;      // total RAM bytes
 }
 
 message EnrollRequest {
@@ -67,6 +70,32 @@ message StreamMetricsRequest {
   double load_1m = 11;
   double load_5m = 12;
   double load_15m = 13;
+
+  // Enhanced monitoring fields
+  uint64 disk_io_read = 14;                   // bytes read since last sample (delta)
+  uint64 disk_io_write = 15;                  // bytes written since last sample (delta)
+  uint64 swap_used = 16;
+  uint64 swap_total = 17;
+  uint64 mem_available = 18;                  // available memory (accounts for buffers/cache)
+  uint32 cpu_cores = 19;                      // logical core count
+  uint64 uptime_seconds = 20;                 // host uptime
+  repeated TemperatureSensor temperatures = 21;
+  repeated DiskPartition partitions = 22;
+}
+
+message TemperatureSensor {
+  string name = 1;       // e.g. "coretemp_Core 0", "acpitz"
+  double celsius = 2;    // temperature in celsius
+}
+
+message DiskPartition {
+  string mountpoint = 1;  // e.g. "/", "/data", "/home"
+  string device = 2;      // e.g. "/dev/sda1", "C:"
+  string fstype = 3;      // e.g. "ext4", "xfs", "ntfs"
+  uint64 total = 4;       // total bytes
+  uint64 used = 5;        // used bytes
+  uint64 available = 6;   // available bytes (free, minus reserved blocks)
+  double percent = 7;     // usage percentage
 }
 
 message StreamMetricsResponse {

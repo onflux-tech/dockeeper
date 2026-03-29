@@ -85,19 +85,47 @@ func (m *MetricsCollector) collectSystem(ctx context.Context) {
 	}
 
 	req := &agentpb.StreamMetricsRequest{
-		ServerId:   m.serverID,
-		Timestamp:  timestamppb.Now(),
-		CpuPercent: sm.CPUPercent,
-		MemPercent: sm.MemPercent,
-		MemUsed:    sm.MemUsed,
-		MemTotal:   sm.MemTotal,
-		DiskUsed:   sm.DiskUsed,
-		DiskTotal:  sm.DiskTotal,
-		NetRx:      sm.NetRx,
-		NetTx:      sm.NetTx,
-		Load_1M:    sm.Load1m,
-		Load_5M:    sm.Load5m,
-		Load_15M:   sm.Load15m,
+		ServerId:      m.serverID,
+		Timestamp:     timestamppb.Now(),
+		CpuPercent:    sm.CPUPercent,
+		MemPercent:    sm.MemPercent,
+		MemUsed:       sm.MemUsed,
+		MemTotal:      sm.MemTotal,
+		DiskUsed:      sm.DiskUsed,
+		DiskTotal:     sm.DiskTotal,
+		NetRx:         sm.NetRx,
+		NetTx:         sm.NetTx,
+		Load_1M:       sm.Load1m,
+		Load_5M:       sm.Load5m,
+		Load_15M:      sm.Load15m,
+		DiskIoRead:    sm.DiskIORead,
+		DiskIoWrite:   sm.DiskIOWrite,
+		SwapUsed:      sm.SwapUsed,
+		SwapTotal:     sm.SwapTotal,
+		MemAvailable:  sm.MemAvailable,
+		CpuCores:      sm.CPUCores,
+		UptimeSeconds: sm.UptimeSeconds,
+	}
+
+	// Map temperature sensors.
+	for _, t := range sm.Temperatures {
+		req.Temperatures = append(req.Temperatures, &agentpb.TemperatureSensor{
+			Name:    t.Name,
+			Celsius: t.Celsius,
+		})
+	}
+
+	// Map disk partitions.
+	for _, p := range sm.Partitions {
+		req.Partitions = append(req.Partitions, &agentpb.DiskPartition{
+			Mountpoint: p.Mountpoint,
+			Device:     p.Device,
+			Fstype:     p.FSType,
+			Total:      p.Total,
+			Used:       p.Used,
+			Available:  p.Available,
+			Percent:    p.Percent,
+		})
 	}
 
 	if err := stream.Send(req); err != nil {
