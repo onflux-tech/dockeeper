@@ -52,6 +52,7 @@ import {
 	useDeleteGroup,
 	useUpdateGroup,
 	useAddMember,
+	useRemoveMember,
 	useAPIKeys,
 	useCreateAPIKey,
 	useDeleteAPIKey,
@@ -88,18 +89,21 @@ function UsersTab() {
 	const updateUser = useUpdateUser();
 	const deleteUser = useDeleteUser();
 	const addMember = useAddMember();
+	const removeMember = useRemoveMember();
 
 	const [showCreate, setShowCreate] = useState(false);
 	const [editId, setEditId] = useState<string | null>(null);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [groupId, setGroupId] = useState("");
+	const [originalGroupId, setOriginalGroupId] = useState("");
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
 	function resetForm() {
 		setEmail("");
 		setPassword("");
 		setGroupId("");
+		setOriginalGroupId("");
 		setEditId(null);
 		setShowCreate(false);
 	}
@@ -108,7 +112,9 @@ function UsersTab() {
 		setEditId(user.id);
 		setEmail(user.email);
 		setPassword("");
-		setGroupId(user.groups?.[0]?.id ?? "");
+		const currentGroup = user.groups?.[0]?.id ?? "none";
+		setGroupId(currentGroup);
+		setOriginalGroupId(currentGroup);
 		setShowCreate(true);
 	}
 
@@ -134,7 +140,22 @@ function UsersTab() {
 				email,
 				...(password ? { password } : {}),
 			},
-			{ onSuccess: resetForm },
+			{
+				onSuccess: () => {
+					// Handle group membership change.
+					const newGroup = groupId === "none" ? "" : groupId;
+					const oldGroup = originalGroupId === "none" ? "" : originalGroupId;
+					if (newGroup !== oldGroup) {
+						if (oldGroup) {
+							removeMember.mutate({ groupId: oldGroup, userId: editId });
+						}
+						if (newGroup) {
+							addMember.mutate({ groupId: newGroup, userId: editId });
+						}
+					}
+					resetForm();
+				},
+			},
 		);
 	}
 
@@ -252,24 +273,22 @@ function UsersTab() {
 								required={!editId}
 							/>
 						</div>
-						{!editId && (
-							<div className="space-y-2">
-								<Label>Group (optional)</Label>
-								<Select value={groupId} onValueChange={setGroupId}>
-									<SelectTrigger>
-										<SelectValue placeholder="No group" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="none">No group</SelectItem>
-										{groups?.map((g) => (
-											<SelectItem key={g.id} value={g.id}>
-												{g.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						)}
+						<div className="space-y-2">
+							<Label>Group</Label>
+							<Select value={groupId} onValueChange={setGroupId}>
+								<SelectTrigger>
+									<SelectValue placeholder="No group" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">No group</SelectItem>
+									{groups?.map((g) => (
+										<SelectItem key={g.id} value={g.id}>
+											{g.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 					</div>
 					<DialogFooter>
 						<Button variant="outline" onClick={resetForm}>
