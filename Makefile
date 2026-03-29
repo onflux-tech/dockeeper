@@ -6,7 +6,7 @@ GO       = go
 GOFLAGS  = -trimpath
 BIN_DIR  = bin
 
-.PHONY: all build-manager build-agent build lint format test clean dev proto-gen \
+.PHONY: all build-manager build-agent build lint format test clean dev dev-manager dev-agent proto-gen \
         dev-web build-web lint-web format-web test-web \
         build-all build-agent-dist docker-build docker-push release
 
@@ -41,10 +41,16 @@ test:
 	$(GO) test -count=1 ./...
 
 clean:
-	rm -rf $(BIN_DIR) web/dist
+	rm -rf $(BIN_DIR) tmp web/dist
 
 dev:
 	$(GO) run ./cmd/manager serve --http=0.0.0.0:8090 --dir=./dk_data
+
+dev-manager:
+	air -c .air.manager.toml
+
+dev-agent:
+	air -c .air.agent.toml
 
 ## ── Proto ────────────────────────────────────────────
 

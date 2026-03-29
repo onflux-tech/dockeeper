@@ -1,0 +1,19 @@
+root = "."
+tmp_dir = "tmp/agent"
+
+[build]
+  bin = "tmp/agent/dockeeper-agent.exe"
+  cmd = "go build -trimpath -o tmp/agent/dockeeper-agent.exe ./cmd/agent"
+  args_bin = ["--manager-url=localhost:50051", "--data-dir=./dk-agent-data"]
+  delay = 1000
+  exclude_dir = ["bin", "tmp", "web", "node_modules", "dk_data", "dk-agent-data", "proto/gen"]
+  exclude_regex = ["_test\\.go$"]
+  include_ext = ["go"]
+  include_dir = ["cmd/agent", "internal/agent", "internal/shared"]
+  kill_delay = 500
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true
