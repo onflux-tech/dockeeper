@@ -61,11 +61,36 @@ checksum:
 
 changelog:
   sort: asc
+  use: git
+  abbrev: -1
+  groups:
+    - title: "🚀 New Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "🐛 Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "⚡ Improvements"
+      regexp: '^.*?(perf|refactor|improve)(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "📦 Infrastructure & CI"
+      regexp: '^.*?(ci|build|docker|infra)(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: "📝 Documentation"
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: "🔒 Security"
+      regexp: '^.*?security(\([[:word:]]+\))??!?:.+$'
+      order: 5
+    - title: "🔧 Other Changes"
+      order: 999
   filters:
     exclude:
       - "^docs:"
       - "^test:"
-      - "^chore:"
+      - "^chore\\(deps\\):"
+      - "^Merge branch"
+      - "^Merge pull request"
 
 dockers:
   - id: manager-amd64
@@ -140,3 +165,21 @@ release:
     owner: onflux-tech
     name: dockeeper
   prerelease: auto
+  make_latest: true
+  header: |
+    ## What's Changed
+  footer: |
+    {{ if .Env.CONTRIBUTORS }}
+    ### 🤝 Contributors
+
+    {{ .Env.CONTRIBUTORS }}
+    {{ end }}
+
+    **Full Changelog**: https://github.com/onflux-tech/dockeeper/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ---
+    🐳 **Docker images:**
+    ```
+    docker pull ghcr.io/onflux-tech/dockeeper-manager:{{ .Version }}
+    docker pull ghcr.io/onflux-tech/dockeeper-agent:{{ .Version }}
+    ```

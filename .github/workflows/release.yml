@@ -51,6 +51,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate contributors
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            CONTRIBUTORS=$(gh api "repos/${{ github.repository }}/compare/${PREV_TAG}...${{ github.sha }}" \
+              --jq '[.commits[].author.login // empty] | unique | map(select(test("\\[bot\\]$") | not)) | map("@" + .) | join(", ")' 2>/dev/null || echo "")
+          else
+            CONTRIBUTORS=$(gh api "repos/${{ github.repository }}/commits?per_page=100" \
+              --jq '[.[].author.login // empty] | unique | map(select(test("\\[bot\\]$") | not)) | map("@" + .) | join(", ")' 2>/dev/null || echo "")
+          fi
+          echo "CONTRIBUTORS=${CONTRIBUTORS}" >> "$GITHUB_ENV"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
