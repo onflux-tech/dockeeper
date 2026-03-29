@@ -4,7 +4,7 @@ import pb from "@/lib/pb";
 import { invalidateCollectionQueries } from "@/lib/query-invalidation";
 import type { CollectionName } from "@/types/pocketbase";
 
-const DEBOUNCE_MS = 500;
+const DEFAULT_DEBOUNCE_MS = 500;
 
 /**
  * Subscribes to PocketBase realtime events (SSE) for a collection and
@@ -14,6 +14,11 @@ const DEBOUNCE_MS = 500;
  * Invalidation is debounced so that burst updates (e.g. agent reporting
  * many records at once) are collapsed into a single refetch.
  *
+ * @param name Collection name to subscribe to.
+ * @param debounceMs Custom debounce interval. Use higher values (e.g. 3000)
+ *   for collections that receive frequent metric-driven updates to reduce
+ *   unnecessary re-renders.
+ *
  * @example
  * function ServerList() {
  *   useRealtime("servers");
@@ -21,9 +26,10 @@ const DEBOUNCE_MS = 500;
  *   // `data` is automatically refreshed when a server record changes.
  * }
  */
-export function useRealtime(name: CollectionName) {
+export function useRealtime(name: CollectionName, debounceMs?: number) {
 	const queryClient = useQueryClient();
 	const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const interval = debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
 	useEffect(() => {
 		let unsubscribe: (() => Promise<void>) | undefined;
@@ -33,7 +39,7 @@ export function useRealtime(name: CollectionName) {
 				clearTimeout(timerRef.current);
 				timerRef.current = setTimeout(() => {
 					invalidateCollectionQueries(queryClient, name);
-				}, DEBOUNCE_MS);
+				}, interval);
 			})
 			.then((unsub) => {
 				unsubscribe = unsub;
@@ -45,5 +51,5 @@ export function useRealtime(name: CollectionName) {
 				void unsubscribe();
 			}
 		};
-	}, [name, queryClient]);
+	}, [name, queryClient, interval]);
 }

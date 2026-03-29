@@ -95,11 +95,11 @@ export default function ServersPage() {
 	const { data: serversResult, isLoading } = useCollection("servers", finalOptions);
 	const deleteServer = useDeleteServer();
 	const navigate = useNavigate();
-	useRealtime("servers");
+	useRealtime("servers", 3000);
 
 	// Fetch all containers for running/total count per server.
 	const { data: containersResult } = useCollection("containers", { perPage: 500 });
-	useRealtime("containers");
+	useRealtime("containers", 3000);
 	const containerCounts = useMemo(() => {
 		const map = new Map<string, { running: number; total: number }>();
 		for (const c of containersResult?.items ?? []) {

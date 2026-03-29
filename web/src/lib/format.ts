@@ -5,12 +5,12 @@ const DAY = 86_400;
 /**
  * Format bytes into a human-readable string (e.g. "2.1 GB").
  */
-export function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number, decimals = 1): string {
 	if (bytes === 0) return "0 B";
 	const units = ["B", "KB", "MB", "GB", "TB"];
 	const i = Math.floor(Math.log(bytes) / Math.log(1024));
 	const val = bytes / 1024 ** i;
-	return `${val.toFixed(1)} ${units[i]}`;
+	return `${val.toFixed(decimals)} ${units[i]}`;
 }
 
 /**
@@ -65,6 +65,16 @@ function formatFuture(secs: number): string {
 	if (secs < HOUR) return `in ${Math.floor(secs / MINUTE)}m`;
 	if (secs < DAY) return `in ${Math.floor(secs / HOUR)}h`;
 	return `in ${Math.floor(secs / DAY)}d`;
+}
+
+/**
+ * Returns a Tailwind text color class based on a percentage value threshold.
+ * Green (<50%), Yellow (50-80%), Red (>80%).
+ */
+export function formatPercentClass(value: number): string {
+	if (value >= 80) return "text-destructive";
+	if (value >= 50) return "text-yellow-500";
+	return "text-green-500";
 }
 
 /** Simple human-readable cron description. */

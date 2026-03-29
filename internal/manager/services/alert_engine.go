@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -310,6 +312,10 @@ func (e *AlertEngine) isUpdateInProgress(scope string) bool {
 }
 
 // queryMetrics fetches metric values for the given target within the duration window.
+// Supports direct field names (cpu_percent, disk_io_read, etc.) and computed metrics:
+//   - swap_percent: computed from swap_used/swap_total
+//   - max_temperature: max celsius from temperatures JSON array
+//   - partition_usage_<mountpoint>: percent usage from partitions JSON array
 func (e *AlertEngine) queryMetrics(targetType, targetID, metric string, durationSec int) ([]float64, error) {
 	cutoff := time.Now().UTC().Add(-time.Duration(durationSec) * time.Second).Format(time.RFC3339)
 
@@ -334,11 +340,117 @@ func (e *AlertEngine) queryMetrics(targetType, targetID, metric string, duration
 
 	values := make([]float64, 0, len(records))
 	for _, rec := range records {
-		val := rec.GetFloat(metric)
-		values = append(values, val)
+		val, ok := extractMetricValue(rec, metric)
+		if ok {
+			values = append(values, val)
+		}
 	}
 
 	return values, nil
+}
+
+// extractMetricValue reads a metric value from a record, handling both direct
+// fields and computed/derived metrics.
+func extractMetricValue(rec *core.Record, metric string) (float64, bool) {
+	switch metric {
+	case "swap_percent":
+		used := rec.GetFloat("swap_used")
+		total := rec.GetFloat("swap_total")
+		if total <= 0 {
+			return 0, true
+		}
+		return (used / total) * 100, true
+
+	case "max_temperature":
+		return extractMaxTemperature(rec), true
+
+	default:
+		// Check for partition_usage_<mountpoint> pattern.
+		if strings.HasPrefix(metric, "partition_usage_") {
+			mountpoint := strings.TrimPrefix(metric, "partition_usage_")
+			val, ok := extractPartitionUsage(rec, mountpoint)
+			return val, ok
+		}
+
+		// Direct field read — works for cpu_percent, mem_percent, disk_io_read,
+		// disk_io_write, swap_used, swap_total, mem_available, etc.
+		return rec.GetFloat(metric), true
+	}
+}
+
+// extractMaxTemperature parses the temperatures JSON field and returns the max celsius.
+func extractMaxTemperature(rec *core.Record) float64 {
+	raw := rec.Get("temperatures")
+	if raw == nil {
+		return 0
+	}
+
+	var temps []struct {
+		Celsius float64 `json:"celsius"`
+	}
+
+	switch v := raw.(type) {
+	case string:
+		if err := json.Unmarshal([]byte(v), &temps); err != nil {
+			return 0
+		}
+	case []any:
+		b, err := json.Marshal(v)
+		if err != nil {
+			return 0
+		}
+		if err := json.Unmarshal(b, &temps); err != nil {
+			return 0
+		}
+	default:
+		return 0
+	}
+
+	var maxTemp float64
+	for _, t := range temps {
+		if t.Celsius > maxTemp {
+			maxTemp = t.Celsius
+		}
+	}
+	return maxTemp
+}
+
+// extractPartitionUsage parses the partitions JSON field and returns the percent usage
+// for the given mountpoint.
+func extractPartitionUsage(rec *core.Record, mountpoint string) (float64, bool) {
+	raw := rec.Get("partitions")
+	if raw == nil {
+		return 0, false
+	}
+
+	var parts []struct {
+		Mountpoint string  `json:"mountpoint"`
+		Percent    float64 `json:"percent"`
+	}
+
+	switch v := raw.(type) {
+	case string:
+		if err := json.Unmarshal([]byte(v), &parts); err != nil {
+			return 0, false
+		}
+	case []any:
+		b, err := json.Marshal(v)
+		if err != nil {
+			return 0, false
+		}
+		if err := json.Unmarshal(b, &parts); err != nil {
+			return 0, false
+		}
+	default:
+		return 0, false
+	}
+
+	for _, p := range parts {
+		if p.Mountpoint == mountpoint {
+			return p.Percent, true
+		}
+	}
+	return 0, false
 }
 
 func compare(value float64, operator string, threshold float64) bool {
