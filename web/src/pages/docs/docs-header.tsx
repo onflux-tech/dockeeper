@@ -1,8 +1,9 @@
 import { Link } from "react-router";
-import { ArrowLeft, Container, KeyRound, Menu } from "lucide-react";
+import { ArrowLeft, KeyRound, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { DockeeperLogo } from "@/components/dockeeper-logo";
 import { changelog } from "@/data/changelog";
 
 interface DocsHeaderProps {
@@ -17,7 +18,7 @@ export function DocsHeader({
   onChangelogOpen,
 }: DocsHeaderProps) {
   return (
-    <header className="docs-header sticky top-0 z-50 flex h-16 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-md">
+    <header className="docs-header sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-md">
       {/* Mobile menu toggle */}
       <Button
         variant="ghost"
@@ -31,7 +32,7 @@ export function DocsHeader({
 
       {/* Brand */}
       <div className="flex items-center gap-2">
-        <Container className="h-5 w-5 shrink-0 text-primary" />
+        <DockeeperLogo size={32} />
         <span className="hidden text-lg font-semibold sm:inline">
           Dockeeper
         </span>
@@ -42,7 +43,7 @@ export function DocsHeader({
       {/* Version badge */}
       <button
         onClick={onChangelogOpen}
-        className="ml-1 cursor-pointer"
+        className="cursor-pointer"
         aria-label="Open changelog"
       >
         <Badge

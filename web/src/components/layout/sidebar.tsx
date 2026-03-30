@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router";
-import { Container } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DockeeperLogo } from "@/components/dockeeper-logo";
 import { navigation } from "@/lib/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -72,7 +72,7 @@ function SidebarHeader() {
 				collapsed ? "justify-center h-14" : "h-14 gap-2 px-4",
 			)}
 		>
-			<Container className="h-5 w-5 shrink-0 text-primary" />
+			<DockeeperLogo size={32} />
 			{!collapsed && (
 				<span className="text-lg font-semibold text-sidebar-foreground">Dockeeper</span>
 			)}
@@ -106,7 +106,7 @@ export function MobileSidebar() {
 		<Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
 			<SheetContent side="left" className="w-64 bg-sidebar p-0">
 				<SheetHeader className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-					<Container className="h-5 w-5 text-sidebar-primary" />
+					<DockeeperLogo size={32} />
 					<SheetTitle className="text-lg font-semibold text-sidebar-foreground">
 						Dockeeper
 					</SheetTitle>

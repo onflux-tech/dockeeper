@@ -3,12 +3,13 @@ import { useForm } from "react-hook-form";
 import { z } from "zod/v4";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Navigate } from "react-router";
-import { Container, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/auth-store";
 import { ApiRequestError, authApi } from "@/lib/api";
+import { DockeeperLogo } from "@/components/dockeeper-logo";
 
 const loginSchema = z.object({
 	email: z.email("Enter a valid email address"),
@@ -67,8 +68,8 @@ export default function LoginPage() {
 		>
 			<Card className="w-full max-w-sm">
 				<CardHeader className="text-center">
-					<div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-						<Container className="h-6 w-6 text-primary" />
+					<div className="mx-auto mb-2">
+						<DockeeperLogo size={48} />
 					</div>
 					<CardTitle className="text-2xl">Dockeeper</CardTitle>
 					<CardDescription>
