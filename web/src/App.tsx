@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { Routes, Route } from "react-router";
+import { RequireCapability } from "@/components/layout/require-capability";
 
 const ProtectedRoute = lazy(() => import("@/components/layout/protected-route"));
 const AppLayout = lazy(() => import("@/components/layout/app-layout"));
@@ -36,6 +37,11 @@ function RouteFallback() {
 	);
 }
 
+/** Helper to wrap a page with a capability check. */
+function Cap({ cap, children }: { cap: string; children: React.ReactNode }) {
+	return <RequireCapability capability={cap}>{children}</RequireCapability>;
+}
+
 function App() {
 	return (
 		<div className="min-h-screen bg-background text-foreground">
@@ -46,26 +52,26 @@ function App() {
 					<Route element={<ProtectedRoute />}>
 						<Route element={<AppLayout />}>
 							<Route index element={<DashboardPage />} />
-							<Route path="servers" element={<ServersPage />} />
-							<Route path="servers/create" element={<ServerCreatePage />} />
-							<Route path="servers/:id" element={<ServerDetailPage />} />
-							<Route path="containers" element={<ContainersPage />} />
-							<Route path="containers/create" element={<ContainerCreatePage />} />
-							<Route path="containers/:id" element={<ContainerDetailPage />} />
-							<Route path="containers/:id/terminal" element={<ContainerTerminalPage />} />
-							<Route path="images" element={<ImagesPage />} />
-							<Route path="compose" element={<ComposePage />} />
-							<Route path="compose/create" element={<ComposeCreatePage />} />
-							<Route path="networks" element={<NetworksPage />} />
-							<Route path="volumes" element={<VolumesPage />} />
-							<Route path="alerts" element={<AlertsPage />} />
-							<Route path="health-checks" element={<HealthChecksPage />} />
-							<Route path="backups" element={<BackupsPage />} />
-							<Route path="traefik" element={<TraefikPage />} />
-							<Route path="settings" element={<SettingsPage />} />
-							<Route path="audit-logs" element={<AuditLogsPage />} />
-							<Route path="users" element={<UsersPage />} />
-							<Route path="events" element={<EventsPage />} />
+							<Route path="servers" element={<Cap cap="servers.view"><ServersPage /></Cap>} />
+							<Route path="servers/create" element={<Cap cap="servers.manage"><ServerCreatePage /></Cap>} />
+							<Route path="servers/:id" element={<Cap cap="servers.view"><ServerDetailPage /></Cap>} />
+							<Route path="containers" element={<Cap cap="containers.view"><ContainersPage /></Cap>} />
+							<Route path="containers/create" element={<Cap cap="containers.manage"><ContainerCreatePage /></Cap>} />
+							<Route path="containers/:id" element={<Cap cap="containers.view"><ContainerDetailPage /></Cap>} />
+							<Route path="containers/:id/terminal" element={<Cap cap="containers.manage"><ContainerTerminalPage /></Cap>} />
+							<Route path="images" element={<Cap cap="images.view"><ImagesPage /></Cap>} />
+							<Route path="compose" element={<Cap cap="compose.view"><ComposePage /></Cap>} />
+							<Route path="compose/create" element={<Cap cap="compose.manage"><ComposeCreatePage /></Cap>} />
+							<Route path="networks" element={<Cap cap="networks.manage"><NetworksPage /></Cap>} />
+							<Route path="volumes" element={<Cap cap="volumes.manage"><VolumesPage /></Cap>} />
+							<Route path="alerts" element={<Cap cap="alerts.view"><AlertsPage /></Cap>} />
+							<Route path="health-checks" element={<Cap cap="health.view"><HealthChecksPage /></Cap>} />
+							<Route path="backups" element={<Cap cap="backups.view"><BackupsPage /></Cap>} />
+							<Route path="traefik" element={<Cap cap="traefik.view"><TraefikPage /></Cap>} />
+							<Route path="settings" element={<Cap cap="settings.view"><SettingsPage /></Cap>} />
+							<Route path="audit-logs" element={<Cap cap="audit.view"><AuditLogsPage /></Cap>} />
+							<Route path="users" element={<Cap cap="users.view"><UsersPage /></Cap>} />
+							<Route path="events" element={<Cap cap="events.view"><EventsPage /></Cap>} />
 						</Route>
 					</Route>
 				</Routes>

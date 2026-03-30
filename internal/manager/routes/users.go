@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -20,7 +21,7 @@ func RegisterUserRoutes(se *core.ServeEvent, app core.App, rbacStore *store.RBAC
 	users.GET("", handleListUsers(app, rbacStore)).BindFunc(rbac.RequireCapability(constants.CapUsersView))
 	users.POST("", handleCreateUser(app)).BindFunc(rbac.RequireCapability(constants.CapUsersManage))
 	users.PATCH("/{id}", handleUpdateUser(app)).BindFunc(rbac.RequireCapability(constants.CapUsersManage))
-	users.DELETE("/{id}", handleDeleteUser(app)).BindFunc(rbac.RequireCapability(constants.CapUsersManage))
+	users.DELETE("/{id}", handleDeleteUser(app, rbacStore)).BindFunc(rbac.RequireCapability(constants.CapUsersManage))
 
 	// Groups CRUD.
 	groups.GET("", handleListGroups(rbacStore)).BindFunc(rbac.RequireCapability(constants.CapUsersView))
@@ -35,10 +36,9 @@ func RegisterUserRoutes(se *core.ServeEvent, app core.App, rbacStore *store.RBAC
 
 func handleListUsers(app core.App, rbacStore *store.RBACStore) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
-		records, err := app.FindRecordsByFilter(core.CollectionNameSuperusers, "", "-created", 200, 0)
-		if err != nil {
-			return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		}
+		// Auth collections need AutodateField registered to support sort by "created".
+		dkUsers, _ := app.FindRecordsByFilter(constants.CollDkUsers, "", "-created", 200, 0)
+		superusers, _ := app.FindRecordsByFilter(core.CollectionNameSuperusers, "", "-created", 200, 0)
 
 		// Preload all groups for name lookup.
 		allGroups, _ := rbacStore.GetGroups()
@@ -60,21 +60,51 @@ func handleListUsers(app core.App, rbacStore *store.RBACStore) func(e *core.Requ
 			userGroups[uid] = append(userGroups[uid], map[string]string{"id": gid, "name": gname})
 		}
 
-		users := make([]map[string]any, 0, len(records))
-		for _, r := range records {
+		users := make([]map[string]any, 0, len(dkUsers)+len(superusers))
+
+		// Add superusers first.
+		for _, r := range superusers {
+			if r.Email() == core.DefaultInstallerEmail {
+				continue
+			}
 			groups := userGroups[r.Id]
 			if groups == nil {
 				groups = []map[string]string{}
 			}
-			users = append(users, map[string]any{
-				"id":      r.Id,
-				"email":   r.Email(),
-				"groups":  groups,
-				"created": r.GetString("created"),
-				"updated": r.GetString("updated"),
-			})
+			u := userExport(r)
+			u["groups"] = groups
+			u["is_superuser"] = true
+			u["enabled"] = true
+			users = append(users, u)
 		}
+
+		// Add dk_users.
+		for _, r := range dkUsers {
+			groups := userGroups[r.Id]
+			if groups == nil {
+				groups = []map[string]string{}
+			}
+			u := userExport(r)
+			u["groups"] = groups
+			u["is_superuser"] = false
+			users = append(users, u)
+		}
+
 		return e.JSON(http.StatusOK, users)
+	}
+}
+
+// userExport builds a clean map from a PB auth record, extracting only the fields the frontend needs.
+func userExport(r *core.Record) map[string]any {
+	pub := r.PublicExport()
+	name, _ := pub["name"].(string)
+	return map[string]any{
+		"id":      r.Id,
+		"email":   r.Email(),
+		"enabled": pub["enabled"],
+		"name":    name,
+		"created": pub["created"],
+		"updated": pub["updated"],
 	}
 }
 
@@ -83,19 +113,23 @@ func handleCreateUser(app core.App) func(e *core.RequestEvent) error {
 		var body struct {
 			Email    string `json:"email"`
 			Password string `json:"password"`
+			Name     string `json:"name"`
 		}
 		if err := e.BindBody(&body); err != nil || body.Email == "" || body.Password == "" {
 			return e.JSON(http.StatusBadRequest, map[string]string{"error": "email and password are required"})
 		}
 
-		col, err := app.FindCachedCollectionByNameOrId(core.CollectionNameSuperusers)
+		// Create user in dk_users collection (NOT _superusers).
+		col, err := app.FindCachedCollectionByNameOrId(constants.CollDkUsers)
 		if err != nil {
-			return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return e.JSON(http.StatusInternalServerError, map[string]string{"error": "dk_users collection not found"})
 		}
 
 		rec := core.NewRecord(col)
 		rec.SetEmail(body.Email)
 		rec.SetPassword(body.Password)
+		rec.Set("name", body.Name)
+		rec.Set("enabled", true)
 
 		if err := app.Save(rec); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -112,14 +146,20 @@ func handleUpdateUser(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		userID := e.Request.PathValue("id")
 
-		rec, err := app.FindRecordById(core.CollectionNameSuperusers, userID)
+		// Try dk_users first, then _superusers.
+		rec, err := app.FindRecordById(constants.CollDkUsers, userID)
 		if err != nil {
-			return e.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
+			rec, err = app.FindRecordById(core.CollectionNameSuperusers, userID)
+			if err != nil {
+				return e.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
+			}
 		}
 
 		var body struct {
 			Email    string `json:"email"`
 			Password string `json:"password"`
+			Name     string `json:"name"`
+			Enabled  *bool  `json:"enabled"`
 		}
 		if err := e.BindBody(&body); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
@@ -130,6 +170,15 @@ func handleUpdateUser(app core.App) func(e *core.RequestEvent) error {
 		}
 		if body.Password != "" {
 			rec.SetPassword(body.Password)
+		}
+		// Only set name/enabled for dk_users (not superusers).
+		if !rec.IsSuperuser() {
+			if body.Name != "" {
+				rec.Set("name", body.Name)
+			}
+			if body.Enabled != nil {
+				rec.Set("enabled", *body.Enabled)
+			}
 		}
 
 		if err := app.Save(rec); err != nil {
@@ -143,14 +192,44 @@ func handleUpdateUser(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
-func handleDeleteUser(app core.App) func(e *core.RequestEvent) error {
+func handleDeleteUser(app core.App, rbacStore *store.RBACStore) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		userID := e.Request.PathValue("id")
 
-		rec, err := app.FindRecordById(core.CollectionNameSuperusers, userID)
+		// Try dk_users first.
+		rec, err := app.FindRecordById(constants.CollDkUsers, userID)
 		if err != nil {
-			return e.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
+			// Try _superusers.
+			rec, err = app.FindRecordById(core.CollectionNameSuperusers, userID)
+			if err != nil {
+				return e.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
+			}
+
+			// Prevent deleting the last superuser.
+			superusers, _ := app.FindRecordsByFilter(core.CollectionNameSuperusers, "", "", 0, 0)
+			realCount := 0
+			for _, su := range superusers {
+				if su.Email() != core.DefaultInstallerEmail {
+					realCount++
+				}
+			}
+			if realCount <= 1 {
+				return e.JSON(http.StatusConflict, map[string]string{"error": "cannot delete the last admin"})
+			}
 		}
+
+		// Clean up group memberships.
+		members, _ := app.FindRecordsByFilter(
+			constants.CollGroupMembers,
+			"user = {:userId}",
+			"", 0, 0,
+			dbx.Params{"userId": userID},
+		)
+		for _, m := range members {
+			_ = app.Delete(m)
+		}
+
+		rbacStore.InvalidateUserCache(userID)
 
 		if err := app.Delete(rec); err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

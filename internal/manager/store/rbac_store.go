@@ -175,6 +175,11 @@ func (s *RBACStore) GetUserCapabilities(userID string) ([]string, error) {
 					caps = append(caps, str)
 				}
 			}
+		default:
+			// PB JSONField returns types.JSONRaw ([]byte) — try JSON unmarshal.
+			if b, err := json.Marshal(raw); err == nil {
+				_ = json.Unmarshal(b, &caps)
+			}
 		}
 
 		for _, cap := range caps {

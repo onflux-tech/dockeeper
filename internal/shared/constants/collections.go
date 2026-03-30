@@ -38,4 +38,5 @@ const (
 	CollBatchJobs           = "batch_jobs"
 	CollTags                = "tags"
 	CollActionTokens        = "action_tokens"
+	CollDkUsers             = "dk_users"
 )

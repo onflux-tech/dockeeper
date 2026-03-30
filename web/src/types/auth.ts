@@ -3,6 +3,8 @@ export interface AdminData {
 	email: string;
 	created: string;
 	updated: string;
+	is_superuser: boolean;
+	capabilities: string[];
 }
 
 export interface AuthResponse {

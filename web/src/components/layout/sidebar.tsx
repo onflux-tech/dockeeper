@@ -2,11 +2,57 @@ import { Link, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import { DockeeperLogo } from "@/components/dockeeper-logo";
 import { navigation } from "@/lib/navigation";
+import { useHasCapability } from "@/hooks/use-permissions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSidebar } from "./sidebar-context";
+import type { NavItem } from "@/lib/navigation";
+
+function NavItemLink({
+	item,
+	isActive,
+	collapsed,
+	onNavigate,
+}: {
+	item: NavItem;
+	isActive: boolean;
+	collapsed: boolean;
+	onNavigate?: () => void;
+}) {
+	// Check capability — items without a capability are always visible.
+	const hasAccess = useHasCapability(item.capability ?? "");
+	if (item.capability && !hasAccess) return null;
+
+	const link = (
+		<Link
+			to={item.href}
+			onClick={onNavigate}
+			className={cn(
+				"flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+				collapsed && "justify-center p-2",
+				isActive
+					? "bg-primary/10 text-primary"
+					: "text-sidebar-foreground/70 hover:bg-primary/15 hover:text-primary",
+			)}
+		>
+			<item.icon className="h-4 w-4 shrink-0" />
+			{!collapsed && <span>{item.label}</span>}
+		</Link>
+	);
+
+	if (collapsed) {
+		return (
+			<Tooltip>
+				<TooltipTrigger asChild>{link}</TooltipTrigger>
+				<TooltipContent side="right">{item.label}</TooltipContent>
+			</Tooltip>
+		);
+	}
+
+	return link;
+}
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 	const { pathname } = useLocation();
@@ -26,34 +72,15 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 						{group.items.map((item) => {
 							const isActive =
 								item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-							const link = (
-								<Link
+							return (
+								<NavItemLink
 									key={item.href}
-									to={item.href}
-									onClick={onNavigate}
-									className={cn(
-										"flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-										collapsed && "justify-center p-2",
-										isActive
-											? "bg-primary/10 text-primary"
-											: "text-sidebar-foreground/70 hover:bg-primary/15 hover:text-primary",
-									)}
-								>
-									<item.icon className="h-4 w-4 shrink-0" />
-									{!collapsed && <span>{item.label}</span>}
-								</Link>
+									item={item}
+									isActive={isActive}
+									collapsed={collapsed}
+									onNavigate={onNavigate}
+								/>
 							);
-
-							if (collapsed) {
-								return (
-									<Tooltip key={item.href}>
-										<TooltipTrigger asChild>{link}</TooltipTrigger>
-										<TooltipContent side="right">{item.label}</TooltipContent>
-									</Tooltip>
-								);
-							}
-
-							return link;
 						})}
 					</nav>
 				</div>

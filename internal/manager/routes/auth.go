@@ -9,6 +9,8 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
+	"github.com/onflux-tech/dockeeper/internal/manager/store"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 )
 
 const (
@@ -17,15 +19,15 @@ const (
 )
 
 // RegisterAuthRoutes registers all /api/dk/auth/* routes.
-func RegisterAuthRoutes(se *core.ServeEvent, authLimiter *middleware.RateLimiter) {
+func RegisterAuthRoutes(se *core.ServeEvent, authLimiter *middleware.RateLimiter, rbacStore *store.RBACStore) {
 	auth := se.Router.Group("/api/dk/auth")
 
 	auth.POST("/setup", handleSetup).BindFunc(authLimiter.Limit)
-	auth.POST("/login", handleLogin).BindFunc(authLimiter.Limit)
-	auth.POST("/refresh", handleRefresh).BindFunc(middleware.RequireSuperuser)
-	auth.POST("/logout", handleLogout).BindFunc(middleware.RequireSuperuser)
-	auth.POST("/password", handleChangePassword).BindFunc(middleware.RequireSuperuser)
-	auth.GET("/me", handleMe).BindFunc(middleware.RequireSuperuser)
+	auth.POST("/login", handleLogin(rbacStore)).BindFunc(authLimiter.Limit)
+	auth.POST("/refresh", handleRefresh(rbacStore)).BindFunc(middleware.RequireAuth)
+	auth.POST("/logout", handleLogout).BindFunc(middleware.RequireAuth)
+	auth.POST("/password", handleChangePassword).BindFunc(middleware.RequireAuth)
+	auth.GET("/me", handleMe(rbacStore)).BindFunc(middleware.RequireAuth)
 	auth.GET("/status", handleStatus)
 }
 
@@ -73,50 +75,84 @@ func handleSetup(e *core.RequestEvent) error {
 
 	slog.Info("admin account created", "email", body.Email)
 
-	return respondWithTokens(e, admin)
+	return respondWithTokens(e, admin, true, nil)
 }
 
 // POST /api/dk/auth/login — authenticate with email and password.
-func handleLogin(e *core.RequestEvent) error {
-	var body struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	if err := e.BindBody(&body); err != nil {
-		return e.JSON(http.StatusBadRequest, map[string]string{
-			"error": "invalid request body",
-		})
-	}
+func handleLogin(rbacStore *store.RBACStore) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		var body struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+		if err := e.BindBody(&body); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]string{
+				"error": "invalid request body",
+			})
+		}
 
-	if body.Email == "" || body.Password == "" {
-		return e.JSON(http.StatusBadRequest, map[string]string{
-			"error": "email and password are required",
-		})
+		if body.Email == "" || body.Password == "" {
+			return e.JSON(http.StatusBadRequest, map[string]string{
+				"error": "email and password are required",
+			})
+		}
+
+		// Try dk_users first (regular users).
+		dkUser, err := e.App.FindAuthRecordByEmail(constants.CollDkUsers, body.Email)
+		if err == nil {
+			if !dkUser.ValidatePassword(body.Password) {
+				slog.Warn("login attempt with wrong password", "email", body.Email, "ip", e.RealIP())
+				return e.JSON(http.StatusUnauthorized, map[string]string{
+					"error": "invalid credentials",
+				})
+			}
+
+			// Check if user is enabled.
+			if !dkUser.GetBool("enabled") {
+				slog.Warn("login attempt for disabled user", "email", body.Email, "ip", e.RealIP())
+				return e.JSON(http.StatusForbidden, map[string]string{
+					"error": "account is disabled",
+				})
+			}
+
+			caps, _ := rbacStore.GetUserCapabilities(dkUser.Id)
+
+			slog.Info("user logged in", "email", body.Email, "ip", e.RealIP())
+			return respondWithTokens(e, dkUser, false, caps)
+		}
+
+		// Fallback: try _superusers (admin users).
+		admin, err := e.App.FindAuthRecordByEmail(core.CollectionNameSuperusers, body.Email)
+		if err != nil {
+			slog.Warn("login attempt with unknown email", "email", body.Email, "ip", e.RealIP())
+			return e.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "invalid credentials",
+			})
+		}
+
+		if !admin.ValidatePassword(body.Password) {
+			slog.Warn("login attempt with wrong password", "email", body.Email, "ip", e.RealIP())
+			return e.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "invalid credentials",
+			})
+		}
+
+		slog.Info("admin logged in", "email", body.Email, "ip", e.RealIP())
+
+		return respondWithTokens(e, admin, true, nil)
 	}
-
-	admin, err := e.App.FindAuthRecordByEmail(core.CollectionNameSuperusers, body.Email)
-	if err != nil {
-		slog.Warn("login attempt with unknown email", "email", body.Email, "ip", e.RealIP())
-		return e.JSON(http.StatusUnauthorized, map[string]string{
-			"error": "invalid credentials",
-		})
-	}
-
-	if !admin.ValidatePassword(body.Password) {
-		slog.Warn("login attempt with wrong password", "email", body.Email, "ip", e.RealIP())
-		return e.JSON(http.StatusUnauthorized, map[string]string{
-			"error": "invalid credentials",
-		})
-	}
-
-	slog.Info("admin logged in", "email", body.Email, "ip", e.RealIP())
-
-	return respondWithTokens(e, admin)
 }
 
 // POST /api/dk/auth/refresh — issue new tokens from a valid access token.
-func handleRefresh(e *core.RequestEvent) error {
-	return respondWithTokens(e, e.Auth)
+func handleRefresh(rbacStore *store.RBACStore) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		isSuperuser := e.Auth.IsSuperuser()
+		var caps []string
+		if !isSuperuser {
+			caps, _ = rbacStore.GetUserCapabilities(e.Auth.Id)
+		}
+		return respondWithTokens(e, e.Auth, isSuperuser, caps)
+	}
 }
 
 // POST /api/dk/auth/logout — invalidate all tokens by rotating the token key.
@@ -129,22 +165,39 @@ func handleLogout(e *core.RequestEvent) error {
 		})
 	}
 
-	slog.Info("admin logged out", "email", e.Auth.Email(), "ip", e.RealIP())
+	slog.Info("user logged out", "email", e.Auth.Email(), "ip", e.RealIP())
 
 	return e.NoContent(http.StatusNoContent)
 }
 
-// GET /api/dk/auth/me — return the authenticated admin's data.
-func handleMe(e *core.RequestEvent) error {
-	return e.JSON(http.StatusOK, map[string]any{
-		"id":      e.Auth.Id,
-		"email":   e.Auth.Email(),
-		"created": e.Auth.GetDateTime("created"),
-		"updated": e.Auth.GetDateTime("updated"),
-	})
+// GET /api/dk/auth/me — return the authenticated user's data with capabilities.
+func handleMe(rbacStore *store.RBACStore) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		isSuperuser := e.Auth.IsSuperuser()
+
+		var caps []string
+		if isSuperuser {
+			caps = constants.AllCapabilities
+		} else {
+			var err error
+			caps, err = rbacStore.GetUserCapabilities(e.Auth.Id)
+			if err != nil {
+				caps = []string{}
+			}
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"id":           e.Auth.Id,
+			"email":        e.Auth.Email(),
+			"created":      e.Auth.GetDateTime("created"),
+			"updated":      e.Auth.GetDateTime("updated"),
+			"is_superuser": isSuperuser,
+			"capabilities": caps,
+		})
+	}
 }
 
-// POST /api/dk/auth/password — change the authenticated admin's password.
+// POST /api/dk/auth/password — change the authenticated user's password.
 func handleChangePassword(e *core.RequestEvent) error {
 	var body struct {
 		CurrentPassword string `json:"current_password"`
@@ -172,7 +225,7 @@ func handleChangePassword(e *core.RequestEvent) error {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to update password"})
 	}
 
-	slog.Info("admin password changed", "email", e.Auth.Email(), "ip", e.RealIP())
+	slog.Info("user password changed", "email", e.Auth.Email(), "ip", e.RealIP())
 	return e.JSON(http.StatusOK, map[string]string{"status": "password_changed"})
 }
 
@@ -184,29 +237,38 @@ func handleStatus(e *core.RequestEvent) error {
 }
 
 // respondWithTokens generates access + refresh tokens and returns the auth response.
-func respondWithTokens(e *core.RequestEvent, admin *core.Record) error {
-	accessToken, err := admin.NewStaticAuthToken(accessTokenDuration)
+func respondWithTokens(e *core.RequestEvent, user *core.Record, isSuperuser bool, caps []string) error {
+	accessToken, err := user.NewStaticAuthToken(accessTokenDuration)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to generate access token",
 		})
 	}
 
-	refreshToken, err := admin.NewStaticAuthToken(refreshTokenDuration)
+	refreshToken, err := user.NewStaticAuthToken(refreshTokenDuration)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to generate refresh token",
 		})
 	}
 
+	if isSuperuser {
+		caps = constants.AllCapabilities
+	}
+	if caps == nil {
+		caps = []string{}
+	}
+
 	return e.JSON(http.StatusOK, map[string]any{
 		"token":   accessToken,
 		"refresh": refreshToken,
 		"admin": map[string]any{
-			"id":      admin.Id,
-			"email":   admin.Email(),
-			"created": admin.GetDateTime("created"),
-			"updated": admin.GetDateTime("updated"),
+			"id":           user.Id,
+			"email":        user.Email(),
+			"created":      user.GetDateTime("created"),
+			"updated":      user.GetDateTime("updated"),
+			"is_superuser": isSuperuser,
+			"capabilities": caps,
 		},
 	})
 }

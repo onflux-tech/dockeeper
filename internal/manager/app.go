@@ -76,7 +76,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 
 		registerHealthRoutes(se, version, commit)
 		routes.RegisterAgentPublicRoutes(se, app)
-		routes.RegisterAuthRoutes(se, authLimiter)
+		routes.RegisterAuthRoutes(se, authLimiter, rbacStore)
 
 		// User, group, and API key management routes.
 		routes.RegisterUserRoutes(se, app, rbacStore, rbac)

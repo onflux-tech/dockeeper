@@ -15,3 +15,13 @@ func RequireSuperuser(e *core.RequestEvent) error {
 	}
 	return e.Next()
 }
+
+// RequireAuth returns a handler that accepts both PB superusers and dk_users auth records.
+func RequireAuth(e *core.RequestEvent) error {
+	if e.Auth == nil {
+		return e.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "authentication required",
+		})
+	}
+	return e.Next()
+}

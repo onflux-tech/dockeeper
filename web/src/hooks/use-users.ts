@@ -27,6 +27,8 @@ export interface User {
 	id: string;
 	email: string;
 	groups: { id: string; name: string }[];
+	is_superuser: boolean;
+	enabled: boolean;
 	created: string;
 	updated: string;
 }
