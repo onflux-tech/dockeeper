@@ -70,7 +70,7 @@ const PB_COLLECTION_MAP: Record<string, string> = {
 
 async function fetchResources(
 	resourceType: string,
-	apiKey: string,
+	playgroundAuthHeaders: Record<string, string>,
 	pbToken: string | null,
 	serverId?: string,
 ): Promise<ResourceOption[]> {
@@ -80,7 +80,7 @@ async function fetchResources(
 
 	if (DK_PATH_MAP[resourceType]) {
 		url = new URL(DK_PATH_MAP[resourceType], base);
-		headers = { "X-API-Key": apiKey };
+		headers = { ...playgroundAuthHeaders };
 	} else if (PB_COLLECTION_MAP[resourceType]) {
 		if (!pbToken) return [];
 		url = new URL(`/api/collections/${PB_COLLECTION_MAP[resourceType]}/records`, base);
@@ -169,7 +169,7 @@ export function ResourceSelect({
 	serverId,
 	className,
 }: ResourceSelectProps) {
-	const { apiKey, isAuthorized } = usePlaygroundAuth();
+	const { isAuthorized, authHeaders: playgroundAuthHeaders } = usePlaygroundAuth();
 	const pbToken = useAuthStore((s) => s.token);
 	const [options, setOptions] = useState<ResourceOption[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -191,7 +191,7 @@ export function ResourceSelect({
 
 			setLoading(true);
 			try {
-				const data = await fetchResources(resourceType, apiKey, pbToken, serverId);
+				const data = await fetchResources(resourceType, playgroundAuthHeaders, pbToken, serverId);
 				cache.set(cacheKey, { data, ts: Date.now() });
 				setOptions(data);
 			} catch {
@@ -200,7 +200,7 @@ export function ResourceSelect({
 				setLoading(false);
 			}
 		},
-		[apiKey, isAuthorized, pbToken, resourceType, serverId],
+		[playgroundAuthHeaders, isAuthorized, pbToken, resourceType, serverId],
 	);
 
 	// Not authorized or unknown resource: plain input

@@ -27,7 +27,7 @@ interface QuickSendBarProps {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function QuickSendBar({ endpoint, onOpenPlayground }: QuickSendBarProps) {
-	const { apiKey, isAuthorized } = usePlaygroundAuth();
+	const { authHeaders: playgroundAuthHeaders } = usePlaygroundAuth();
 	const [paramValue, setParamValue] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [response, setResponse] = useState<{
@@ -53,8 +53,7 @@ export function QuickSendBar({ endpoint, onOpenPlayground }: QuickSendBarProps) 
 		if (paramName) pParams[paramName] = paramValue;
 
 		const url = buildRequestUrl(origin, endpoint.path, pParams, {});
-		const headers: Record<string, string> = {};
-		if (isAuthorized) headers["X-API-Key"] = apiKey;
+		const headers: Record<string, string> = { ...playgroundAuthHeaders };
 
 		const t0 = performance.now();
 
@@ -89,7 +88,7 @@ export function QuickSendBar({ endpoint, onOpenPlayground }: QuickSendBarProps) 
 		} finally {
 			setLoading(false);
 		}
-	}, [endpoint, paramName, paramValue, apiKey, isAuthorized]);
+	}, [endpoint, paramName, paramValue, playgroundAuthHeaders]);
 
 	if (!isQuickEligible(endpoint)) return null;
 
@@ -98,8 +97,7 @@ export function QuickSendBar({ endpoint, onOpenPlayground }: QuickSendBarProps) 
 	const pParams: Record<string, string> = {};
 	if (paramName) pParams[paramName] = paramValue || `{${paramName}}`;
 	const curlUrl = buildRequestUrl(origin, endpoint.path, pParams, {});
-	const curlHeaders: Record<string, string> = {};
-	if (isAuthorized) curlHeaders["X-API-Key"] = apiKey;
+	const curlHeaders: Record<string, string> = { ...playgroundAuthHeaders };
 
 	return (
 		<div className="mt-3 space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">

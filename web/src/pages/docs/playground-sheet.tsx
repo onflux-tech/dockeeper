@@ -154,7 +154,7 @@ interface ResponseState {
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function PlaygroundSheet({ open, onOpenChange, endpoint, onHistory }: PlaygroundSheetProps) {
-	const { apiKey, isAuthorized } = usePlaygroundAuth();
+	const { isAuthorized, authMode, authHeaders: playgroundAuthHeaders } = usePlaygroundAuth();
 
 	// Request form state
 	const [pathParams, setPathParams] = useState<Record<string, string>>({});
@@ -213,8 +213,7 @@ export function PlaygroundSheet({ open, onOpenChange, endpoint, onHistory }: Pla
 		}
 		const url = buildRequestUrl(origin, endpoint.path, pathParams, qpObj);
 
-		const reqHeaders: Record<string, string> = {};
-		if (isAuthorized) reqHeaders["X-API-Key"] = apiKey;
+		const reqHeaders: Record<string, string> = { ...playgroundAuthHeaders };
 		for (const { key, value } of headers) {
 			if (key && value) reqHeaders[key] = value;
 		}
@@ -283,7 +282,7 @@ export function PlaygroundSheet({ open, onOpenChange, endpoint, onHistory }: Pla
 		} finally {
 			setLoading(false);
 		}
-	}, [endpoint, pathParams, queryParams, headers, body, apiKey, isAuthorized, onHistory]);
+	}, [endpoint, pathParams, queryParams, headers, body, playgroundAuthHeaders, onHistory]);
 
 	// Ctrl+Enter to send
 	useEffect(() => {
@@ -317,8 +316,7 @@ export function PlaygroundSheet({ open, onOpenChange, endpoint, onHistory }: Pla
 	const liveUrl = buildRequestUrl(origin, endpoint.path, pathParams, qpObj);
 
 	// Build headers for code generation
-	const codeHeaders: Record<string, string> = {};
-	if (isAuthorized) codeHeaders["X-API-Key"] = apiKey;
+	const codeHeaders: Record<string, string> = { ...playgroundAuthHeaders };
 	for (const { key, value } of headers) {
 		if (key && value) codeHeaders[key] = value;
 	}
@@ -403,9 +401,8 @@ export function PlaygroundSheet({ open, onOpenChange, endpoint, onHistory }: Pla
 							{isAuthorized ? (
 								<div className="flex items-center gap-2 rounded-lg border border-green-400/30 bg-green-400/5 px-3 py-2">
 									<span className="h-2 w-2 rounded-full bg-green-400" />
-									<span className="text-xs text-green-400">API Key configured</span>
-									<span className="ml-auto font-mono text-[10px] text-muted-foreground">
-										{"•".repeat(Math.min(apiKey.length, 16))}
+									<span className="text-xs text-green-400">
+										{authMode === "api-key" ? "API Key configured" : "Session active"}
 									</span>
 								</div>
 							) : (
@@ -485,7 +482,7 @@ export function PlaygroundSheet({ open, onOpenChange, endpoint, onHistory }: Pla
 						{isStreaming && open && (
 							<StreamingViewer
 								endpoint={endpoint}
-								apiKey={apiKey}
+								authHeaders={playgroundAuthHeaders}
 								pathParams={pathParams}
 								queryParams={qpObj}
 								onHistory={onHistory}

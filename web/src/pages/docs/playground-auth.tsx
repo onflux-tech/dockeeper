@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { Eye, EyeOff, KeyRound, Loader2, ShieldCheck, ShieldOff } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, LogIn, ShieldCheck, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -32,7 +32,7 @@ interface AuthorizeDialogProps {
 }
 
 export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
-	const { apiKey, isAuthorized, authorize, deauthorize } = usePlaygroundAuth();
+	const { apiKey, authMode, isAuthorized, authorize, deauthorize } = usePlaygroundAuth();
 	const [draft, setDraft] = useState("");
 	const [showKey, setShowKey] = useState(false);
 	const [isValidating, setIsValidating] = useState(false);
@@ -69,17 +69,19 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 						API Authorization
 					</DialogTitle>
 					<DialogDescription>
-						Enter your API key to test endpoints. The key is stored in this tab only and cleared
-						when you close it.
+						{authMode === "session"
+							? "You're authenticated via your active session. You can optionally use an API key instead."
+							: "Enter your API key to test endpoints. The key is stored in this tab only and cleared when you close it."}
 					</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4 py-2">
-					{isAuthorized ? (
+					{/* Active API key */}
+					{authMode === "api-key" && (
 						<div className="space-y-3">
 							<div className="flex items-center gap-2 rounded-lg border border-green-400/30 bg-green-400/5 px-3 py-2.5">
 								<ShieldCheck className="h-4 w-4 text-green-400" />
-								<span className="text-sm font-medium text-green-400">Authorized</span>
+								<span className="text-sm font-medium text-green-400">API Key</span>
 								<span className="ml-auto font-mono text-xs text-muted-foreground">
 									{showKey ? apiKey : `${"•".repeat(Math.min(apiKey.length, 20))}`}
 								</span>
@@ -89,7 +91,11 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 									onClick={() => setShowKey(!showKey)}
 									aria-label={showKey ? "Hide key" : "Show key"}
 								>
-									{showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+									{showKey ? (
+										<EyeOff className="h-3.5 w-3.5" />
+									) : (
+										<Eye className="h-3.5 w-3.5" />
+									)}
 								</Button>
 							</div>
 							<Button
@@ -99,10 +105,74 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 								onClick={handleDeauthorize}
 							>
 								<ShieldOff className="mr-1.5 h-3.5 w-3.5" />
-								Deauthorize
+								Remove API Key
 							</Button>
 						</div>
-					) : (
+					)}
+
+					{/* Session auth (no API key) */}
+					{authMode === "session" && (
+						<div className="space-y-3">
+							<div className="flex items-center gap-2 rounded-lg border border-green-400/30 bg-green-400/5 px-3 py-2.5">
+								<LogIn className="h-4 w-4 text-green-400" />
+								<span className="text-sm font-medium text-green-400">
+									Session Active
+								</span>
+								<span className="ml-auto text-xs text-muted-foreground">
+									via login
+								</span>
+							</div>
+							<p className="text-xs text-muted-foreground">
+								Requests use your current session credentials. Add an API key below to
+								test specific key permissions instead.
+							</p>
+							<div className="relative">
+								<Input
+									type={showKey ? "text" : "password"}
+									placeholder="dk_... (optional override)"
+									value={draft}
+									onChange={(e) => {
+										setDraft(e.target.value);
+										if (error) setError("");
+									}}
+									onKeyDown={(e) => e.key === "Enter" && handleAuthorize()}
+									className={`pr-10 font-mono ${error ? "border-destructive" : ""}`}
+									disabled={isValidating}
+								/>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									className="absolute right-1 top-1/2 -translate-y-1/2"
+									onClick={() => setShowKey(!showKey)}
+									aria-label={showKey ? "Hide key" : "Show key"}
+								>
+									{showKey ? (
+										<EyeOff className="h-3.5 w-3.5" />
+									) : (
+										<Eye className="h-3.5 w-3.5" />
+									)}
+								</Button>
+							</div>
+							{error && <p className="text-xs text-destructive">{error}</p>}
+							<Button
+								size="sm"
+								variant="outline"
+								className="w-full"
+								disabled={!draft.trim() || isValidating}
+								onClick={handleAuthorize}
+							>
+								{isValidating ? (
+									<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+								) : (
+									<KeyRound className="mr-1.5 h-3.5 w-3.5" />
+								)}
+								{isValidating ? "Validating..." : "Use API Key Instead"}
+							</Button>
+						</div>
+					)}
+
+					{/* Not authenticated at all */}
+					{!isAuthorized && (
 						<div className="space-y-3">
 							<div className="relative">
 								<Input
@@ -125,7 +195,11 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 									onClick={() => setShowKey(!showKey)}
 									aria-label={showKey ? "Hide key" : "Show key"}
 								>
-									{showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+									{showKey ? (
+										<EyeOff className="h-3.5 w-3.5" />
+									) : (
+										<Eye className="h-3.5 w-3.5" />
+									)}
 								</Button>
 							</div>
 							{error && <p className="text-xs text-destructive">{error}</p>}
@@ -169,7 +243,9 @@ interface AuthorizeBadgeProps {
 }
 
 export function AuthorizeBadge({ onClick }: AuthorizeBadgeProps) {
-	const { isAuthorized } = usePlaygroundAuth();
+	const { isAuthorized, authMode } = usePlaygroundAuth();
+
+	const label = authMode === "api-key" ? "API Key" : authMode === "session" ? "Session" : "Authorize";
 
 	return (
 		<Button
@@ -183,7 +259,7 @@ export function AuthorizeBadge({ onClick }: AuthorizeBadgeProps) {
 				className={`h-2 w-2 rounded-full ${isAuthorized ? "bg-green-400" : "bg-muted-foreground/50"}`}
 			/>
 			<KeyRound className="h-3.5 w-3.5" />
-			<span className="hidden sm:inline">{isAuthorized ? "Authorized" : "Authorize"}</span>
+			<span className="hidden sm:inline">{label}</span>
 		</Button>
 	);
 }

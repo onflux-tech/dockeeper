@@ -1,10 +1,15 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { useAuthStore } from "@/stores/auth-store";
 
 const STORAGE_KEY = "dk-playground-key";
+
+export type AuthMode = "api-key" | "session" | null;
 
 export interface PlaygroundAuthCtx {
 	apiKey: string;
 	isAuthorized: boolean;
+	authMode: AuthMode;
+	authHeaders: Record<string, string>;
 	authorize: (key: string) => Promise<{ ok: boolean; error?: string }>;
 	deauthorize: () => void;
 }
@@ -19,6 +24,8 @@ export function usePlaygroundAuth(): PlaygroundAuthCtx {
 
 export function usePlaygroundAuthValue(): PlaygroundAuthCtx {
 	const [apiKey, setApiKey] = useState(() => sessionStorage.getItem(STORAGE_KEY) ?? "");
+	const sessionToken = useAuthStore((s) => s.token);
+	const isSessionAuth = useAuthStore((s) => s.isAuthenticated);
 
 	const authorize = useCallback(async (key: string): Promise<{ ok: boolean; error?: string }> => {
 		try {
@@ -41,8 +48,18 @@ export function usePlaygroundAuthValue(): PlaygroundAuthCtx {
 		setApiKey("");
 	}, []);
 
-	return useMemo(
-		() => ({ apiKey, isAuthorized: apiKey.length > 0, authorize, deauthorize }),
-		[apiKey, authorize, deauthorize],
-	);
+	return useMemo(() => {
+		const hasApiKey = apiKey.length > 0;
+		const authMode: AuthMode = hasApiKey ? "api-key" : isSessionAuth ? "session" : null;
+		const isAuthorized = hasApiKey || isSessionAuth;
+
+		const authHeaders: Record<string, string> = {};
+		if (hasApiKey) {
+			authHeaders["X-API-Key"] = apiKey;
+		} else if (isSessionAuth && sessionToken) {
+			authHeaders["Authorization"] = sessionToken;
+		}
+
+		return { apiKey, isAuthorized, authMode, authHeaders, authorize, deauthorize };
+	}, [apiKey, isSessionAuth, sessionToken, authorize, deauthorize]);
 }

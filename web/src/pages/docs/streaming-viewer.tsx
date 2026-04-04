@@ -69,7 +69,7 @@ function eventTypeColor(type: string): string {
 
 interface StreamingViewerProps {
 	endpoint: ApiEndpoint;
-	apiKey: string;
+	authHeaders: Record<string, string>;
 	pathParams: Record<string, string>;
 	queryParams: Record<string, string>;
 	onHistory?: (entry: HistoryEntry) => void;
@@ -79,7 +79,7 @@ interface StreamingViewerProps {
 
 export function StreamingViewer({
 	endpoint,
-	apiKey,
+	authHeaders,
 	pathParams,
 	queryParams,
 	onHistory,
@@ -147,8 +147,7 @@ export function StreamingViewer({
 
 		const origin = window.location.origin;
 		const url = buildRequestUrl(origin, endpoint.path, pathParams, queryParams);
-		const headers: Record<string, string> = { Accept: "text/event-stream" };
-		if (apiKey) headers["X-API-Key"] = apiKey;
+		const headers: Record<string, string> = { Accept: "text/event-stream", ...authHeaders };
 
 		try {
 			const res = await fetch(url, {
@@ -227,7 +226,7 @@ export function StreamingViewer({
 				setErrorMsg(err instanceof Error ? err.message : "Connection failed");
 			}
 		}
-	}, [endpoint, apiKey, pathParams, queryParams, onHistory]);
+	}, [endpoint, authHeaders, pathParams, queryParams, onHistory]);
 
 	const stop = useCallback(() => {
 		abortRef.current?.abort();
