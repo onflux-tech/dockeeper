@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -42,14 +43,28 @@ func handleListTraefikRoutes(e *core.RequestEvent, app core.App) error {
 
 	// Build filter from query params.
 	var parts []string
+	var params []dbx.Params
 	if sid := q.Get("server_id"); sid != "" {
-		parts = append(parts, "server = '"+sid+"'")
+		parts = append(parts, "server = {:serverId}")
+		params = append(params, dbx.Params{"serverId": sid})
 	}
 	if search := strings.TrimSpace(q.Get("search")); search != "" {
-		escaped := strings.ReplaceAll(search, "'", "\\'")
-		parts = append(parts, "(name ~ '"+escaped+"' || rule ~ '"+escaped+"' || service ~ '"+escaped+"')")
+		parts = append(parts, "(name ~ {:search} || rule ~ {:search} || service ~ {:search})")
+		params = append(params, dbx.Params{"search": search})
 	}
 	filter := strings.Join(parts, " && ")
+
+	// Merge all params into one map.
+	mergedParams := dbx.Params{}
+	for _, p := range params {
+		for k, v := range p {
+			mergedParams[k] = v
+		}
+	}
+	var filterParams []dbx.Params
+	if len(mergedParams) > 0 {
+		filterParams = append(filterParams, mergedParams)
+	}
 
 	// Count total matching records.
 	all, err := app.FindRecordsByFilter(
@@ -57,6 +72,7 @@ func handleListTraefikRoutes(e *core.RequestEvent, app core.App) error {
 		filter,
 		sort,
 		0, 0,
+		filterParams...,
 	)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -74,6 +90,7 @@ func handleListTraefikRoutes(e *core.RequestEvent, app core.App) error {
 		sort,
 		perPage,
 		offset,
+		filterParams...,
 	)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

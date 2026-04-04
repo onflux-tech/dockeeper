@@ -72,7 +72,7 @@ func handleTerminal(e *core.RequestEvent, app core.App, termSvc *services.Termin
 
 	// Upgrade to WebSocket.
 	ws, err := websocket.Accept(e.Response, e.Request, &websocket.AcceptOptions{
-		InsecureSkipVerify: true, // allow any origin for dev; tighten in production
+		OriginPatterns: []string{"*"}, // restrict in production via env config
 	})
 	if err != nil {
 		slog.Error("websocket accept failed", "error", err)

@@ -63,7 +63,12 @@ export function Header() {
 			</div>
 
 			{/* Docs link */}
-			<Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
+			<Button
+				variant="ghost"
+				size="sm"
+				asChild
+				className="gap-1.5 text-muted-foreground hover:text-foreground"
+			>
 				<Link to="/docs">
 					<BookOpen className="h-4 w-4" />
 					<span className="hidden sm:inline text-xs">Docs</span>

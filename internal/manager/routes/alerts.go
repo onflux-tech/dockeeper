@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -38,8 +39,10 @@ func RegisterAlertRoutes(se *core.ServeEvent, app core.App, alertStore *store.Al
 func handleListAlertRules(e *core.RequestEvent, app core.App) error {
 	serverID := e.Request.URL.Query().Get("server_id")
 	filter := ""
+	var params []dbx.Params
 	if serverID != "" {
-		filter = "target_type = 'server' && target_id = '" + serverID + "'"
+		filter = "target_type = 'server' && target_id = {:serverId}"
+		params = append(params, dbx.Params{"serverId": serverID})
 	}
 
 	records, err := app.FindRecordsByFilter(
@@ -47,6 +50,7 @@ func handleListAlertRules(e *core.RequestEvent, app core.App) error {
 		filter,
 		"-created",
 		200, 0,
+		params...,
 	)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

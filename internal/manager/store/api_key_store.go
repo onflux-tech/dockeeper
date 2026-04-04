@@ -62,6 +62,13 @@ func (s *APIKeyStore) Create(name, userID string, capabilities []string, expires
 	return plaintext, rec, nil
 }
 
+// dummyHash is a pre-computed bcrypt hash used to ensure constant-time behavior
+// when no matching key prefix is found (prevents timing oracle on prefix existence).
+var dummyHash = func() []byte {
+	h, _ := bcrypt.GenerateFromPassword([]byte("dummy-key-for-timing"), bcrypt.DefaultCost)
+	return h
+}()
+
 // ValidateKey finds a key by prefix and validates the full plaintext.
 // Returns the record and capabilities if valid.
 func (s *APIKeyStore) ValidateKey(plaintext string) (*core.Record, []string, error) {
@@ -77,6 +84,8 @@ func (s *APIKeyStore) ValidateKey(plaintext string) (*core.Record, []string, err
 		dbx.Params{"prefix": prefix},
 	)
 	if err != nil || len(records) == 0 {
+		// Perform a dummy bcrypt comparison to prevent timing oracle on prefix existence.
+		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(plaintext))
 		return nil, nil, fmt.Errorf("key not found")
 	}
 

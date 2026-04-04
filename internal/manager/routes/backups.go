@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -54,8 +55,10 @@ func RegisterBackupRoutes(se *core.ServeEvent, app core.App, backupSvc *services
 func handleListPolicies(e *core.RequestEvent, app core.App) error {
 	serverID := e.Request.URL.Query().Get("server_id")
 	filter := ""
+	var params []dbx.Params
 	if serverID != "" {
-		filter = "server = '" + serverID + "'"
+		filter = "server = {:serverId}"
+		params = append(params, dbx.Params{"serverId": serverID})
 	}
 
 	records, err := app.FindRecordsByFilter(
@@ -63,6 +66,7 @@ func handleListPolicies(e *core.RequestEvent, app core.App) error {
 		filter,
 		"-created",
 		200, 0,
+		params...,
 	)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -167,10 +171,13 @@ func handleListRecords(e *core.RequestEvent, app core.App) error {
 	serverID := e.Request.URL.Query().Get("server_id")
 
 	filter := ""
+	var params []dbx.Params
 	if policyID != "" {
-		filter = "policy = '" + policyID + "'"
+		filter = "policy = {:policyId}"
+		params = append(params, dbx.Params{"policyId": policyID})
 	} else if serverID != "" {
-		filter = "server = '" + serverID + "'"
+		filter = "server = {:serverId}"
+		params = append(params, dbx.Params{"serverId": serverID})
 	}
 
 	records, err := app.FindRecordsByFilter(
@@ -178,6 +185,7 @@ func handleListRecords(e *core.RequestEvent, app core.App) error {
 		filter,
 		"-started_at",
 		200, 0,
+		params...,
 	)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

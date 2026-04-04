@@ -2,6 +2,7 @@ package routes
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -351,8 +352,9 @@ func extractAgentBinary(archivePath, destDir, destFilename string) (string, erro
 	defer os.RemoveAll(tmpExtractDir)
 
 	// Extract using command line tar (handles both gzip and tar).
-	cmd := fmt.Sprintf("tar -xzf %s -C %s", archivePath, tmpExtractDir)
-	if execErr := execCommand(cmd); execErr != nil {
+	cmd := exec.Command("tar", "-xzf", archivePath, "-C", tmpExtractDir)
+	cmd.Stderr = os.Stderr
+	if execErr := cmd.Run(); execErr != nil {
 		return "", fmt.Errorf("tar extract: %w", execErr)
 	}
 
@@ -383,13 +385,6 @@ func extractAgentBinary(archivePath, destDir, destFilename string) (string, erro
 	}
 
 	return destPath, nil
-}
-
-// execCommand runs a shell command and returns any error.
-func execCommand(cmd string) error {
-	c := exec.Command("sh", "-c", cmd)
-	c.Stderr = os.Stderr
-	return c.Run()
 }
 
 func handleInstallScript(e *core.RequestEvent, app core.App, version string) error {
@@ -451,7 +446,7 @@ func handlePublicInstallScript(e *core.RequestEvent, app core.App) error {
 		return e.JSON(http.StatusNotFound, map[string]string{"error": "server not found"})
 	}
 
-	if record.GetString("enrollment_token") != token {
+	if subtle.ConstantTimeCompare([]byte(record.GetString("enrollment_token")), []byte(token)) != 1 {
 		return e.JSON(http.StatusForbidden, map[string]string{"error": "invalid token"})
 	}
 
@@ -500,7 +495,7 @@ func handlePublicQuickInstallScript(e *core.RequestEvent, app core.App) error {
 	}
 
 	storedToken := strings.Trim(records[0].GetString("value"), "\"")
-	if storedToken != token {
+	if subtle.ConstantTimeCompare([]byte(storedToken), []byte(token)) != 1 {
 		return e.JSON(http.StatusForbidden, map[string]string{"error": "invalid token"})
 	}
 

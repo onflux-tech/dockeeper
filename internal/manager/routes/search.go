@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -201,15 +202,13 @@ func handleGlobalSearch(e *core.RequestEvent, app core.App) error {
 		go func(idx int, d collectionDef) {
 			defer wg.Done()
 
-			// Build filter: (field1 ~ 'escaped' || field2 ~ 'escaped' || ...)
-			// Use direct string interpolation (same pattern as traefik.go)
-			// to avoid issues with named params + LIKE operator.
-			escaped := strings.ReplaceAll(q, "'", "\\'")
+			// Build filter using parameterized queries to prevent injection.
 			filterParts := make([]string, len(d.searchFields))
 			for j, field := range d.searchFields {
-				filterParts[j] = field + " ~ '" + escaped + "'"
+				filterParts[j] = field + " ~ {:q}"
 			}
 			filter := "(" + strings.Join(filterParts, " || ") + ")"
+			filterParams := dbx.Params{"q": q}
 
 			// Count total.
 			allRecords, countErr := app.FindRecordsByFilter(
@@ -217,6 +216,7 @@ func handleGlobalSearch(e *core.RequestEvent, app core.App) error {
 				filter,
 				"",
 				0, 0,
+				filterParams,
 			)
 			total := 0
 			if countErr != nil {
@@ -236,6 +236,7 @@ func handleGlobalSearch(e *core.RequestEvent, app core.App) error {
 					filter,
 					"-created",
 					limit, 0,
+					filterParams,
 				)
 				if err != nil {
 					slog.Warn("global search: query failed",

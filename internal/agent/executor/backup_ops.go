@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -229,5 +230,5 @@ func isSubpath(base, target string) bool {
 	if err != nil {
 		return false
 	}
-	return rel != ".." && !filepath.IsAbs(rel) && rel[:2] != ".."
+	return !filepath.IsAbs(rel) && !strings.HasPrefix(rel, "..")
 }

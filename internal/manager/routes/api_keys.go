@@ -69,6 +69,17 @@ func handleCreateAPIKey(apiKeyStore *store.APIKeyStore) func(e *core.RequestEven
 			userID = e.Auth.Id
 		}
 
+		// Validate capabilities against the known set.
+		validCaps := make(map[string]bool, len(constants.AllCapabilities))
+		for _, c := range constants.AllCapabilities {
+			validCaps[c] = true
+		}
+		for _, c := range body.Capabilities {
+			if !validCaps[c] {
+				return e.JSON(http.StatusBadRequest, map[string]string{"error": "unknown capability: " + c})
+			}
+		}
+
 		var expiresAt *time.Time
 		if body.ExpiresAt != "" {
 			t, err := time.Parse(time.RFC3339, body.ExpiresAt)

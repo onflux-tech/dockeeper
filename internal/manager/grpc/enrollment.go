@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -139,14 +140,22 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 
 // RenewCert issues a new client certificate for an already-enrolled agent.
 func (h *EnrollmentHandler) RenewCert(ctx context.Context, req *agentpb.RenewCertRequest) (*agentpb.RenewCertResponse, error) {
+	// Always use the mTLS identity as the authoritative server ID.
+	mtlsID, ok := ServerIDFromContext(ctx)
+	if !ok || mtlsID == "" {
+		return nil, status.Error(codes.Unauthenticated, "mTLS identity required")
+	}
+
 	serverID := req.GetServerId()
 	if serverID == "" {
-		// Try to get from mTLS context.
-		if id, ok := ServerIDFromContext(ctx); ok {
-			serverID = id
-		} else {
-			return nil, status.Error(codes.InvalidArgument, "server_id is required")
-		}
+		serverID = mtlsID
+	}
+
+	// Prevent impersonation: the requested server_id MUST match the mTLS CN.
+	if serverID != mtlsID {
+		slog.Warn("RenewCert: server_id mismatch with mTLS CN",
+			"requested", serverID, "mtls_cn", mtlsID)
+		return nil, status.Error(codes.PermissionDenied, "server_id does not match certificate identity")
 	}
 
 	// Verify server exists.
@@ -188,34 +197,15 @@ func (h *EnrollmentHandler) validateToken(token string) error {
 		"", 1, 0,
 	)
 	if err != nil || len(records) == 0 {
-		// No token configured — generate one and save it for future use.
-		return h.createAndValidateToken(token)
+		// No token configured — reject enrollment instead of auto-creating.
+		return fmt.Errorf("no enrollment token configured")
 	}
 
 	stored := strings.Trim(records[0].GetString("value"), "\"")
-	if stored != token {
+	// Constant-time comparison to prevent timing attacks.
+	if subtle.ConstantTimeCompare([]byte(stored), []byte(token)) != 1 {
 		return fmt.Errorf("token mismatch")
 	}
-	return nil
-}
-
-// createAndValidateToken stores the provided token as the enrollment token setting.
-// This is used on first enrollment when no token is configured yet.
-func (h *EnrollmentHandler) createAndValidateToken(token string) error {
-	col, err := h.app.FindCachedCollectionByNameOrId(constants.CollSettings)
-	if err != nil {
-		return fmt.Errorf("find settings collection: %w", err)
-	}
-
-	record := core.NewRecord(col)
-	record.Set("key", "enrollment_token")
-	record.Set("value", token)
-
-	if err := h.app.Save(record); err != nil {
-		return fmt.Errorf("save enrollment token: %w", err)
-	}
-
-	slog.Info("enrollment token saved from first enrollment")
 	return nil
 }
 

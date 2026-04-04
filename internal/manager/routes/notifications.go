@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -138,10 +139,13 @@ func handleListNotificationLogs(e *core.RequestEvent, app core.App) error {
 	channelID := e.Request.URL.Query().Get("channel_id")
 
 	filter := ""
+	var params []dbx.Params
 	if alertRuleID != "" {
-		filter = "alert_rule = '" + alertRuleID + "'"
+		filter = "alert_rule = {:alertRuleId}"
+		params = append(params, dbx.Params{"alertRuleId": alertRuleID})
 	} else if channelID != "" {
-		filter = "channel = '" + channelID + "'"
+		filter = "channel = {:channelId}"
+		params = append(params, dbx.Params{"channelId": channelID})
 	}
 
 	records, err := app.FindRecordsByFilter(
@@ -149,6 +153,7 @@ func handleListNotificationLogs(e *core.RequestEvent, app core.App) error {
 		filter,
 		"-sent_at",
 		200, 0,
+		params...,
 	)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

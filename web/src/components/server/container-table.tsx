@@ -299,7 +299,7 @@ export function ContainerTable({
 								<Checkbox checked={allSelected} onCheckedChange={toggleAll} />
 							</TableHead>
 							<SortableHead
-								className="w-24"
+								className="w-24"
 								label="Status"
 								sortKey="status"
 								currentKey={sortKey}
@@ -314,7 +314,7 @@ export function ContainerTable({
 								onToggle={toggleSort}
 							/>
 							<SortableHead
-								className="w-24"
+								className="w-24"
 								label="Uptime"
 								sortKey="uptime"
 								currentKey={sortKey}
@@ -322,7 +322,7 @@ export function ContainerTable({
 								onToggle={toggleSort}
 							/>
 							<SortableHead
-								className="w-16"
+								className="w-16"
 								label="CPU%"
 								sortKey="cpu"
 								currentKey={sortKey}
@@ -330,7 +330,7 @@ export function ContainerTable({
 								onToggle={toggleSort}
 							/>
 							<SortableHead
-								className="w-20"
+								className="w-20"
 								label="RAM"
 								sortKey="ram"
 								currentKey={sortKey}
