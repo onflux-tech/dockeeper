@@ -3,7 +3,9 @@
 	.docs-header,
 	.docs-sidebar,
 	.docs-copy-btn,
-	.docs-mobile-toggle {
+	.docs-mobile-toggle,
+	[data-slot="sheet-overlay"],
+	[data-slot="sheet-content"] {
 		display: none !important;
 	}
 

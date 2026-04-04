@@ -41,6 +41,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { CapabilitySelector } from "@/components/capability-selector";
 
 import {
 	useUsers,
@@ -58,27 +59,6 @@ import {
 	useDeleteAPIKey,
 	type CreatedAPIKey,
 } from "@/hooks/use-users";
-
-// ── Capabilities List ────────────────────────────────────
-
-// Group by domain for a nicer matrix layout.
-const CAP_DOMAINS = [
-	{ domain: "Servers", caps: ["servers.view", "servers.manage"] },
-	{ domain: "Containers", caps: ["containers.view", "containers.manage"] },
-	{ domain: "Images", caps: ["images.view", "images.manage"] },
-	{ domain: "Networks", caps: ["networks.view", "networks.manage"] },
-	{ domain: "Volumes", caps: ["volumes.view", "volumes.manage"] },
-	{ domain: "Compose", caps: ["compose.view", "compose.manage"] },
-	{ domain: "Metrics", caps: ["metrics.view"] },
-	{ domain: "Alerts", caps: ["alerts.view", "alerts.manage"] },
-	{ domain: "Notifications", caps: ["notifications.view", "notifications.manage"] },
-	{ domain: "Backups", caps: ["backups.view", "backups.manage"] },
-	{ domain: "Settings", caps: ["settings.view", "settings.manage"] },
-	{ domain: "Users", caps: ["users.view", "users.manage"] },
-	{ domain: "Audit", caps: ["audit.view"] },
-	{ domain: "Events", caps: ["events.view"] },
-	{ domain: "Traefik", caps: ["traefik.view", "traefik.manage"] },
-];
 
 // ── Users Tab ────────────────────────────────────────────
 
@@ -142,7 +122,6 @@ function UsersTab() {
 			},
 			{
 				onSuccess: () => {
-					// Handle group membership change.
 					const newGroup = groupId === "none" ? "" : groupId;
 					const oldGroup = originalGroupId === "none" ? "" : originalGroupId;
 					if (newGroup !== oldGroup) {
@@ -349,12 +328,6 @@ function GroupsTab() {
 	const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
 	const [viewingPreset, setViewingPreset] = useState(false);
 
-	function toggleCap(cap: string) {
-		setSelectedCaps((prev) =>
-			prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap],
-		);
-	}
-
 	function handleCreate() {
 		createGroup.mutate(
 			{ name, description, capabilities: selectedCaps },
@@ -525,30 +498,11 @@ function GroupsTab() {
 						)}
 						<div className="space-y-2">
 							<Label>Capabilities</Label>
-							<div className="mt-2 space-y-2">
-								{CAP_DOMAINS.map(({ domain, caps }) => (
-									<div key={domain} className="flex items-center gap-3 rounded-md border px-3 py-2">
-										<span className="w-24 text-xs font-medium text-muted-foreground">{domain}</span>
-										<div className="flex flex-1 gap-3">
-											{caps.map((cap) => (
-												<label
-													key={cap}
-													className={`flex items-center gap-1.5 text-xs ${viewingPreset ? "" : "cursor-pointer"}`}
-												>
-													<input
-														type="checkbox"
-														className="accent-primary"
-														checked={selectedCaps.includes(cap)}
-														onChange={() => !viewingPreset && toggleCap(cap)}
-														disabled={viewingPreset}
-													/>
-													{cap.split(".")[1]}
-												</label>
-											))}
-										</div>
-									</div>
-								))}
-							</div>
+							<CapabilitySelector
+								selected={selectedCaps}
+								onChange={setSelectedCaps}
+								disabled={viewingPreset}
+							/>
 						</div>
 					</div>
 					<DialogFooter>
@@ -626,12 +580,6 @@ function APIKeysTab() {
 	const [selectedCaps, setSelectedCaps] = useState<string[]>([]);
 	const [createdKey, setCreatedKey] = useState<CreatedAPIKey | null>(null);
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-	function toggleCap(cap: string) {
-		setSelectedCaps((prev) =>
-			prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap],
-		);
-	}
 
 	function handleCreate() {
 		createKey.mutate(
@@ -741,29 +689,7 @@ function APIKeysTab() {
 						</div>
 						<div className="space-y-2">
 							<Label>Capabilities</Label>
-							<div className="mt-2 space-y-2">
-								{CAP_DOMAINS.map(({ domain, caps }) => (
-									<div key={domain} className="flex items-center gap-3 rounded-md border px-3 py-2">
-										<span className="w-24 text-xs font-medium text-muted-foreground">{domain}</span>
-										<div className="flex flex-1 gap-3">
-											{caps.map((cap) => (
-												<label
-													key={cap}
-													className="flex cursor-pointer items-center gap-1.5 text-xs"
-												>
-													<input
-														type="checkbox"
-														className="accent-primary"
-														checked={selectedCaps.includes(cap)}
-														onChange={() => toggleCap(cap)}
-													/>
-													{cap.split(".")[1]}
-												</label>
-											))}
-										</div>
-									</div>
-								))}
-							</div>
+							<CapabilitySelector selected={selectedCaps} onChange={setSelectedCaps} />
 						</div>
 					</div>
 					<DialogFooter>

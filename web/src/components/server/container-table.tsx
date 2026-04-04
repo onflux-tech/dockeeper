@@ -216,7 +216,7 @@ export function ContainerTable({
 					<Skeleton className="h-9 w-64" />
 					<Skeleton className="h-9 w-32" />
 				</div>
-				<div className="rounded-md border">
+				<div className="rounded-md border overflow-x-auto">
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -292,13 +292,14 @@ export function ContainerTable({
 
 			{/* Table */}
 			<div className="rounded-md border">
-				<Table>
+				<Table className="table-fixed">
 					<TableHeader>
 						<TableRow>
 							<TableHead className="w-10">
 								<Checkbox checked={allSelected} onCheckedChange={toggleAll} />
 							</TableHead>
 							<SortableHead
+								className="w-24"
 								label="Status"
 								sortKey="status"
 								currentKey={sortKey}
@@ -313,6 +314,7 @@ export function ContainerTable({
 								onToggle={toggleSort}
 							/>
 							<SortableHead
+								className="w-24"
 								label="Uptime"
 								sortKey="uptime"
 								currentKey={sortKey}
@@ -320,6 +322,7 @@ export function ContainerTable({
 								onToggle={toggleSort}
 							/>
 							<SortableHead
+								className="w-16"
 								label="CPU%"
 								sortKey="cpu"
 								currentKey={sortKey}
@@ -327,6 +330,7 @@ export function ContainerTable({
 								onToggle={toggleSort}
 							/>
 							<SortableHead
+								className="w-20"
 								label="RAM"
 								sortKey="ram"
 								currentKey={sortKey}
@@ -340,8 +344,8 @@ export function ContainerTable({
 								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
-							<TableHead>Tags</TableHead>
-							{showServer && <TableHead>Server</TableHead>}
+							<TableHead className="w-24">Tags</TableHead>
+							{showServer && <TableHead className="w-28">Server</TableHead>}
 							<TableHead className="w-10" />
 						</TableRow>
 					</TableHeader>
@@ -364,8 +368,8 @@ export function ContainerTable({
 									<TableCell>
 										<Badge variant={statusColors[c.status] ?? "secondary"}>{c.status}</Badge>
 									</TableCell>
-									<TableCell className="max-w-[250px] text-sm font-medium">
-										<Link to={`/containers/${c.id}`} className="truncate hover:underline">
+									<TableCell className="overflow-hidden text-sm font-medium">
+										<Link to={`/containers/${c.id}`} className="block truncate hover:underline">
 											{c.name}
 										</Link>
 									</TableCell>
@@ -380,7 +384,7 @@ export function ContainerTable({
 									<TableCell className="text-xs tabular-nums text-muted-foreground">
 										{c.current_ram != null && c.current_ram > 0 ? formatBytes(c.current_ram) : "—"}
 									</TableCell>
-									<TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+									<TableCell className="overflow-hidden truncate text-sm text-muted-foreground">
 										{c.image}
 									</TableCell>
 									<TableCell>

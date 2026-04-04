@@ -37,6 +37,8 @@ export interface ApiEndpoint {
 	responseExample?: string;
 	curlExample: string;
 	jsExample: string;
+	streaming?: boolean;
+	websocket?: boolean;
 }
 
 export interface ApiGroup {

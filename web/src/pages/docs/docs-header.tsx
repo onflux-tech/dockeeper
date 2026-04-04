@@ -1,19 +1,24 @@
+import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, KeyRound, Menu } from "lucide-react";
+import { ArrowLeft, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { DockeeperLogo } from "@/components/dockeeper-logo";
 import { changelog } from "@/data/changelog";
+import { AuthorizeBadge, AuthorizeDialog } from "./playground-auth";
 
 interface DocsHeaderProps {
 	onMobileToggle: () => void;
 	onChangelogOpen: () => void;
+	historySlot?: React.ReactNode;
 }
 
 const latestVersion = changelog.length > 0 ? changelog[0].version : "0.0.0";
 
-export function DocsHeader({ onMobileToggle, onChangelogOpen }: DocsHeaderProps) {
+export function DocsHeader({ onMobileToggle, onChangelogOpen, historySlot }: DocsHeaderProps) {
+	const [authOpen, setAuthOpen] = useState(false);
+
 	return (
 		<header className="docs-header sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-md">
 			{/* Mobile menu toggle */}
@@ -46,19 +51,17 @@ export function DocsHeader({ onMobileToggle, onChangelogOpen }: DocsHeaderProps)
 
 			{/* Actions */}
 			<div className="flex items-center gap-2">
+				{historySlot}
+				<AuthorizeBadge onClick={() => setAuthOpen(true)} />
 				<Button variant="outline" size="sm" asChild>
 					<Link to="/">
 						<ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
 						<span className="hidden sm:inline">Dashboard</span>
 					</Link>
 				</Button>
-				<Button size="sm" asChild>
-					<Link to="/users?tab=api-keys">
-						<KeyRound className="mr-1.5 h-3.5 w-3.5" />
-						<span className="hidden sm:inline">Create API Key</span>
-					</Link>
-				</Button>
 			</div>
+
+			<AuthorizeDialog open={authOpen} onOpenChange={setAuthOpen} />
 		</header>
 	);
 }

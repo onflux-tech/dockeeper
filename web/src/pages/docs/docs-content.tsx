@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import type { ApiGroup } from "@/types/docs";
+import type { ApiEndpoint, ApiGroup } from "@/types/docs";
 import { GettingStarted } from "./getting-started";
 import { EndpointSection } from "./endpoint-section";
 
@@ -7,12 +7,13 @@ import { EndpointSection } from "./endpoint-section";
 
 interface DocsContentProps {
 	groups: ApiGroup[];
+	onOpenPlayground?: (endpoint: ApiEndpoint) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
 
 export const DocsContent = forwardRef<HTMLDivElement, DocsContentProps>(function DocsContent(
-	{ groups },
+	{ groups, onOpenPlayground },
 	ref,
 ) {
 	return (
@@ -36,7 +37,11 @@ export const DocsContent = forwardRef<HTMLDivElement, DocsContentProps>(function
 							{/* Endpoints */}
 							<div className="space-y-56">
 								{group.endpoints.map((endpoint) => (
-									<EndpointSection key={endpoint.id} endpoint={endpoint} />
+									<EndpointSection
+										key={endpoint.id}
+										endpoint={endpoint}
+										onOpenPlayground={onOpenPlayground}
+									/>
 								))}
 							</div>
 						</div>

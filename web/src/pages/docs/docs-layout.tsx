@@ -8,6 +8,7 @@ interface DocsLayoutProps {
 	onMobileOpenChange: (open: boolean) => void;
 	changelogOpen: boolean;
 	onChangelogOpenChange: (open: boolean) => void;
+	historySlot?: ReactNode;
 }
 
 export function DocsLayout({
@@ -16,12 +17,14 @@ export function DocsLayout({
 	onMobileOpenChange,
 	changelogOpen,
 	onChangelogOpenChange,
+	historySlot,
 }: DocsLayoutProps) {
 	return (
 		<div className="flex h-screen flex-col bg-background">
 			<DocsHeader
 				onMobileToggle={() => onMobileOpenChange(!mobileOpen)}
 				onChangelogOpen={() => onChangelogOpenChange(true)}
+				historySlot={historySlot}
 			/>
 
 			<div className="flex flex-1 overflow-hidden">{children}</div>

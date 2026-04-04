@@ -1,7 +1,11 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Play, Radio } from "lucide-react";
 import type { ApiEndpoint, ApiParameter, AuthType, HttpMethod } from "@/types/docs";
 import { CodeBlock } from "./code-block";
+import { QuickSendBar } from "./quick-send-bar";
+import { isQuickEligible } from "./playground-utils";
 
 // ── Method badge styles ─────────────────────────────────────────────────────
 
@@ -68,11 +72,12 @@ function ParamList({ title, params }: { title: string; params: ApiParameter[] })
 
 interface EndpointSectionProps {
 	endpoint: ApiEndpoint;
+	onOpenPlayground?: (endpoint: ApiEndpoint) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export function EndpointSection({ endpoint }: EndpointSectionProps) {
+export function EndpointSection({ endpoint, onOpenPlayground }: EndpointSectionProps) {
 	const authInfo = AUTH_LABEL[endpoint.auth];
 
 	return (
@@ -89,6 +94,30 @@ export function EndpointSection({ endpoint }: EndpointSectionProps) {
 							{endpoint.method}
 						</Badge>
 						<h3 className="text-lg font-bold">{endpoint.title}</h3>
+						{endpoint.streaming && (
+							<Badge variant="outline" className="border-purple-400/30 text-purple-400 text-[10px]">
+								<Radio className="mr-1 h-2.5 w-2.5" /> SSE
+							</Badge>
+						)}
+						{endpoint.websocket && (
+							<Badge
+								variant="outline"
+								className="border-muted-foreground/30 text-muted-foreground text-[10px]"
+							>
+								WebSocket
+							</Badge>
+						)}
+						{!endpoint.websocket && onOpenPlayground && (
+							<Button
+								variant="outline"
+								size="sm"
+								className="ml-auto h-7 text-xs"
+								onClick={() => onOpenPlayground(endpoint)}
+							>
+								<Play className="mr-1 h-3 w-3" />
+								Test Request
+							</Button>
+						)}
 					</div>
 
 					{/* Path */}
@@ -153,6 +182,14 @@ export function EndpointSection({ endpoint }: EndpointSectionProps) {
 								<code>{endpoint.responseExample}</code>
 							</pre>
 						</div>
+					)}
+
+					{/* Quick Send Bar (inline testing for simple endpoints) */}
+					{isQuickEligible(endpoint) && (
+						<QuickSendBar
+							endpoint={endpoint}
+							onOpenPlayground={() => onOpenPlayground?.(endpoint)}
+						/>
 					)}
 				</div>
 

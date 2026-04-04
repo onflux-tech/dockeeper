@@ -72,24 +72,17 @@ const data = await res.json();`,
 						required: true,
 						description: "Admin password (min 8 chars).",
 					},
-					{
-						name: "passwordConfirm",
-						type: "string",
-						required: true,
-						description: "Password confirmation.",
-					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/auth/setup \\
   -H "Content-Type: application/json" \\
-  -d '{"email": "admin@example.com", "password": "securepass", "passwordConfirm": "securepass"}'`,
+  -d '{"email": "admin@example.com", "password": "securepass"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/auth/setup", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     email: "admin@example.com",
     password: "securepass",
-    passwordConfirm: "securepass",
   }),
 });`,
 		},
@@ -146,10 +139,10 @@ const { token, refresh } = await res.json();`,
 			description: "Exchange a valid refresh token for a new access/refresh token pair.",
 			auth: "superuser",
 			curlExample: `curl -X POST http://localhost:8090/api/dk/auth/refresh \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/auth/refresh", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const { token, refresh } = await res.json();`,
 		},
@@ -161,10 +154,10 @@ const { token, refresh } = await res.json();`,
 			description: "Invalidate the current session.",
 			auth: "superuser",
 			curlExample: `curl -X POST http://localhost:8090/api/dk/auth/logout \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/auth/logout", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -177,35 +170,33 @@ const { token, refresh } = await res.json();`,
 			requestBody: {
 				contentType: "application/json",
 				fields: [
-					{ name: "oldPassword", type: "string", required: true, description: "Current password." },
 					{
-						name: "password",
+						name: "current_password",
+						type: "string",
+						required: true,
+						description: "Current password.",
+					},
+					{
+						name: "new_password",
 						type: "string",
 						required: true,
 						description: "New password (min 8 chars).",
 					},
-					{
-						name: "passwordConfirm",
-						type: "string",
-						required: true,
-						description: "New password confirmation.",
-					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/auth/password \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"oldPassword": "old", "password": "new", "passwordConfirm": "new"}'`,
+  -d '{"current_password": "old", "new_password": "new"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/auth/password", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    oldPassword: "old",
-    password: "new",
-    passwordConfirm: "new",
+    current_password: "old",
+    new_password: "new",
   }),
 });`,
 		},
@@ -223,9 +214,9 @@ const { token, refresh } = await res.json();`,
 				updated: "2026-01-01 00:00:00.000Z",
 			}),
 			curlExample: `curl http://localhost:8090/api/dk/auth/me \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/auth/me", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const user = await res.json();`,
 		},
@@ -259,9 +250,9 @@ const servers: ApiGroup = {
 				},
 			]),
 			curlExample: `curl http://localhost:8090/api/dk/servers \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/servers", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const servers = await res.json();`,
 		},
@@ -278,7 +269,7 @@ const servers = await res.json();`,
 				contentType: "application/json",
 				fields: [
 					{
-						name: "hostname",
+						name: "name",
 						type: "string",
 						required: true,
 						description: "Display name for the server.",
@@ -292,16 +283,16 @@ const servers = await res.json();`,
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/servers/provision \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"hostname": "prod-2"}'`,
+  -d '{"name": "prod-2"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/servers/provision", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ hostname: "prod-2" }),
+  body: JSON.stringify({ name: "prod-2" }),
 });
 const server = await res.json();`,
 		},
@@ -318,9 +309,9 @@ const server = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Server record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/servers/SERVER_ID/install-script \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/servers/SERVER_ID/install-script", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const script = await res.text();`,
 		},
@@ -338,21 +329,21 @@ const script = await res.text();`,
 			requestBody: {
 				contentType: "application/json",
 				fields: [
-					{ name: "hostname", type: "string", required: false, description: "New display name." },
+					{ name: "name", type: "string", required: true, description: "New display name." },
 					{ name: "description", type: "string", required: false, description: "New description." },
 				],
 			},
 			curlExample: `curl -X PATCH http://localhost:8090/api/dk/servers/SERVER_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"hostname": "prod-1-renamed"}'`,
+  -d '{"name": "prod-1-renamed"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/servers/SERVER_ID", {
   method: "PATCH",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ hostname: "prod-1-renamed" }),
+  body: JSON.stringify({ name: "prod-1-renamed" }),
 });`,
 		},
 		{
@@ -368,10 +359,10 @@ const script = await res.text();`,
 				{ name: "id", type: "string", required: true, description: "Server record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/servers/SERVER_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/servers/SERVER_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -384,9 +375,9 @@ const script = await res.text();`,
 			auth: "required",
 			capability: "servers.manage",
 			curlExample: `curl http://localhost:8090/api/dk/servers/quick-install \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/servers/quick-install", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const { command } = await res.json();`,
 		},
@@ -399,9 +390,9 @@ const { command } = await res.json();`,
 			auth: "required",
 			capability: "servers.manage",
 			curlExample: `curl http://localhost:8090/api/dk/enrollment-token \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/enrollment-token", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const { token } = await res.json();`,
 		},
@@ -414,10 +405,10 @@ const { token } = await res.json();`,
 			auth: "required",
 			capability: "servers.manage",
 			curlExample: `curl -X POST http://localhost:8090/api/dk/enrollment-token/regenerate \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/enrollment-token/regenerate", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const { token } = await res.json();`,
 		},
@@ -458,19 +449,49 @@ const containers: ApiGroup = {
 						name: "ports",
 						type: "object[]",
 						required: false,
-						description: "Port mappings (host→container).",
+						description: "Port mappings: [{host_port, container_port, protocol}].",
 					},
 					{
 						name: "env",
-						type: "string[]",
+						type: "object",
 						required: false,
-						description: "Environment variables (KEY=VALUE).",
+						description: 'Environment variables as key-value map: {"KEY": "VALUE"}.',
 					},
 					{
 						name: "volumes",
-						type: "string[]",
+						type: "object[]",
 						required: false,
-						description: "Volume mounts (host:container).",
+						description: "Volume mounts: [{source, target, read_only}].",
+					},
+					{
+						name: "labels",
+						type: "object",
+						required: false,
+						description: 'Container labels as key-value map: {"key": "value"}.',
+					},
+					{
+						name: "network",
+						type: "string",
+						required: false,
+						description: "Docker network to connect.",
+					},
+					{
+						name: "cpu_limit",
+						type: "number",
+						required: false,
+						description: "CPU limit in cores (e.g. 0.5, 1, 2).",
+					},
+					{
+						name: "mem_limit",
+						type: "number",
+						required: false,
+						description: "Memory limit in bytes.",
+					},
+					{
+						name: "pids_limit",
+						type: "number",
+						required: false,
+						description: "Max number of PIDs.",
 					},
 					{
 						name: "restart_policy",
@@ -479,7 +500,19 @@ const containers: ApiGroup = {
 						description: "Restart policy (no, always, unless-stopped, on-failure).",
 					},
 					{
-						name: "start",
+						name: "command",
+						type: "string[]",
+						required: false,
+						description: "Override container command.",
+					},
+					{
+						name: "entrypoint",
+						type: "string[]",
+						required: false,
+						description: "Override container entrypoint.",
+					},
+					{
+						name: "auto_start",
 						type: "boolean",
 						required: false,
 						description: "Start the container after creation (default: true).",
@@ -488,27 +521,27 @@ const containers: ApiGroup = {
 			},
 			responseExample: json({ id: "ctr_abc123", name: "my-nginx", status: "running" }),
 			curlExample: `curl -X POST http://localhost:8090/api/dk/containers/create \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "server_id": "SERVER_ID",
     "name": "my-nginx",
     "image": "nginx:latest",
-    "ports": [{"host": 8080, "container": 80}],
-    "start": true
+    "ports": [{"host_port": "8080", "container_port": "80", "protocol": "tcp"}],
+    "auto_start": true
   }'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/create", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
     server_id: "SERVER_ID",
     name: "my-nginx",
     image: "nginx:latest",
-    ports: [{ host: 8080, container: 80 }],
-    start: true,
+    ports: [{ host_port: "8080", container_port: "80", protocol: "tcp" }],
+    auto_start: true,
   }),
 });`,
 		},
@@ -525,9 +558,9 @@ const containers: ApiGroup = {
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/containers/CONTAINER_ID/inspect \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/inspect", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const info = await res.json();`,
 		},
@@ -543,10 +576,10 @@ const info = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/containers/CONTAINER_ID/start \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/start", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -561,10 +594,10 @@ const info = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/containers/CONTAINER_ID/stop \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/stop", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -579,10 +612,10 @@ const info = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/containers/CONTAINER_ID/restart \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/restart", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -598,10 +631,10 @@ const info = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/containers/CONTAINER_ID/remove \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/remove", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -616,10 +649,10 @@ const info = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/containers/CONTAINER_ID/pause \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/pause", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -634,10 +667,10 @@ const info = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/containers/CONTAINER_ID/unpause \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/unpause", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -664,13 +697,13 @@ const info = await res.json();`,
 				],
 			},
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/containers/CONTAINER_ID/desired-state \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"desired_state": "running"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/desired-state", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ desired_state: "running" }),
@@ -688,9 +721,9 @@ const info = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/containers/CONTAINER_ID/resources \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/resources", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const limits = await res.json();`,
 		},
@@ -715,24 +748,30 @@ const limits = await res.json();`,
 						description: "CPU limit in cores (e.g. 0.5, 1, 2).",
 					},
 					{
-						name: "memory_limit",
+						name: "mem_limit",
 						type: "number",
 						required: false,
 						description: "Memory limit in bytes.",
 					},
+					{
+						name: "pids_limit",
+						type: "number",
+						required: false,
+						description: "Max number of PIDs (0 = unlimited).",
+					},
 				],
 			},
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/containers/CONTAINER_ID/resources \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"cpu_limit": 1, "memory_limit": 536870912}'`,
+  -d '{"cpu_limit": 1, "mem_limit": 536870912, "pids_limit": 200}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/resources", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ cpu_limit: 1, memory_limit: 536870912 }),
+  body: JSON.stringify({ cpu_limit: 1, mem_limit: 536870912, pids_limit: 200 }),
 });`,
 		},
 		{
@@ -747,9 +786,9 @@ const limits = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/containers/CONTAINER_ID/env \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/env", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const { env } = await res.json();`,
 		},
@@ -769,24 +808,24 @@ const { env } = await res.json();`,
 				fields: [
 					{
 						name: "env",
-						type: "string[]",
+						type: "object",
 						required: true,
-						description: "Full list of environment variables (KEY=VALUE).",
-						example: '["NODE_ENV=production", "PORT=3000"]',
+						description: "Environment variables as key-value map.",
+						example: '{"NODE_ENV": "production", "PORT": "3000"}',
 					},
 				],
 			},
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/containers/CONTAINER_ID/env \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"env": ["NODE_ENV=production", "PORT=3000"]}'`,
+  -d '{"env": {"NODE_ENV": "production", "PORT": "3000"}}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/env", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ env: ["NODE_ENV=production", "PORT=3000"] }),
+  body: JSON.stringify({ env: { NODE_ENV: "production", PORT: "3000" } }),
 });`,
 		},
 	],
@@ -809,9 +848,9 @@ const images: ApiGroup = {
 			auth: "required",
 			capability: "images.view",
 			curlExample: `curl http://localhost:8090/api/dk/images \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/images", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const images = await res.json();`,
 		},
@@ -826,10 +865,10 @@ const images = await res.json();`,
 			capability: "images.manage",
 			parameters: [{ name: "id", type: "string", required: true, description: "Image record ID." }],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/images/IMAGE_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/images/IMAGE_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -844,19 +883,25 @@ const images = await res.json();`,
 				contentType: "application/json",
 				fields: [
 					{ name: "server_id", type: "string", required: true, description: "Target server ID." },
+					{
+						name: "all",
+						type: "boolean",
+						required: false,
+						description: "Remove all unused images, not just dangling ones (default: false).",
+					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/images/prune \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"server_id": "SERVER_ID"}'`,
+  -d '{"server_id": "SERVER_ID", "all": true}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/images/prune", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ server_id: "SERVER_ID" }),
+  body: JSON.stringify({ server_id: "SERVER_ID", all: true }),
 });
 const { spaceReclaimed } = await res.json();`,
 		},
@@ -880,9 +925,9 @@ const compose: ApiGroup = {
 			auth: "required",
 			capability: "compose.view",
 			curlExample: `curl http://localhost:8090/api/dk/compose \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/compose", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const stacks = await res.json();`,
 		},
@@ -898,9 +943,9 @@ const stacks = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Compose stack record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/compose/STACK_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/compose/STACK_ID", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const stack = await res.json();`,
 		},
@@ -919,7 +964,7 @@ const stack = await res.json();`,
 					{ name: "server_id", type: "string", required: true, description: "Target server ID." },
 					{ name: "name", type: "string", required: true, description: "Stack name." },
 					{
-						name: "yaml",
+						name: "yaml_content",
 						type: "string",
 						required: true,
 						description: "Docker Compose YAML content.",
@@ -927,19 +972,19 @@ const stack = await res.json();`,
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/compose \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"server_id": "SERVER_ID", "name": "my-stack", "yaml": "version: \\"3\\"\\nservices:\\n  web:\\n    image: nginx"}'`,
+  -d '{"server_id": "SERVER_ID", "name": "my-stack", "yaml_content": "version: \\"3\\"\\nservices:\\n  web:\\n    image: nginx"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/compose", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
     server_id: "SERVER_ID",
     name: "my-stack",
-    yaml: "version: \\"3\\"\\nservices:\\n  web:\\n    image: nginx",
+    yaml_content: "version: \\"3\\"\\nservices:\\n  web:\\n    image: nginx",
   }),
 });`,
 		},
@@ -957,22 +1002,26 @@ const stack = await res.json();`,
 			requestBody: {
 				contentType: "application/json",
 				fields: [
-					{ name: "name", type: "string", required: false, description: "New stack name." },
-					{ name: "yaml", type: "string", required: false, description: "Updated YAML content." },
+					{
+						name: "yaml_content",
+						type: "string",
+						required: true,
+						description: "Updated YAML content.",
+					},
 				],
 			},
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/compose/STACK_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"yaml": "version: \\"3\\"\\nservices:\\n  web:\\n    image: nginx:alpine"}'`,
+  -d '{"yaml_content": "version: \\"3\\"\\nservices:\\n  web:\\n    image: nginx:alpine"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/compose/STACK_ID", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    yaml: "version: \\"3\\"\\nservices:\\n  web:\\n    image: nginx:alpine",
+    yaml_content: "version: \\"3\\"\\nservices:\\n  web:\\n    image: nginx:alpine",
   }),
 });`,
 		},
@@ -989,10 +1038,10 @@ const stack = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Compose stack record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/compose/STACK_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/compose/STACK_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 	],
@@ -1025,22 +1074,42 @@ const networks: ApiGroup = {
 						required: false,
 						description: "Network driver (default: bridge).",
 					},
+					{
+						name: "subnet",
+						type: "string",
+						required: false,
+						description: "Subnet in CIDR format (e.g. 172.20.0.0/16).",
+					},
+					{
+						name: "gateway",
+						type: "string",
+						required: false,
+						description: "Gateway IP address (e.g. 172.20.0.1).",
+					},
+					{
+						name: "internal",
+						type: "boolean",
+						required: false,
+						description: "Restrict external access to the network (default: false).",
+					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/networks \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"server_id": "SERVER_ID", "name": "my-network", "driver": "bridge"}'`,
+  -d '{"server_id": "SERVER_ID", "name": "my-network", "driver": "bridge", "subnet": "172.20.0.0/16", "gateway": "172.20.0.1"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/networks", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
     server_id: "SERVER_ID",
     name: "my-network",
     driver: "bridge",
+    subnet: "172.20.0.0/16",
+    gateway: "172.20.0.1",
   }),
 });`,
 		},
@@ -1056,10 +1125,10 @@ const networks: ApiGroup = {
 				{ name: "id", type: "string", required: true, description: "Network record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/networks/NETWORK_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/networks/NETWORK_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1085,13 +1154,13 @@ const networks: ApiGroup = {
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/networks/NETWORK_ID/connect \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"container_id": "CONTAINER_ID"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/networks/NETWORK_ID/connect", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ container_id: "CONTAINER_ID" }),
@@ -1117,19 +1186,25 @@ const networks: ApiGroup = {
 						required: true,
 						description: "Container record ID to disconnect.",
 					},
+					{
+						name: "force",
+						type: "boolean",
+						required: false,
+						description: "Force disconnection even if the container is running (default: false).",
+					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/networks/NETWORK_ID/disconnect \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"container_id": "CONTAINER_ID"}'`,
+  -d '{"container_id": "CONTAINER_ID", "force": true}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/networks/NETWORK_ID/disconnect", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ container_id: "CONTAINER_ID" }),
+  body: JSON.stringify({ container_id: "CONTAINER_ID", force: true }),
 });`,
 		},
 	],
@@ -1165,13 +1240,13 @@ const volumes: ApiGroup = {
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/volumes \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"server_id": "SERVER_ID", "name": "my-volume"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/volumes", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ server_id: "SERVER_ID", name: "my-volume" }),
@@ -1189,10 +1264,10 @@ const volumes: ApiGroup = {
 				{ name: "id", type: "string", required: true, description: "Volume record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/volumes/VOLUME_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/volumes/VOLUME_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1207,9 +1282,9 @@ const volumes: ApiGroup = {
 				{ name: "id", type: "string", required: true, description: "Volume record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/volumes/VOLUME_ID/inspect \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/volumes/VOLUME_ID/inspect", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const info = await res.json();`,
 		},
@@ -1233,9 +1308,9 @@ const backups: ApiGroup = {
 			auth: "required",
 			capability: "backups.view",
 			curlExample: `curl http://localhost:8090/api/dk/backups/policies \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/backups/policies", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const policies = await res.json();`,
 		},
@@ -1250,15 +1325,15 @@ const policies = await res.json();`,
 			requestBody: {
 				contentType: "application/json",
 				fields: [
-					{ name: "name", type: "string", required: true, description: "Policy name." },
+					{ name: "server_id", type: "string", required: true, description: "Target server ID." },
 					{
-						name: "container_id",
+						name: "volume",
 						type: "string",
 						required: true,
-						description: "Container to back up.",
+						description: "Volume name to back up.",
 					},
 					{
-						name: "cron",
+						name: "schedule",
 						type: "string",
 						required: true,
 						description: "Cron schedule expression.",
@@ -1276,22 +1351,34 @@ const policies = await res.json();`,
 						required: false,
 						description: "S3 bucket for remote storage.",
 					},
+					{
+						name: "s3_prefix",
+						type: "string",
+						required: false,
+						description: "S3 key prefix for backups.",
+					},
+					{
+						name: "enabled",
+						type: "boolean",
+						required: false,
+						description: "Whether the policy is active.",
+					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/backups/policies \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"name": "daily-db", "container_id": "CTR_ID", "cron": "0 2 * * *", "retention_days": 30}'`,
+  -d '{"server_id": "SERVER_ID", "volume": "my-data", "schedule": "0 2 * * *", "retention_days": 30}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/backups/policies", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    name: "daily-db",
-    container_id: "CTR_ID",
-    cron: "0 2 * * *",
+    server_id: "SERVER_ID",
+    volume: "my-data",
+    schedule: "0 2 * * *",
     retention_days: 30,
   }),
 });`,
@@ -1308,13 +1395,13 @@ const policies = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Policy record ID." },
 			],
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/backups/policies/POLICY_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"cron": "0 3 * * *", "retention_days": 60}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/backups/policies/POLICY_ID", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ cron: "0 3 * * *", retention_days: 60 }),
@@ -1332,10 +1419,10 @@ const policies = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Policy record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/backups/policies/POLICY_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/backups/policies/POLICY_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1351,10 +1438,10 @@ const policies = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Policy record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/backups/policies/POLICY_ID/trigger \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/backups/policies/POLICY_ID/trigger", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1375,9 +1462,9 @@ const policies = await res.json();`,
 				},
 			]),
 			curlExample: `curl http://localhost:8090/api/dk/backups/records \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/backups/records", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const records = await res.json();`,
 		},
@@ -1394,10 +1481,10 @@ const records = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Backup record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/backups/records/BACKUP_ID/restore \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/backups/records/BACKUP_ID/restore", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1410,10 +1497,10 @@ const records = await res.json();`,
 			auth: "required",
 			capability: "backups.manage",
 			curlExample: `curl -X POST http://localhost:8090/api/dk/backups/cleanup \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/backups/cleanup", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const { deleted } = await res.json();`,
 		},
@@ -1450,9 +1537,9 @@ const alertsBlackout: ApiGroup = {
 				},
 			]),
 			curlExample: `curl http://localhost:8090/api/dk/alerts \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const rules = await res.json();`,
 		},
@@ -1469,52 +1556,121 @@ const rules = await res.json();`,
 				fields: [
 					{ name: "name", type: "string", required: true, description: "Alert rule name." },
 					{
+						name: "rule_type",
+						type: "string",
+						required: false,
+						description: 'Rule type: "metric" or "event" (default: "metric").',
+					},
+					{
 						name: "metric",
 						type: "string",
-						required: true,
-						description: "Metric to monitor (cpu_percent, memory_percent, disk_percent).",
+						required: false,
+						description:
+							"Metric to monitor (required for metric rules: cpu_percent, memory_percent, disk_percent).",
 					},
 					{
 						name: "operator",
 						type: "string",
-						required: true,
-						description: "Comparison operator (gt, lt, gte, lte, eq).",
+						required: false,
+						description: "Comparison operator: gt, lt, gte, lte, eq (required for metric rules).",
 					},
 					{
 						name: "threshold",
 						type: "number",
-						required: true,
-						description: "Threshold value to trigger alert.",
+						required: false,
+						description: "Threshold value to trigger alert (required for metric rules).",
 					},
 					{
-						name: "server_id",
+						name: "duration",
+						type: "number",
+						required: false,
+						description: "Seconds the condition must hold before firing (default: 60).",
+					},
+					{
+						name: "target_type",
 						type: "string",
 						required: false,
-						description: "Target server (omit for all servers).",
+						description: 'Target scope: "server" or "container".',
 					},
 					{
-						name: "channel_ids",
+						name: "target_id",
+						type: "string",
+						required: false,
+						description: "Target server or container ID.",
+					},
+					{
+						name: "event_type",
+						type: "string",
+						required: false,
+						description: "Event type to watch (required for event rules).",
+					},
+					{
+						name: "scope",
+						type: "string",
+						required: false,
+						description: 'Event scope (default: "all").',
+					},
+					{
+						name: "active_delay",
+						type: "number",
+						required: false,
+						description: "Seconds to wait before activating (default: 0).",
+					},
+					{
+						name: "clear_delay",
+						type: "number",
+						required: false,
+						description: "Seconds after condition clears to resolve (default: 0).",
+					},
+					{
+						name: "notification_cooldown",
+						type: "number",
+						required: false,
+						description: "Min seconds between notifications (default: 300).",
+					},
+					{
+						name: "suppress_during_updates",
+						type: "boolean",
+						required: false,
+						description: "Suppress alerts during container updates.",
+					},
+					{
+						name: "template",
+						type: "string",
+						required: false,
+						description: "Custom notification message template.",
+					},
+					{
+						name: "channels",
 						type: "string[]",
 						required: false,
 						description: "Notification channel IDs.",
 					},
+					{
+						name: "enabled",
+						type: "boolean",
+						required: false,
+						description: "Whether the rule is enabled (default: true).",
+					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/alerts \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"name": "High CPU", "metric": "cpu_percent", "operator": "gt", "threshold": 90}'`,
+  -d '{"name": "High CPU", "rule_type": "metric", "metric": "cpu_percent", "operator": "gt", "threshold": 90, "duration": 60}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
     name: "High CPU",
+    rule_type: "metric",
     metric: "cpu_percent",
     operator: "gt",
     threshold: 90,
+    duration: 60,
   }),
 });`,
 		},
@@ -1530,13 +1686,13 @@ const rules = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Alert rule record ID." },
 			],
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/alerts/ALERT_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"threshold": 95}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts/ALERT_ID", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ threshold: 95 }),
@@ -1554,10 +1710,10 @@ const rules = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Alert rule record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/alerts/ALERT_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts/ALERT_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1572,10 +1728,10 @@ const rules = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Alert rule record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/alerts/ALERT_ID/toggle \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/alerts/ALERT_ID/toggle", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1587,9 +1743,9 @@ const rules = await res.json();`,
 			auth: "required",
 			capability: "alerts.view",
 			curlExample: `curl http://localhost:8090/api/dk/blackout-windows \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/blackout-windows", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const windows = await res.json();`,
 		},
@@ -1605,30 +1761,60 @@ const windows = await res.json();`,
 				contentType: "application/json",
 				fields: [
 					{ name: "name", type: "string", required: true, description: "Blackout window name." },
-					{ name: "start", type: "string", required: true, description: "Start time (ISO 8601)." },
-					{ name: "end", type: "string", required: true, description: "End time (ISO 8601)." },
+					{
+						name: "start_time",
+						type: "string",
+						required: true,
+						description: "Start time (ISO 8601).",
+					},
+					{ name: "end_time", type: "string", required: true, description: "End time (ISO 8601)." },
+					{
+						name: "recurring",
+						type: "boolean",
+						required: false,
+						description: "Whether this window recurs (default: false).",
+					},
+					{
+						name: "recurrence_rule",
+						type: "string",
+						required: false,
+						description: "Recurrence rule (e.g. RRULE:FREQ=WEEKLY;BYDAY=SA).",
+					},
+					{
+						name: "duration_minutes",
+						type: "number",
+						required: false,
+						description: "Duration in minutes (used with recurring windows).",
+					},
 					{
 						name: "server_ids",
 						type: "string[]",
 						required: false,
 						description: "Affected servers (omit for all).",
 					},
+					{
+						name: "enabled",
+						type: "boolean",
+						required: false,
+						description: "Whether this window is active (default: true).",
+					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/blackout-windows \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"name": "Deploy window", "start": "2026-04-01T02:00:00Z", "end": "2026-04-01T04:00:00Z"}'`,
+  -d '{"name": "Deploy window", "start_time": "2026-04-01T02:00:00Z", "end_time": "2026-04-01T04:00:00Z", "enabled": true}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/blackout-windows", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
     name: "Deploy window",
-    start: "2026-04-01T02:00:00Z",
-    end: "2026-04-01T04:00:00Z",
+    start_time: "2026-04-01T02:00:00Z",
+    end_time: "2026-04-01T04:00:00Z",
+    enabled: true,
   }),
 });`,
 		},
@@ -1644,13 +1830,13 @@ const windows = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Blackout window record ID." },
 			],
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/blackout-windows/BLACKOUT_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"end": "2026-04-01T06:00:00Z"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/blackout-windows/BLACKOUT_ID", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ end: "2026-04-01T06:00:00Z" }),
@@ -1668,10 +1854,10 @@ const windows = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Blackout window record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/blackout-windows/BLACKOUT_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/blackout-windows/BLACKOUT_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 	],
@@ -1694,9 +1880,9 @@ const notifications: ApiGroup = {
 			auth: "required",
 			capability: "notifications.view",
 			curlExample: `curl http://localhost:8090/api/dk/notifications/channels \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const channels = await res.json();`,
 		},
@@ -1705,7 +1891,8 @@ const channels = await res.json();`,
 			method: "POST",
 			path: "/api/dk/notifications/channels",
 			title: "Create Channel",
-			description: "Create a new notification channel (WhatsApp, Telegram, or Webhook).",
+			description:
+				"Create a new notification channel (WhatsApp, Telegram, Webhook, Discord, Slack, SMTP, or Ntfy).",
 			auth: "required",
 			capability: "notifications.manage",
 			requestBody: {
@@ -1716,7 +1903,8 @@ const channels = await res.json();`,
 						name: "type",
 						type: "string",
 						required: true,
-						description: "Channel type: whatsapp, telegram, or webhook.",
+						description:
+							"Channel type: whatsapp, telegram, webhook, discord, slack, smtp, or ntfy.",
 					},
 					{
 						name: "config",
@@ -1724,22 +1912,29 @@ const channels = await res.json();`,
 						required: true,
 						description: "Type-specific configuration (e.g. phone, bot_token, url).",
 					},
+					{
+						name: "enabled",
+						type: "boolean",
+						required: false,
+						description: "Whether the channel is active (default: true).",
+					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/notifications/channels \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"name": "Ops Webhook", "type": "webhook", "config": {"url": "https://hooks.example.com/alert"}}'`,
+  -d '{"name": "Ops Webhook", "type": "webhook", "config": {"url": "https://hooks.example.com/alert"}, "enabled": true}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
     name: "Ops Webhook",
     type: "webhook",
     config: { url: "https://hooks.example.com/alert" },
+    enabled: true,
   }),
 });`,
 		},
@@ -1755,13 +1950,13 @@ const channels = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Channel record ID." },
 			],
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "Ops Webhook v2"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ name: "Ops Webhook v2" }),
@@ -1780,10 +1975,10 @@ const channels = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Channel record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1798,10 +1993,10 @@ const channels = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Channel record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID/test \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/channels/CHANNEL_ID/test", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1822,9 +2017,9 @@ const channels = await res.json();`,
 				},
 			]),
 			curlExample: `curl http://localhost:8090/api/dk/notifications/logs \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/notifications/logs", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const logs = await res.json();`,
 		},
@@ -1848,9 +2043,9 @@ const healthChecks: ApiGroup = {
 			auth: "required",
 			capability: "health.view",
 			curlExample: `curl http://localhost:8090/api/dk/health-checks \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const checks = await res.json();`,
 		},
@@ -1867,17 +2062,34 @@ const checks = await res.json();`,
 				fields: [
 					{ name: "name", type: "string", required: true, description: "Health check name." },
 					{
-						name: "url",
+						name: "container",
 						type: "string",
 						required: true,
-						description: "URL to check.",
-						example: "http://10.0.1.10:8080/health",
+						description: "Container ID to monitor.",
 					},
 					{
-						name: "method",
+						name: "server",
+						type: "string",
+						required: true,
+						description: "Server ID where the container runs.",
+					},
+					{
+						name: "url_path",
 						type: "string",
 						required: false,
-						description: "HTTP method (default: GET).",
+						description: "HTTP path to check (e.g. /health).",
+					},
+					{
+						name: "port",
+						type: "number",
+						required: true,
+						description: "Port to check.",
+					},
+					{
+						name: "expected_status",
+						type: "number",
+						required: false,
+						description: "Expected HTTP status (default: 200).",
 					},
 					{
 						name: "interval_seconds",
@@ -1892,27 +2104,59 @@ const checks = await res.json();`,
 						description: "Request timeout (default: 10).",
 					},
 					{
-						name: "expected_status",
+						name: "failure_threshold",
 						type: "number",
 						required: false,
-						description: "Expected HTTP status (default: 200).",
+						description: "Consecutive failures before marking unhealthy.",
+					},
+					{
+						name: "success_threshold",
+						type: "number",
+						required: false,
+						description: "Consecutive successes before marking healthy.",
+					},
+					{
+						name: "auto_restart",
+						type: "boolean",
+						required: false,
+						description: "Auto-restart container on failure.",
+					},
+					{
+						name: "max_restarts",
+						type: "number",
+						required: false,
+						description: "Max auto-restarts allowed.",
+					},
+					{
+						name: "restart_window_minutes",
+						type: "number",
+						required: false,
+						description: "Time window for max restart count.",
+					},
+					{
+						name: "enabled",
+						type: "boolean",
+						required: false,
+						description: "Whether the check is active.",
 					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/health-checks \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"name": "API Health", "url": "http://10.0.1.10:8080/health", "interval_seconds": 30}'`,
+  -d '{"name": "API Health", "container": "CTR_ID", "server": "SRV_ID", "port": 8080, "url_path": "/health"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
     name: "API Health",
-    url: "http://10.0.1.10:8080/health",
-    interval_seconds: 30,
+    container: "CTR_ID",
+    server: "SRV_ID",
+    port: 8080,
+    url_path: "/health",
   }),
 });`,
 		},
@@ -1928,13 +2172,13 @@ const checks = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Health check record ID." },
 			],
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/health-checks/CHECK_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"interval_seconds": 15}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks/CHECK_ID", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ interval_seconds: 15 }),
@@ -1952,10 +2196,10 @@ const checks = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Health check record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/health-checks/CHECK_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks/CHECK_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -1970,9 +2214,9 @@ const checks = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Health check record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/health-checks/CHECK_ID/logs \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks/CHECK_ID/logs", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const logs = await res.json();`,
 		},
@@ -1988,10 +2232,10 @@ const logs = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Health check record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/health-checks/CHECK_ID/trigger \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/health-checks/CHECK_ID/trigger", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 	],
@@ -2014,9 +2258,9 @@ const usersAccess: ApiGroup = {
 			auth: "required",
 			capability: "users.view",
 			curlExample: `curl http://localhost:8090/api/dk/users \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/users", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const users = await res.json();`,
 		},
@@ -2039,27 +2283,27 @@ const users = await res.json();`,
 						description: "User password (min 8 chars).",
 					},
 					{
-						name: "passwordConfirm",
+						name: "name",
 						type: "string",
-						required: true,
-						description: "Password confirmation.",
+						required: false,
+						description: "User display name.",
 					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/users \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"email": "user@example.com", "password": "securepass", "passwordConfirm": "securepass"}'`,
+  -d '{"email": "user@example.com", "password": "securepass", "name": "John"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/users", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
     email: "user@example.com",
     password: "securepass",
-    passwordConfirm: "securepass",
+    name: "John",
   }),
 });`,
 		},
@@ -2068,21 +2312,35 @@ const users = await res.json();`,
 			method: "PATCH",
 			path: "/api/dk/users/{id}",
 			title: "Update User",
-			description: "Update a user's email or verified status.",
+			description: "Update a user's email, name, password, or enabled status.",
 			auth: "required",
 			capability: "users.manage",
 			parameters: [{ name: "id", type: "string", required: true, description: "User record ID." }],
+			requestBody: {
+				contentType: "application/json",
+				fields: [
+					{ name: "email", type: "string", required: false, description: "New email address." },
+					{ name: "name", type: "string", required: false, description: "New display name." },
+					{ name: "password", type: "string", required: false, description: "New password." },
+					{
+						name: "enabled",
+						type: "boolean",
+						required: false,
+						description: "Enable or disable user.",
+					},
+				],
+			},
 			curlExample: `curl -X PATCH http://localhost:8090/api/dk/users/USER_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"verified": true}'`,
+  -d '{"enabled": true}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/users/USER_ID", {
   method: "PATCH",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ verified: true }),
+  body: JSON.stringify({ enabled: true }),
 });`,
 		},
 		{
@@ -2095,10 +2353,10 @@ const users = await res.json();`,
 			capability: "users.manage",
 			parameters: [{ name: "id", type: "string", required: true, description: "User record ID." }],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/users/USER_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/users/USER_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -2117,9 +2375,9 @@ const users = await res.json();`,
 				},
 			]),
 			curlExample: `curl http://localhost:8090/api/dk/groups \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const groups = await res.json();`,
 		},
@@ -2136,21 +2394,27 @@ const groups = await res.json();`,
 				fields: [
 					{ name: "name", type: "string", required: true, description: "Group name." },
 					{
+						name: "description",
+						type: "string",
+						required: false,
+						description: "Group description.",
+					},
+					{
 						name: "capabilities",
 						type: "string[]",
-						required: true,
+						required: false,
 						description: "List of capability strings.",
 					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/groups \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "Read Only", "capabilities": ["servers.view", "containers.view"]}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
@@ -2169,13 +2433,13 @@ const groups = await res.json();`,
 			capability: "users.manage",
 			parameters: [{ name: "id", type: "string", required: true, description: "Group record ID." }],
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/groups/GROUP_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"capabilities": ["servers.view", "containers.view", "images.view"]}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups/GROUP_ID", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
@@ -2193,10 +2457,10 @@ const groups = await res.json();`,
 			capability: "users.manage",
 			parameters: [{ name: "id", type: "string", required: true, description: "Group record ID." }],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/groups/GROUP_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups/GROUP_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -2220,13 +2484,13 @@ const groups = await res.json();`,
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/groups/GROUP_ID/members \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"user_id": "USER_ID"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups/GROUP_ID/members", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ user_id: "USER_ID" }),
@@ -2250,10 +2514,10 @@ const groups = await res.json();`,
 				},
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/groups/GROUP_ID/members/USER_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/groups/GROUP_ID/members/USER_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -2265,9 +2529,9 @@ const groups = await res.json();`,
 			auth: "required",
 			capability: "users.view",
 			curlExample: `curl http://localhost:8090/api/dk/api-keys \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/api-keys", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const keys = await res.json();`,
 		},
@@ -2276,7 +2540,8 @@ const keys = await res.json();`,
 			method: "POST",
 			path: "/api/dk/api-keys",
 			title: "Create API Key",
-			description: "Generate a new API key linked to a group. The raw key is returned only once.",
+			description:
+				"Generate a new API key with specific capabilities. The raw key is returned only once.",
 			auth: "required",
 			capability: "users.manage",
 			requestBody: {
@@ -2284,10 +2549,16 @@ const keys = await res.json();`,
 				fields: [
 					{ name: "name", type: "string", required: true, description: "Key display name." },
 					{
-						name: "group_id",
+						name: "capabilities",
+						type: "string[]",
+						required: false,
+						description: "List of capability strings the key grants.",
+					},
+					{
+						name: "expires_at",
 						type: "string",
-						required: true,
-						description: "Group that defines the key's capabilities.",
+						required: false,
+						description: "Expiration date in RFC3339 format.",
 					},
 				],
 			},
@@ -2295,19 +2566,19 @@ const keys = await res.json();`,
 				id: "ak_01",
 				name: "CI Pipeline",
 				key: "dk_abc123...",
-				group_id: "grp_01",
+				capabilities: ["containers.view", "containers.manage"],
 			}),
 			curlExample: `curl -X POST http://localhost:8090/api/dk/api-keys \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"name": "CI Pipeline", "group_id": "GROUP_ID"}'`,
+  -d '{"name": "CI Pipeline", "capabilities": ["containers.view", "containers.manage"]}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/api-keys", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ name: "CI Pipeline", group_id: "GROUP_ID" }),
+  body: JSON.stringify({ name: "CI Pipeline", capabilities: ["containers.view", "containers.manage"] }),
 });
 const { key } = await res.json(); // Save this — shown only once`,
 		},
@@ -2323,10 +2594,10 @@ const { key } = await res.json(); // Save this — shown only once`,
 				{ name: "id", type: "string", required: true, description: "API key record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/api-keys/KEY_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/api-keys/KEY_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 	],
@@ -2349,9 +2620,9 @@ const tags: ApiGroup = {
 			auth: "required",
 			capability: "containers.view",
 			curlExample: `curl http://localhost:8090/api/dk/tags \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const tags = await res.json();`,
 		},
@@ -2364,9 +2635,9 @@ const tags = await res.json();`,
 			auth: "required",
 			capability: "containers.view",
 			curlExample: `curl http://localhost:8090/api/dk/tags/names \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags/names", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const names = await res.json();`,
 		},
@@ -2375,32 +2646,39 @@ const names = await res.json();`,
 			method: "POST",
 			path: "/api/dk/tags",
 			title: "Assign Tag",
-			description: "Assign a tag to a container.",
+			description: "Assign a tag to a resource (container or server).",
 			auth: "required",
 			capability: "containers.manage",
 			requestBody: {
 				contentType: "application/json",
 				fields: [
+					{ name: "name", type: "string", required: true, description: "Tag name." },
+					{ name: "color", type: "string", required: false, description: "Tag color (hex)." },
 					{
-						name: "container_id",
+						name: "resource_type",
 						type: "string",
 						required: true,
-						description: "Container record ID.",
+						description: 'Resource type: "container" or "server".',
 					},
-					{ name: "tag", type: "string", required: true, description: "Tag name." },
+					{
+						name: "resource_id",
+						type: "string",
+						required: true,
+						description: "Resource record ID.",
+					},
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/tags \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"container_id": "CONTAINER_ID", "tag": "production"}'`,
+  -d '{"name": "production", "resource_type": "container", "resource_id": "CONTAINER_ID"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ container_id: "CONTAINER_ID", tag: "production" }),
+  body: JSON.stringify({ name: "production", resource_type: "container", resource_id: "CONTAINER_ID" }),
 });`,
 		},
 		{
@@ -2415,10 +2693,10 @@ const names = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Tag assignment record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/tags/TAG_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags/TAG_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -2426,32 +2704,39 @@ const names = await res.json();`,
 			method: "POST",
 			path: "/api/dk/tags/bulk",
 			title: "Bulk Assign Tags",
-			description: "Assign a tag to multiple containers at once.",
+			description: "Assign a tag to multiple resources at once.",
 			auth: "required",
 			capability: "containers.manage",
 			requestBody: {
 				contentType: "application/json",
 				fields: [
+					{ name: "tag", type: "string", required: true, description: "Tag name to assign." },
+					{ name: "color", type: "string", required: false, description: "Tag color (hex)." },
 					{
-						name: "container_ids",
+						name: "resource_type",
+						type: "string",
+						required: true,
+						description: 'Resource type: "container" or "server".',
+					},
+					{
+						name: "resource_ids",
 						type: "string[]",
 						required: true,
-						description: "Container record IDs.",
+						description: "Resource record IDs.",
 					},
-					{ name: "tag", type: "string", required: true, description: "Tag name to assign." },
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/tags/bulk \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"container_ids": ["CTR_1", "CTR_2"], "tag": "staging"}'`,
+  -d '{"tag": "staging", "resource_type": "container", "resource_ids": ["CTR_1", "CTR_2"]}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags/bulk", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ container_ids: ["CTR_1", "CTR_2"], tag: "staging" }),
+  body: JSON.stringify({ tag: "staging", resource_type: "container", resource_ids: ["CTR_1", "CTR_2"] }),
 });`,
 		},
 		{
@@ -2459,32 +2744,38 @@ const names = await res.json();`,
 			method: "DELETE",
 			path: "/api/dk/tags/bulk",
 			title: "Bulk Remove Tags",
-			description: "Remove a tag from multiple containers at once.",
+			description: "Remove a tag from multiple resources at once.",
 			auth: "required",
 			capability: "containers.manage",
 			requestBody: {
 				contentType: "application/json",
 				fields: [
+					{ name: "tag", type: "string", required: true, description: "Tag name to remove." },
 					{
-						name: "container_ids",
+						name: "resource_type",
+						type: "string",
+						required: true,
+						description: 'Resource type: "container" or "server".',
+					},
+					{
+						name: "resource_ids",
 						type: "string[]",
 						required: true,
-						description: "Container record IDs.",
+						description: "Resource record IDs.",
 					},
-					{ name: "tag", type: "string", required: true, description: "Tag name to remove." },
 				],
 			},
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/tags/bulk \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"container_ids": ["CTR_1", "CTR_2"], "tag": "staging"}'`,
+  -d '{"tag": "staging", "resource_type": "container", "resource_ids": ["CTR_1", "CTR_2"]}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/tags/bulk", {
   method: "DELETE",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ container_ids: ["CTR_1", "CTR_2"], tag: "staging" }),
+  body: JSON.stringify({ tag: "staging", resource_type: "container", resource_ids: ["CTR_1", "CTR_2"] }),
 });`,
 		},
 	],
@@ -2530,13 +2821,13 @@ const batchOperations: ApiGroup = {
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/batch \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"action": "restart", "container_ids": ["CTR_1", "CTR_2", "CTR_3"]}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
@@ -2555,9 +2846,9 @@ const { job_id } = await res.json();`,
 			auth: "required",
 			capability: "containers.view",
 			curlExample: `curl http://localhost:8090/api/dk/batch \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const jobs = await res.json();`,
 		},
@@ -2581,9 +2872,9 @@ const jobs = await res.json();`,
 				failed: 0,
 			}),
 			curlExample: `curl http://localhost:8090/api/dk/batch/JOB_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch/JOB_ID", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const job = await res.json();`,
 		},
@@ -2593,15 +2884,16 @@ const job = await res.json();`,
 			path: "/api/dk/batch/{id}/progress",
 			title: "Get Batch Progress",
 			description: "Get real-time progress updates for a running batch job.",
+			streaming: true,
 			auth: "required",
 			capability: "containers.view",
 			parameters: [
 				{ name: "id", type: "string", required: true, description: "Batch job record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/batch/JOB_ID/progress \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch/JOB_ID/progress", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const progress = await res.json();`,
 		},
@@ -2617,10 +2909,10 @@ const progress = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Batch job record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/batch/JOB_ID/cancel \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/batch/JOB_ID/cancel", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 	],
@@ -2643,9 +2935,9 @@ const monitoring: ApiGroup = {
 			auth: "required",
 			capability: "traefik.view",
 			curlExample: `curl http://localhost:8090/api/dk/traefik/routes \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/traefik/routes", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const routes = await res.json();`,
 		},
@@ -2661,9 +2953,9 @@ const routes = await res.json();`,
 				{ name: "q", type: "string", required: true, description: "Search query (min 2 chars)." },
 			],
 			curlExample: `curl "http://localhost:8090/api/dk/search?q=nginx" \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/search?q=nginx", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const results = await res.json();`,
 		},
@@ -2698,9 +2990,9 @@ const results = await res.json();`,
 				},
 			],
 			curlExample: `curl "http://localhost:8090/api/dk/audit-logs?page=1&perPage=20" \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/audit-logs?page=1&perPage=20", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const logs = await res.json();`,
 		},
@@ -2725,9 +3017,9 @@ const settings: ApiGroup = {
 			capability: "settings.view",
 			responseExample: json({ raw_hours: 48, hourly_days: 30, daily_days: 365 }),
 			curlExample: `curl http://localhost:8090/api/dk/settings/retention \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/settings/retention", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const retention = await res.json();`,
 		},
@@ -2743,36 +3035,58 @@ const retention = await res.json();`,
 				contentType: "application/json",
 				fields: [
 					{
-						name: "raw_hours",
+						name: "retention_raw_hours",
 						type: "number",
 						required: false,
 						description: "Hours to keep raw metrics (default: 48).",
 					},
 					{
-						name: "hourly_days",
+						name: "retention_hourly_days",
 						type: "number",
 						required: false,
 						description: "Days to keep hourly aggregates (default: 30).",
 					},
 					{
-						name: "daily_days",
+						name: "retention_daily_days",
 						type: "number",
 						required: false,
 						description: "Days to keep daily aggregates (default: 365).",
 					},
+					{
+						name: "retention_events_days",
+						type: "number",
+						required: false,
+						description: "Days to keep event records (default: 90).",
+					},
+					{
+						name: "retention_audit_logs_days",
+						type: "number",
+						required: false,
+						description: "Days to keep audit logs (default: 90).",
+					},
+					{
+						name: "retention_notification_logs_days",
+						type: "number",
+						required: false,
+						description: "Days to keep notification logs (default: 90).",
+					},
 				],
 			},
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/settings/retention \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"raw_hours": 72, "hourly_days": 60}'`,
+  -d '{"retention_raw_hours": 72, "retention_hourly_days": 60, "retention_audit_logs_days": 180}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/settings/retention", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ raw_hours: 72, hourly_days: 60 }),
+  body: JSON.stringify({
+    retention_raw_hours: 72,
+    retention_hourly_days: 60,
+    retention_audit_logs_days: 180,
+  }),
 });`,
 		},
 		{
@@ -2784,9 +3098,9 @@ const retention = await res.json();`,
 			auth: "required",
 			capability: "settings.view",
 			curlExample: `curl http://localhost:8090/api/dk/registry-credentials \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/registry-credentials", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const creds = await res.json();`,
 		},
@@ -2803,10 +3117,17 @@ const creds = await res.json();`,
 				contentType: "application/json",
 				fields: [
 					{
-						name: "registry",
+						name: "name",
 						type: "string",
 						required: true,
-						description: "Registry URL.",
+						description: "Display name for this credential.",
+						example: "GitHub Container Registry",
+					},
+					{
+						name: "registry_host",
+						type: "string",
+						required: true,
+						description: "Registry host URL.",
 						example: "ghcr.io",
 					},
 					{ name: "username", type: "string", required: true, description: "Registry username." },
@@ -2819,17 +3140,18 @@ const creds = await res.json();`,
 				],
 			},
 			curlExample: `curl -X POST http://localhost:8090/api/dk/registry-credentials \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"registry": "ghcr.io", "username": "user", "password": "ghp_token"}'`,
+  -d '{"name": "GitHub CR", "registry_host": "ghcr.io", "username": "user", "password": "ghp_token"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/registry-credentials", {
   method: "POST",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    registry: "ghcr.io",
+    name: "GitHub CR",
+    registry_host: "ghcr.io",
     username: "user",
     password: "ghp_token",
   }),
@@ -2847,13 +3169,13 @@ const creds = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Credential record ID." },
 			],
 			curlExample: `curl -X PUT http://localhost:8090/api/dk/registry-credentials/CRED_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"password": "new_ghp_token"}'`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/registry-credentials/CRED_ID", {
   method: "PUT",
   headers: {
-    Authorization: "Bearer YOUR_TOKEN",
+    "X-API-Key": "YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({ password: "new_ghp_token" }),
@@ -2871,10 +3193,10 @@ const creds = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Credential record ID." },
 			],
 			curlExample: `curl -X DELETE http://localhost:8090/api/dk/registry-credentials/CRED_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/registry-credentials/CRED_ID", {
   method: "DELETE",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 	],
@@ -2910,9 +3232,9 @@ const { version, commit } = await res.json();`,
 			auth: "required",
 			capability: "settings.view",
 			curlExample: `curl http://localhost:8090/api/dk/system/update/check \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/system/update/check", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const updates = await res.json();`,
 		},
@@ -2922,13 +3244,14 @@ const updates = await res.json();`,
 			path: "/api/dk/system/update/manager",
 			title: "Update Manager",
 			description: "Trigger a self-update of the manager binary. The process will restart.",
+			streaming: true,
 			auth: "required",
 			capability: "settings.manage",
 			curlExample: `curl -X POST http://localhost:8090/api/dk/system/update/manager \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/system/update/manager", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
 		},
 		{
@@ -2944,11 +3267,12 @@ const updates = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Server record ID." },
 			],
 			curlExample: `curl -X POST http://localhost:8090/api/dk/system/update/agent/SERVER_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/system/update/agent/SERVER_ID", {
   method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });`,
+			streaming: true,
 		},
 		{
 			id: "cascade-preview-container",
@@ -2963,9 +3287,9 @@ const updates = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Container record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/containers/CONTAINER_ID/cascade-preview \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/containers/CONTAINER_ID/cascade-preview", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const preview = await res.json();`,
 		},
@@ -2981,9 +3305,9 @@ const preview = await res.json();`,
 				{ name: "id", type: "string", required: true, description: "Volume record ID." },
 			],
 			curlExample: `curl http://localhost:8090/api/dk/volumes/VOLUME_ID/cascade-preview \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/volumes/VOLUME_ID/cascade-preview", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const preview = await res.json();`,
 		},
@@ -3000,9 +3324,9 @@ const preview = await res.json();`,
 			],
 			responseExample: json({ containers: 5, images: 12, volumes: 3, networks: 2, backups: 8 }),
 			curlExample: `curl http://localhost:8090/api/dk/servers/SERVER_ID/cascade-preview \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/servers/SERVER_ID/cascade-preview", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const preview = await res.json();`,
 		},
@@ -3015,9 +3339,9 @@ const preview = await res.json();`,
 			auth: "required",
 			capability: "containers.view",
 			curlExample: `curl http://localhost:8090/api/dk/dashboard/layout \\
-  -H "Authorization: Bearer YOUR_TOKEN"`,
+  -H "X-API-Key: YOUR_API_KEY"`,
 			jsExample: `const res = await fetch("http://localhost:8090/api/dk/dashboard/layout", {
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  headers: { "X-API-Key": "YOUR_API_KEY" },
 });
 const layout = await res.json();`,
 		},

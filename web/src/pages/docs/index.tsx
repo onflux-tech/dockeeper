@@ -1,15 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGroups } from "@/data/api-reference";
 import { useScrollSpy } from "@/hooks/use-scroll-spy";
+import type { ApiEndpoint } from "@/types/docs";
 import { DocsLayout } from "./docs-layout";
 import { DocsSidebar } from "./docs-sidebar";
 import { DocsContent } from "./docs-content";
+import { PlaygroundAuthProvider } from "./playground-auth";
+import { PlaygroundSheet, type HistoryEntry } from "./playground-sheet";
+import { HistoryPopover } from "./playground-history";
+import { usePlaygroundHistory } from "./use-playground-history";
 import "./print.css";
 
-export default function DocsPage() {
+function DocsPageInner() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const [changelogOpen, setChangelogOpen] = useState(false);
+	const [playgroundEndpoint, setPlaygroundEndpoint] = useState<ApiEndpoint | null>(null);
+	const [playgroundOpen, setPlaygroundOpen] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const { entries, addEntry, clearHistory } = usePlaygroundHistory();
 
 	const sectionIds = useMemo(() => {
 		const ids: string[] = [];
@@ -65,12 +74,41 @@ export default function DocsPage() {
 		setMobileOpen(false);
 	};
 
+	const handleOpenPlayground = useCallback((endpoint: ApiEndpoint) => {
+		setPlaygroundEndpoint(endpoint);
+		setPlaygroundOpen(true);
+	}, []);
+
+	const handleHistory = useCallback(
+		(entry: HistoryEntry) => {
+			addEntry(entry);
+		},
+		[addEntry],
+	);
+
+	const handleReplay = useCallback(
+		(entry: HistoryEntry) => {
+			// Find the endpoint by path/method
+			for (const group of apiGroups) {
+				const ep = group.endpoints.find((e) => e.path === entry.path && e.method === entry.method);
+				if (ep) {
+					handleOpenPlayground(ep);
+					return;
+				}
+			}
+		},
+		[handleOpenPlayground],
+	);
+
 	return (
 		<DocsLayout
 			mobileOpen={mobileOpen}
 			onMobileOpenChange={setMobileOpen}
 			changelogOpen={changelogOpen}
 			onChangelogOpenChange={setChangelogOpen}
+			historySlot={
+				<HistoryPopover entries={entries} onClear={clearHistory} onReplay={handleReplay} />
+			}
 		>
 			<DocsSidebar
 				groups={apiGroups}
@@ -79,7 +117,22 @@ export default function DocsPage() {
 				mobileOpen={mobileOpen}
 				onMobileClose={() => setMobileOpen(false)}
 			/>
-			<DocsContent ref={scrollRef} groups={apiGroups} />
+			<DocsContent ref={scrollRef} groups={apiGroups} onOpenPlayground={handleOpenPlayground} />
+
+			<PlaygroundSheet
+				open={playgroundOpen}
+				onOpenChange={setPlaygroundOpen}
+				endpoint={playgroundEndpoint}
+				onHistory={handleHistory}
+			/>
 		</DocsLayout>
+	);
+}
+
+export default function DocsPage() {
+	return (
+		<PlaygroundAuthProvider>
+			<DocsPageInner />
+		</PlaygroundAuthProvider>
 	);
 }
