@@ -3,7 +3,7 @@ import type { ChangelogEntry } from "@/types/docs";
 export const changelog: ChangelogEntry[] = [
 	{
 		version: "1.0.0",
-		date: "2026-04-01",
+		date: "2026-04-07",
 		title: "Dockeeper 1.0 — Open Source Release",
 		summary:
 			"The first public release of Dockeeper: a self-hosted, agent-based platform for managing and monitoring Docker containers across multiple servers. " +
@@ -251,6 +251,61 @@ export const changelog: ChangelogEntry[] = [
 				area: "web",
 				description:
 					"Registry credentials management and agent update UI with fleet-wide progress tracking.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"API Playground auto-detects active login sessions — logged-in users can test endpoints without entering an API key.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"API key authorization dialog validates keys server-side before accepting, with loading state and error feedback.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Docs header dynamically shows Login or Dashboard button based on authentication state.",
+			},
+			// ── Security ────────────────────────────────────────────
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Constant-time token comparison for enrollment and install script validation to prevent timing attacks.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Parameterized PocketBase queries across backups, alerts, notifications, traefik, and search routes to prevent filter injection.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"mTLS certificate CN cross-check on RenewCert to enforce agent identity.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Origin pattern allowlist on WebSocket terminal proxy for secure connection validation.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"API key capability validation against the known capability list and dummy bcrypt on miss to prevent timing oracle.",
+			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Safe path traversal guard on backup operations and direct tar invocation for binary extraction.",
 			},
 			// ── API ──────────────────────────────────────────────────
 			{

@@ -62,9 +62,7 @@ export function DocsHeader({ onMobileToggle, onChangelogOpen, historySlot }: Doc
 						) : (
 							<LogIn className="mr-1.5 h-3.5 w-3.5" />
 						)}
-						<span className="hidden sm:inline">
-							{isAuthenticated ? "Dashboard" : "Login"}
-						</span>
+						<span className="hidden sm:inline">{isAuthenticated ? "Dashboard" : "Login"}</span>
 					</Link>
 				</Button>
 			</div>

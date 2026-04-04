@@ -91,11 +91,7 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 									onClick={() => setShowKey(!showKey)}
 									aria-label={showKey ? "Hide key" : "Show key"}
 								>
-									{showKey ? (
-										<EyeOff className="h-3.5 w-3.5" />
-									) : (
-										<Eye className="h-3.5 w-3.5" />
-									)}
+									{showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
 								</Button>
 							</div>
 							<Button
@@ -115,16 +111,12 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 						<div className="space-y-3">
 							<div className="flex items-center gap-2 rounded-lg border border-green-400/30 bg-green-400/5 px-3 py-2.5">
 								<LogIn className="h-4 w-4 text-green-400" />
-								<span className="text-sm font-medium text-green-400">
-									Session Active
-								</span>
-								<span className="ml-auto text-xs text-muted-foreground">
-									via login
-								</span>
+								<span className="text-sm font-medium text-green-400">Session Active</span>
+								<span className="ml-auto text-xs text-muted-foreground">via login</span>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								Requests use your current session credentials. Add an API key below to
-								test specific key permissions instead.
+								Requests use your current session credentials. Add an API key below to test specific
+								key permissions instead.
 							</p>
 							<div className="relative">
 								<Input
@@ -146,11 +138,7 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 									onClick={() => setShowKey(!showKey)}
 									aria-label={showKey ? "Hide key" : "Show key"}
 								>
-									{showKey ? (
-										<EyeOff className="h-3.5 w-3.5" />
-									) : (
-										<Eye className="h-3.5 w-3.5" />
-									)}
+									{showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
 								</Button>
 							</div>
 							{error && <p className="text-xs text-destructive">{error}</p>}
@@ -195,11 +183,7 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 									onClick={() => setShowKey(!showKey)}
 									aria-label={showKey ? "Hide key" : "Show key"}
 								>
-									{showKey ? (
-										<EyeOff className="h-3.5 w-3.5" />
-									) : (
-										<Eye className="h-3.5 w-3.5" />
-									)}
+									{showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
 								</Button>
 							</div>
 							{error && <p className="text-xs text-destructive">{error}</p>}
@@ -245,7 +229,8 @@ interface AuthorizeBadgeProps {
 export function AuthorizeBadge({ onClick }: AuthorizeBadgeProps) {
 	const { isAuthorized, authMode } = usePlaygroundAuth();
 
-	const label = authMode === "api-key" ? "API Key" : authMode === "session" ? "Session" : "Authorize";
+	const label =
+		authMode === "api-key" ? "API Key" : authMode === "session" ? "Session" : "Authorize";
 
 	return (
 		<Button
