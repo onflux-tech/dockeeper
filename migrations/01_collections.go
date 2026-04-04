@@ -421,13 +421,7 @@ func init() {
 		// ── 14. backup_policies ─────────────────────────────
 		backupPolicies := core.NewBaseCollection("backup_policies")
 		backupPolicies.Fields.Add(
-			&core.RelationField{
-				Name:          "volume",
-				CollectionId:  volumes.Id,
-				MaxSelect:     1,
-				Required:      true,
-				CascadeDelete: true,
-			},
+			&core.TextField{Name: "volume", Required: true, Max: 255},
 			&core.RelationField{
 				Name:          "server",
 				CollectionId:  servers.Id,
