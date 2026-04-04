@@ -111,26 +111,32 @@ func handleCreateAlertRule(e *core.RequestEvent, alertStore *store.AlertStore) e
 		body.NotificationCooldown = 300
 	}
 
-	id, err := alertStore.CreateRule(map[string]any{
+	data := map[string]any{
 		"name":                    body.Name,
 		"rule_type":               body.RuleType,
-		"metric":                  body.Metric,
-		"operator":                body.Operator,
-		"threshold":               body.Threshold,
-		"duration":                body.Duration,
-		"target_type":             body.TargetType,
-		"target_id":               body.TargetID,
-		"event_type":              body.EventType,
-		"scope":                   body.Scope,
+		"channels":                body.Channels,
+		"enabled":                 body.Enabled,
 		"active_delay":            body.ActiveDelay,
 		"clear_delay":             body.ClearDelay,
 		"notification_cooldown":   body.NotificationCooldown,
 		"suppress_during_updates": body.SuppressDuringUpdates,
 		"template":                body.Template,
-		"channels":                body.Channels,
-		"enabled":                 body.Enabled,
 		"state":                   "ok",
-	})
+	}
+
+	if body.RuleType == "metric" {
+		data["metric"] = body.Metric
+		data["operator"] = body.Operator
+		data["threshold"] = body.Threshold
+		data["duration"] = body.Duration
+		data["target_type"] = body.TargetType
+		data["target_id"] = body.TargetID
+	} else {
+		data["event_type"] = body.EventType
+		data["scope"] = body.Scope
+	}
+
+	id, err := alertStore.CreateRule(data)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
