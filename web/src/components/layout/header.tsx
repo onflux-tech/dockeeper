@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router";
-import { LogOut, Menu, PanelLeft, PanelLeftClose, Search, User } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { BookOpen, LogOut, Menu, PanelLeft, PanelLeftClose, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -61,6 +61,14 @@ export function Header() {
 					<Search className="h-4 w-4" />
 				</Button>
 			</div>
+
+			{/* Docs link */}
+			<Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
+				<Link to="/docs">
+					<BookOpen className="h-4 w-4" />
+					<span className="hidden sm:inline text-xs">Docs</span>
+				</Link>
+			</Button>
 
 			{/* User menu */}
 			<DropdownMenu>
