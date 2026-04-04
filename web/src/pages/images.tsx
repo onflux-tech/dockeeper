@@ -86,11 +86,13 @@ const IMAGE_SORT_MAP: Record<ImageSortKey, string> = {
 };
 
 export default function ImagesPage() {
-	const { filters, setSearch, setPage, setPerPage, setCustom, setSort, pbOptions } = useListFilters({
-		defaultSort: "-created",
-		searchFields: ["tags", "image_id"],
-		customFilters: { server: "server" },
-	});
+	const { filters, setSearch, setPage, setPerPage, setCustom, setSort, pbOptions } = useListFilters(
+		{
+			defaultSort: "-created",
+			searchFields: ["tags", "image_id"],
+			customFilters: { server: "server" },
+		},
+	);
 	const [pullOpen, setPullOpen] = useState(false);
 	const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
 
@@ -108,7 +110,8 @@ export default function ImagesPage() {
 	const rawSort = filters.sort;
 	const isDesc = rawSort.startsWith("-");
 	const sortField = isDesc ? rawSort.slice(1) : rawSort;
-	const imageSortKey = (Object.entries(IMAGE_SORT_MAP).find(([, v]) => v === sortField)?.[0] ?? "created") as ImageSortKey;
+	const imageSortKey = (Object.entries(IMAGE_SORT_MAP).find(([, v]) => v === sortField)?.[0] ??
+		"created") as ImageSortKey;
 	const imageSortDir: SortDir = isDesc ? "desc" : "asc";
 
 	const handleSortChange = (key: ImageSortKey) => {
@@ -137,7 +140,11 @@ export default function ImagesPage() {
 				<div className="flex items-center gap-2">
 					<Layers className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Images</h1>
-					{!isLoading && <Badge variant="secondary" className="ml-1">{totalImages}</Badge>}
+					{!isLoading && (
+						<Badge variant="secondary" className="ml-1">
+							{totalImages}
+						</Badge>
+					)}
 				</div>
 				<div className="flex items-center gap-2">
 					<Button
@@ -203,11 +210,42 @@ export default function ImagesPage() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<SortableHead label="Tags" sortKey="tags" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
-								<SortableHead label="Image ID" sortKey="image_id" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
-								<SortableHead label="Size" sortKey="size" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} className="text-right" />
-								<SortableHead label="In Use" sortKey="in_use" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
-								<SortableHead label="Created" sortKey="created" currentKey={imageSortKey} currentDir={imageSortDir} onToggle={handleSortChange} />
+								<SortableHead
+									label="Tags"
+									sortKey="tags"
+									currentKey={imageSortKey}
+									currentDir={imageSortDir}
+									onToggle={handleSortChange}
+								/>
+								<SortableHead
+									label="Image ID"
+									sortKey="image_id"
+									currentKey={imageSortKey}
+									currentDir={imageSortDir}
+									onToggle={handleSortChange}
+								/>
+								<SortableHead
+									label="Size"
+									sortKey="size"
+									currentKey={imageSortKey}
+									currentDir={imageSortDir}
+									onToggle={handleSortChange}
+									className="text-right"
+								/>
+								<SortableHead
+									label="In Use"
+									sortKey="in_use"
+									currentKey={imageSortKey}
+									currentDir={imageSortDir}
+									onToggle={handleSortChange}
+								/>
+								<SortableHead
+									label="Created"
+									sortKey="created"
+									currentKey={imageSortKey}
+									currentDir={imageSortDir}
+									onToggle={handleSortChange}
+								/>
 								<TableHead className="w-12" />
 							</TableRow>
 						</TableHeader>

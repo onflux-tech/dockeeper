@@ -35,10 +35,7 @@ import type { ServerRecord } from "@/types/pocketbase";
 
 type Step = 0 | 1;
 
-const STEPS = [
-	{ label: "Configuration" },
-	{ label: "Review & Create" },
-];
+const STEPS = [{ label: "Configuration" }, { label: "Review & Create" }];
 
 const YAML_PLACEHOLDER = `version: "3.8"
 services:
@@ -105,9 +102,7 @@ export default function ComposeCreatePage() {
 						const code = ev.exit_code ?? 0;
 						setDeployLogs((prev) => [
 							...prev,
-							code === 0
-								? "✓ compose up completed"
-								: `✗ compose up exited with code ${code}`,
+							code === 0 ? "✓ compose up completed" : `✗ compose up exited with code ${code}`,
 						]);
 					}
 				});
@@ -202,9 +197,7 @@ export default function ComposeCreatePage() {
 										</SelectContent>
 									</Select>
 									{onlineServers.length === 0 && (
-										<p className="text-xs text-muted-foreground">
-											No online servers available.
-										</p>
+										<p className="text-xs text-muted-foreground">No online servers available.</p>
 									)}
 								</div>
 
@@ -255,16 +248,12 @@ export default function ComposeCreatePage() {
 							{/* Validation Errors */}
 							{validationErrors.length > 0 && (
 								<div className="rounded-md border border-destructive/50 bg-destructive/5 p-3">
-									<p className="mb-1.5 text-xs font-medium text-destructive">
-										Validation Errors
-									</p>
+									<p className="mb-1.5 text-xs font-medium text-destructive">Validation Errors</p>
 									<ul className="space-y-1">
 										{validationErrors.map((err, i) => (
 											<li key={i} className="text-xs text-destructive/80">
 												{err.line > 0 && (
-													<span className="font-mono text-destructive/60">
-														Line {err.line}:{" "}
-													</span>
+													<span className="font-mono text-destructive/60">Line {err.line}: </span>
 												)}
 												{err.message}
 											</li>
@@ -282,9 +271,7 @@ export default function ComposeCreatePage() {
 							<div className="grid gap-4 sm:grid-cols-2">
 								<div className="space-y-1">
 									<span className="text-xs text-muted-foreground">Server</span>
-									<p className="text-sm font-medium">
-										{selectedServer?.hostname ?? "—"}
-									</p>
+									<p className="text-sm font-medium">{selectedServer?.hostname ?? "—"}</p>
 								</div>
 								<div className="space-y-1">
 									<span className="text-xs text-muted-foreground">Stack Name</span>

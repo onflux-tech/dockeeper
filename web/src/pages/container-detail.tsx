@@ -115,9 +115,7 @@ export default function ContainerDetailPage() {
 						)}
 
 						{/* Tags */}
-						{id && container && (
-							<TagSelector resourceType="container" resourceId={id} />
-						)}
+						{id && container && <TagSelector resourceType="container" resourceId={id} />}
 
 						{/* Desired State Drift Warning */}
 						{container?.desired_state &&

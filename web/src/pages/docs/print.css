@@ -1,90 +1,90 @@
 @media print {
-  /* ── Hide non-essential UI ──────────────────────────────────────────── */
-  .docs-header,
-  .docs-sidebar,
-  .docs-copy-btn,
-  .docs-mobile-toggle {
-    display: none !important;
-  }
+	/* ── Hide non-essential UI ──────────────────────────────────────────── */
+	.docs-header,
+	.docs-sidebar,
+	.docs-copy-btn,
+	.docs-mobile-toggle {
+		display: none !important;
+	}
 
-  /* ── Force single-column, static layout ──────────────────────────── */
-  body {
-    background: white !important;
-    color: black !important;
-    font-size: 11pt;
-    line-height: 1.5;
-  }
+	/* ── Force single-column, static layout ──────────────────────────── */
+	body {
+		background: white !important;
+		color: black !important;
+		font-size: 11pt;
+		line-height: 1.5;
+	}
 
-  * {
-    color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
+	* {
+		color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
 
-  main {
-    max-width: 100% !important;
-    padding: 0 !important;
-  }
+	main {
+		max-width: 100% !important;
+		padding: 0 !important;
+	}
 
-  /* Un-sticky everything */
-  [class*="sticky"] {
-    position: static !important;
-  }
+	/* Un-sticky everything */
+	[class*="sticky"] {
+		position: static !important;
+	}
 
-  /* Force single column for endpoint sections */
-  section > div {
-    flex-direction: column !important;
-  }
+	/* Force single column for endpoint sections */
+	section > div {
+		flex-direction: column !important;
+	}
 
-  /* ── Code blocks: show both tabs expanded ──────────────────────────── */
-  [role="tablist"] {
-    display: none !important;
-  }
+	/* ── Code blocks: show both tabs expanded ──────────────────────────── */
+	[role="tablist"] {
+		display: none !important;
+	}
 
-  [role="tabpanel"] {
-    display: block !important;
-    opacity: 1 !important;
-  }
+	[role="tabpanel"] {
+		display: block !important;
+		opacity: 1 !important;
+	}
 
-  [role="tabpanel"]::before {
-    display: block;
-    font-weight: bold;
-    font-size: 9pt;
-    margin-bottom: 4pt;
-    color: #666;
-  }
+	[role="tabpanel"]::before {
+		display: block;
+		font-weight: bold;
+		font-size: 9pt;
+		margin-bottom: 4pt;
+		color: #666;
+	}
 
-  [role="tabpanel"][data-state="inactive"] {
-    display: block !important;
-  }
+	[role="tabpanel"][data-state="inactive"] {
+		display: block !important;
+	}
 
-  [data-value="curl"][role="tabpanel"]::before {
-    content: "cURL:";
-  }
+	[data-value="curl"][role="tabpanel"]::before {
+		content: "cURL:";
+	}
 
-  [data-value="js"][role="tabpanel"]::before {
-    content: "JavaScript:";
-  }
+	[data-value="js"][role="tabpanel"]::before {
+		content: "JavaScript:";
+	}
 
-  pre {
-    white-space: pre-wrap !important;
-    word-break: break-all;
-    border: 1px solid #ddd !important;
-    padding: 8pt !important;
-    background: #f8f8f8 !important;
-    font-size: 9pt;
-  }
+	pre {
+		white-space: pre-wrap !important;
+		word-break: break-all;
+		border: 1px solid #ddd !important;
+		padding: 8pt !important;
+		background: #f8f8f8 !important;
+		font-size: 9pt;
+	}
 
-  /* ── Page breaks ───────────────────────────────────────────────────── */
-  .border-t {
-    page-break-before: always;
-  }
+	/* ── Page breaks ───────────────────────────────────────────────────── */
+	.border-t {
+		page-break-before: always;
+	}
 
-  section {
-    page-break-inside: avoid;
-  }
+	section {
+		page-break-inside: avoid;
+	}
 
-  h2 {
-    page-break-after: avoid;
-  }
+	h2 {
+		page-break-after: avoid;
+	}
 }

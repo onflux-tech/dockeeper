@@ -1,6 +1,17 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Server, Plus, Search, Trash2, MoreHorizontal, ExternalLink, Pencil, Copy, Check, Terminal } from "lucide-react";
+import {
+	Server,
+	Plus,
+	Search,
+	Trash2,
+	MoreHorizontal,
+	ExternalLink,
+	Pencil,
+	Copy,
+	Check,
+	Terminal,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,7 +119,7 @@ export default function ServersPage() {
 	const containerCounts = useMemo(() => {
 		const map = new Map<string, { running: number; total: number }>();
 		for (const c of containersResult?.items ?? []) {
-			const ct = (c as ContainerRecord);
+			const ct = c as ContainerRecord;
 			const entry = map.get(ct.server) ?? { running: 0, total: 0 };
 			entry.total++;
 			if (ct.status === "running") entry.running++;
@@ -141,7 +152,8 @@ export default function ServersPage() {
 	const rawSort = filters.sort;
 	const isDesc = rawSort.startsWith("-");
 	const sortField = isDesc ? rawSort.slice(1) : rawSort;
-	const sortKey = (Object.entries(SERVER_SORT_MAP).find(([, v]) => v === sortField)?.[0] ?? "name") as ServerSortKey;
+	const sortKey = (Object.entries(SERVER_SORT_MAP).find(([, v]) => v === sortField)?.[0] ??
+		"name") as ServerSortKey;
 	const sortDir: SortDir = isDesc ? "desc" : "asc";
 
 	const handleSortChange = (key: ServerSortKey) => {
@@ -200,9 +212,8 @@ export default function ServersPage() {
 										</Button>
 									</div>
 									<p className="text-[11px] text-muted-foreground leading-relaxed">
-										Requires port <strong>50051</strong> open on the manager. Agents
-										only make outbound connections — no inbound ports needed on
-										agent servers.
+										Requires port <strong>50051</strong> open on the manager. Agents only make
+										outbound connections — no inbound ports needed on agent servers.
 									</p>
 								</div>
 							</PopoverContent>
@@ -227,25 +238,63 @@ export default function ServersPage() {
 						}}
 					/>
 				</div>
-				<TagFilterSelect
-					resourceType="server"
-					value={tagValue}
-					onValueChange={setTagFilter}
-				/>
+				<TagFilterSelect resourceType="server" value={tagValue} onValueChange={setTagFilter} />
 			</div>
 
 			<div className="rounded-md border">
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<SortableHead label="Status" sortKey="status" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
-							<SortableHead label="Name" sortKey="name" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
-							<SortableHead label="Hostname" sortKey="hostname" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
+							<SortableHead
+								label="Status"
+								sortKey="status"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={handleSortChange}
+							/>
+							<SortableHead
+								label="Name"
+								sortKey="name"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={handleSortChange}
+							/>
+							<SortableHead
+								label="Hostname"
+								sortKey="hostname"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={handleSortChange}
+							/>
 							<TableHead>Containers</TableHead>
-							<SortableHead label="Uptime" sortKey="uptime" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
-							<SortableHead label="CPU%" sortKey="cpu" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
-							<SortableHead label="RAM%" sortKey="ram" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
-							<SortableHead label="OS / Version" sortKey="os" currentKey={sortKey} currentDir={sortDir} onToggle={handleSortChange} />
+							<SortableHead
+								label="Uptime"
+								sortKey="uptime"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={handleSortChange}
+							/>
+							<SortableHead
+								label="CPU%"
+								sortKey="cpu"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={handleSortChange}
+							/>
+							<SortableHead
+								label="RAM%"
+								sortKey="ram"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={handleSortChange}
+							/>
+							<SortableHead
+								label="OS / Version"
+								sortKey="os"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={handleSortChange}
+							/>
 							<TableHead className="w-10" />
 						</TableRow>
 					</TableHeader>
@@ -302,12 +351,16 @@ export default function ServersPage() {
 										<TableCell className="text-xs text-muted-foreground whitespace-nowrap">
 											{server.uptime_seconds ? formatUptime(server.uptime_seconds) : "—"}
 										</TableCell>
-										<TableCell className={`text-xs tabular-nums font-medium ${metricColor(server.current_cpu ?? 0)}`}>
+										<TableCell
+											className={`text-xs tabular-nums font-medium ${metricColor(server.current_cpu ?? 0)}`}
+										>
 											{server.current_cpu != null && server.current_cpu > 0
 												? `${server.current_cpu.toFixed(1)}%`
 												: "—"}
 										</TableCell>
-										<TableCell className={`text-xs tabular-nums font-medium ${metricColor(server.current_ram ?? 0)}`}>
+										<TableCell
+											className={`text-xs tabular-nums font-medium ${metricColor(server.current_ram ?? 0)}`}
+										>
 											{server.current_ram != null && server.current_ram > 0
 												? `${server.current_ram.toFixed(1)}%`
 												: "—"}
@@ -315,7 +368,9 @@ export default function ServersPage() {
 										<TableCell className="text-xs text-muted-foreground">
 											{server.os && server.arch ? `${server.os}/${server.arch}` : "—"}
 											{server.agent_version && (
-												<span className="ml-1 text-muted-foreground/70">v{server.agent_version}</span>
+												<span className="ml-1 text-muted-foreground/70">
+													v{server.agent_version}
+												</span>
 											)}
 										</TableCell>
 										<TableCell>

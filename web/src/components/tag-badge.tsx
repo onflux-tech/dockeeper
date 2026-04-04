@@ -21,10 +21,7 @@ export function TagBadge({ name, color = "#6b7280", onRemove, className }: TagBa
 				border: `1px solid ${color}40`,
 			}}
 		>
-			<span
-				className="inline-block h-2 w-2 rounded-full"
-				style={{ backgroundColor: color }}
-			/>
+			<span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
 			{name}
 			{onRemove && (
 				<button

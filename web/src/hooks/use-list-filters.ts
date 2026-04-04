@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
-import {
-	andFilters,
-	containsAnyFilter,
-	eqFilter,
-} from "@/lib/pocketbase-filters";
+import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 
 const VALID_PER_PAGE = [25, 50, 100] as const;
 type PerPage = (typeof VALID_PER_PAGE)[number];

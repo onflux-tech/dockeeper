@@ -19,14 +19,7 @@ interface MultiLogViewerProps {
 	onClose?: () => void;
 }
 
-const COLORS = [
-	"text-log-1",
-	"text-log-2",
-	"text-log-3",
-	"text-log-4",
-	"text-log-5",
-	"text-log-6",
-];
+const COLORS = ["text-log-1", "text-log-2", "text-log-3", "text-log-4", "text-log-5", "text-log-6"];
 
 const BORDER_COLORS = [
 	"border-l-log-1",
@@ -248,8 +241,13 @@ export function MultiLogViewer({ containerIds, onClose }: MultiLogViewerProps) {
 				<ScrollArea className="h-96 rounded-md border bg-muted/30">
 					<div className="p-2 font-mono text-xs leading-relaxed">
 						{filteredLogs.map((entry, i) => (
-							<div key={i} className={`flex gap-2 border-l-2 pl-2 ${getBorderColor(entry.container_id)}`}>
-								<span className="shrink-0 text-muted-foreground">{formatTime(entry.timestamp)}</span>
+							<div
+								key={i}
+								className={`flex gap-2 border-l-2 pl-2 ${getBorderColor(entry.container_id)}`}
+							>
+								<span className="shrink-0 text-muted-foreground">
+									{formatTime(entry.timestamp)}
+								</span>
 								<span className={`shrink-0 ${getColor(entry.container_id)}`}>
 									{entry.container_name || entry.container_id.slice(0, 8)}
 								</span>
@@ -262,7 +260,10 @@ export function MultiLogViewer({ containerIds, onClose }: MultiLogViewerProps) {
 					</div>
 				</ScrollArea>
 			) : (
-				<div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(containerIds.length, 3)}, 1fr)` }}>
+				<div
+					className="grid gap-2"
+					style={{ gridTemplateColumns: `repeat(${Math.min(containerIds.length, 3)}, 1fr)` }}
+				>
 					{Array.from(groupedLogs()).map(([cId, entries]) => {
 						const name = entries[0]?.container_name || cId.slice(0, 8);
 						return (
@@ -272,7 +273,9 @@ export function MultiLogViewer({ containerIds, onClose }: MultiLogViewerProps) {
 									<div className="p-2 font-mono text-[10px] leading-relaxed">
 										{entries.map((entry, i) => (
 											<div key={i} className={entry.stream === "stderr" ? "text-red-400" : ""}>
-												<span className="text-muted-foreground">{formatTime(entry.timestamp)} </span>
+												<span className="text-muted-foreground">
+													{formatTime(entry.timestamp)}{" "}
+												</span>
 												{entry.message}
 											</div>
 										))}

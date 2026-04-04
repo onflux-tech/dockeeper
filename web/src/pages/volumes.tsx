@@ -92,7 +92,11 @@ export default function VolumesPage() {
 				<div className="flex items-center gap-2">
 					<HardDrive className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Volumes</h1>
-					{!isLoading && <Badge variant="secondary" className="ml-1">{totalVolumes}</Badge>}
+					{!isLoading && (
+						<Badge variant="secondary" className="ml-1">
+							{totalVolumes}
+						</Badge>
+					)}
 				</div>
 				<Button size="sm" onClick={() => setCreateOpen(true)} disabled={serverFilter === "all"}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />

@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useTagNames, useApplyTag, useRemoveTag, useTags } from "@/hooks/use-tags";
@@ -13,8 +9,16 @@ import { TagBadge } from "./tag-badge";
 import type { Tag } from "@/hooks/use-tags";
 
 const TAG_COLORS = [
-	"#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4",
-	"#3b82f6", "#8b5cf6", "#ec4899", "#6b7280", "#14b8a6",
+	"#ef4444",
+	"#f97316",
+	"#eab308",
+	"#22c55e",
+	"#06b6d4",
+	"#3b82f6",
+	"#8b5cf6",
+	"#ec4899",
+	"#6b7280",
+	"#14b8a6",
 ];
 
 interface TagSelectorProps {
@@ -44,9 +48,9 @@ export function TagSelector({ resourceType, resourceId }: TagSelectorProps) {
 		(t) => t.name.toLowerCase().includes(search.toLowerCase()) && !appliedNames.has(t.name),
 	);
 
-	const canCreate = search.trim() !== "" && !tagNames.some(
-		(t) => t.name.toLowerCase() === search.trim().toLowerCase(),
-	);
+	const canCreate =
+		search.trim() !== "" &&
+		!tagNames.some((t) => t.name.toLowerCase() === search.trim().toLowerCase());
 
 	function handleApply(name: string, color: string) {
 		applyTag.mutate({
@@ -75,7 +79,11 @@ export function TagSelector({ resourceType, resourceId }: TagSelectorProps) {
 
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger asChild>
-					<Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-xs text-muted-foreground">
+					<Button
+						variant="ghost"
+						size="sm"
+						className="h-6 gap-1 px-2 text-xs text-muted-foreground"
+					>
 						<Plus className="h-3 w-3" />
 						Tag
 						<ChevronsUpDown className="h-3 w-3" />
@@ -97,10 +105,7 @@ export function TagSelector({ resourceType, resourceId }: TagSelectorProps) {
 								className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
 								onClick={() => handleApply(t.name, t.color)}
 							>
-								<span
-									className="h-2.5 w-2.5 rounded-full"
-									style={{ backgroundColor: t.color }}
-								/>
+								<span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: t.color }} />
 								{t.name}
 								<span className="ml-auto text-xs text-muted-foreground">{t.count}</span>
 							</button>
@@ -118,9 +123,7 @@ export function TagSelector({ resourceType, resourceId }: TagSelectorProps) {
 						)}
 
 						{filtered.length === 0 && !canCreate && (
-							<p className="py-2 text-center text-xs text-muted-foreground">
-								No tags found.
-							</p>
+							<p className="py-2 text-center text-xs text-muted-foreground">No tags found.</p>
 						)}
 					</div>
 

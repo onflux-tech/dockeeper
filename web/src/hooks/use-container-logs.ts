@@ -91,16 +91,12 @@ export function useContainerLogs(
 
 						try {
 							const entry = JSON.parse(dataLine.slice(6)) as LogEntry;
-							bufferRef.current = [...bufferRef.current, entry].slice(
-								-maxLinesRef.current,
-							);
+							bufferRef.current = [...bufferRef.current, entry].slice(-maxLinesRef.current);
 
 							if (!pausedRef.current) {
 								setLines([...bufferRef.current]);
 							} else {
-								setBufferedCount(
-									bufferRef.current.length - pausedAtRef.current,
-								);
+								setBufferedCount(bufferRef.current.length - pausedAtRef.current);
 							}
 						} catch {
 							// skip malformed lines

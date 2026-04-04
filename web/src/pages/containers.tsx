@@ -33,12 +33,13 @@ const SORT_MAP: Record<SortKey, string> = {
 };
 
 export default function ContainersPage() {
-	const { filters, setSearch, setPage, setPerPage, setSort, setCustom, pbOptions } =
-		useListFilters({
+	const { filters, setSearch, setPage, setPerPage, setSort, setCustom, pbOptions } = useListFilters(
+		{
 			defaultSort: "-created",
 			searchFields: ["name", "image"],
 			customFilters: { status: "status", server: "server" },
-		});
+		},
+	);
 
 	// Tag filter managed separately (needs `~` contains, not `=` eq).
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -75,7 +76,8 @@ export default function ContainersPage() {
 	const rawSort = filters.sort;
 	const isDesc = rawSort.startsWith("-");
 	const sortField = isDesc ? rawSort.slice(1) : rawSort;
-	const sortKey = (Object.entries(SORT_MAP).find(([, v]) => v === sortField)?.[0] ?? "created") as SortKey;
+	const sortKey = (Object.entries(SORT_MAP).find(([, v]) => v === sortField)?.[0] ??
+		"created") as SortKey;
 	const sortDir: SortDir = isDesc ? "desc" : "asc";
 
 	const handleSortChange = (key: SortKey) => {
@@ -94,7 +96,9 @@ export default function ContainersPage() {
 					<Box className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Containers</h1>
 					{!isLoading && containersResult && (
-						<Badge variant="secondary" className="ml-1">{totalContainers}</Badge>
+						<Badge variant="secondary" className="ml-1">
+							{totalContainers}
+						</Badge>
 					)}
 				</div>
 				<Button asChild size="sm">
@@ -110,11 +114,7 @@ export default function ContainersPage() {
 					value={filters.custom.server ?? "all"}
 					onValueChange={(v) => setCustom("server", v)}
 				/>
-				<TagFilterSelect
-					resourceType="container"
-					value={tagValue}
-					onValueChange={setTagFilter}
-				/>
+				<TagFilterSelect resourceType="container" value={tagValue} onValueChange={setTagFilter} />
 				<Select
 					value={filters.custom.status ?? "all"}
 					onValueChange={(value) => setCustom("status", value)}

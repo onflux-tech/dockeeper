@@ -84,7 +84,9 @@ export function RuleDialog({
 	const [targetId, setTargetId] = useState(editRule?.target_id ?? "");
 	const [eventType, setEventType] = useState(editRule?.event_type ?? "container.crashed");
 	const [scope, setScope] = useState(editRule?.scope ?? "all");
-	const [activeDelay, setActiveDelay] = useState(editRule ? String(editRule.active_delay || 0) : "0");
+	const [activeDelay, setActiveDelay] = useState(
+		editRule ? String(editRule.active_delay || 0) : "0",
+	);
 	const [clearDelay, setClearDelay] = useState(editRule ? String(editRule.clear_delay || 0) : "0");
 	const [cooldown, setCooldown] = useState(
 		editRule ? String(editRule.notification_cooldown || 300) : "300",
@@ -201,10 +203,7 @@ export function RuleDialog({
 						</div>
 						<div className="space-y-1.5">
 							<label className="text-xs font-medium">Rule Type</label>
-							<Select
-								value={ruleType}
-								onValueChange={(v) => setRuleType(v as "metric" | "event")}
-							>
+							<Select value={ruleType} onValueChange={(v) => setRuleType(v as "metric" | "event")}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>

@@ -1,1 +1,9 @@
-export const statusOptions = ["all", "running", "exited", "paused", "created", "restarting", "dead"];
+export const statusOptions = [
+	"all",
+	"running",
+	"exited",
+	"paused",
+	"created",
+	"restarting",
+	"dead",
+];

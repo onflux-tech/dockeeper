@@ -126,16 +126,15 @@ export default function TraefikPage() {
 				<Globe className="h-5 w-5 text-muted-foreground" />
 				<h1 className="text-2xl font-semibold">Traefik Routes</h1>
 				{!isLoading && (
-					<Badge variant="secondary" className="ml-1">{routesResult?.totalItems ?? 0}</Badge>
+					<Badge variant="secondary" className="ml-1">
+						{routesResult?.totalItems ?? 0}
+					</Badge>
 				)}
 			</div>
 
 			{/* Filters */}
 			<div className="flex items-center gap-3">
-				<Select
-					value={serverFilter}
-					onValueChange={setServerFilter}
-				>
+				<Select value={serverFilter} onValueChange={setServerFilter}>
 					<SelectTrigger className="w-48">
 						<SelectValue placeholder="All Servers" />
 					</SelectTrigger>

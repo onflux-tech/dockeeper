@@ -44,10 +44,9 @@ export function useHealthCheckLogs(checkId: string, page = 1, perPage = 50) {
 	return useQuery<CheckLogsResult>({
 		queryKey: ["health-check-logs", checkId, page, perPage],
 		queryFn: () =>
-			fetchJson(
-				`/api/dk/health-checks/${checkId}/logs?page=${page}&per_page=${perPage}`,
-				{ headers: authHeaders() },
-			),
+			fetchJson(`/api/dk/health-checks/${checkId}/logs?page=${page}&per_page=${perPage}`, {
+				headers: authHeaders(),
+			}),
 		enabled: !!checkId,
 	});
 }

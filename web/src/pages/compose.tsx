@@ -78,7 +78,9 @@ export default function ComposePage() {
 					<Rocket className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Compose Stacks</h1>
 					{!isLoading && (
-						<Badge variant="secondary" className="ml-1">{stacksResult?.totalItems ?? 0}</Badge>
+						<Badge variant="secondary" className="ml-1">
+							{stacksResult?.totalItems ?? 0}
+						</Badge>
 					)}
 				</div>
 				<div className="flex items-center gap-2">
@@ -161,15 +163,15 @@ export default function ComposePage() {
 									onClick={() => setSelectedId(selectedId === stack.id ? null : stack.id)}
 								>
 									<TableCell className="font-medium">
-									<span className="flex items-center gap-2">
-										{stack.name}
-										{stack.source === "imported" && (
-											<Badge variant="outline" className="text-[10px]">
-												imported
-											</Badge>
-										)}
-									</span>
-								</TableCell>
+										<span className="flex items-center gap-2">
+											{stack.name}
+											{stack.source === "imported" && (
+												<Badge variant="outline" className="text-[10px]">
+													imported
+												</Badge>
+											)}
+										</span>
+									</TableCell>
 									<TableCell className="text-xs text-muted-foreground">
 										{serverName(stack.server)}
 									</TableCell>
@@ -204,7 +206,6 @@ export default function ComposePage() {
 
 			{/* Stack Detail */}
 			{selectedStack && <StackDetail stack={selectedStack} onDeleted={() => setSelectedId(null)} />}
-
 		</div>
 	);
 }

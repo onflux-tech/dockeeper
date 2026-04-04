@@ -283,66 +283,69 @@ export function useAgentUpdate() {
 				fetch(url, {
 					method: "POST",
 					headers: token ? { Authorization: token } : {},
-				}).then((res) => {
-					if (!res.ok) {
-						res.json()
-							.then((b) => reject(new Error(b.error || b.message || res.statusText)))
-							.catch(() => reject(new Error(res.statusText)));
-						return;
-					}
+				})
+					.then((res) => {
+						if (!res.ok) {
+							res
+								.json()
+								.then((b) => reject(new Error(b.error || b.message || res.statusText)))
+								.catch(() => reject(new Error(res.statusText)));
+							return;
+						}
 
-					const contentType = res.headers.get("content-type") || "";
+						const contentType = res.headers.get("content-type") || "";
 
-					// Non-SSE response (already up to date).
-					if (!contentType.includes("text/event-stream")) {
-						toast.info("Agent already up to date");
-						resolve();
-						return;
-					}
+						// Non-SSE response (already up to date).
+						if (!contentType.includes("text/event-stream")) {
+							toast.info("Agent already up to date");
+							resolve();
+							return;
+						}
 
-					const reader = res.body?.getReader();
-					if (!reader) {
-						resolve();
-						return;
-					}
+						const reader = res.body?.getReader();
+						if (!reader) {
+							resolve();
+							return;
+						}
 
-					const decoder = new TextDecoder();
-					let buffer = "";
+						const decoder = new TextDecoder();
+						let buffer = "";
 
-					function read() {
-						reader!.read().then(({ done, value }) => {
-							if (done) {
-								resolve();
-								return;
-							}
-							buffer += decoder.decode(value, { stream: true });
-							const lines = buffer.split("\n");
-							buffer = lines.pop() || "";
-
-							for (const line of lines) {
-								if (line.startsWith("event: error")) {
-									// Next data line has the error.
-									const idx = lines.indexOf(line);
-									const dataLine = lines[idx + 1];
-									if (dataLine?.startsWith("data: ")) {
-										try {
-											const parsed = JSON.parse(dataLine.slice(6));
-											reject(new Error(parsed.message || "Agent update failed"));
-										} catch {
-											reject(new Error("Agent update failed"));
-										}
-									}
+						function read() {
+							reader!.read().then(({ done, value }) => {
+								if (done) {
+									resolve();
 									return;
 								}
-								if (line.startsWith("event: complete")) {
-									toast.success("Agent updated successfully");
+								buffer += decoder.decode(value, { stream: true });
+								const lines = buffer.split("\n");
+								buffer = lines.pop() || "";
+
+								for (const line of lines) {
+									if (line.startsWith("event: error")) {
+										// Next data line has the error.
+										const idx = lines.indexOf(line);
+										const dataLine = lines[idx + 1];
+										if (dataLine?.startsWith("data: ")) {
+											try {
+												const parsed = JSON.parse(dataLine.slice(6));
+												reject(new Error(parsed.message || "Agent update failed"));
+											} catch {
+												reject(new Error("Agent update failed"));
+											}
+										}
+										return;
+									}
+									if (line.startsWith("event: complete")) {
+										toast.success("Agent updated successfully");
+									}
 								}
-							}
-							read();
-						});
-					}
-					read();
-				}).catch(reject);
+								read();
+							});
+						}
+						read();
+					})
+					.catch(reject);
 			}),
 		onError: (err) => toast.error(`Agent update failed: ${err.message}`),
 	});

@@ -133,7 +133,9 @@ export default function BackupsPage() {
 					<Archive className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Backups</h1>
 					{!policiesLoading && (
-						<Badge variant="secondary" className="ml-1">{policiesResult?.totalItems ?? 0}</Badge>
+						<Badge variant="secondary" className="ml-1">
+							{policiesResult?.totalItems ?? 0}
+						</Badge>
 					)}
 					{runningCount > 0 && (
 						<Badge variant="secondary" className="gap-1">

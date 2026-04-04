@@ -40,9 +40,7 @@ export function BatchProgressDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle className="capitalize">
-						Batch {action}
-					</DialogTitle>
+					<DialogTitle className="capitalize">Batch {action}</DialogTitle>
 					<DialogDescription>
 						{isComplete
 							? `Completed: ${succeeded} succeeded, ${failed} failed${cancelled > 0 ? `, ${cancelled} cancelled` : ""}`
@@ -65,9 +63,7 @@ export function BatchProgressDialog({
 										{containerNames?.get(containerId) ?? containerId.slice(0, 12)}
 									</span>
 									{item.error && (
-										<span className="ml-auto truncate text-xs text-destructive">
-											{item.error}
-										</span>
+										<span className="ml-auto truncate text-xs text-destructive">{item.error}</span>
 									)}
 								</div>
 							))}

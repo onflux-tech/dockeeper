@@ -28,9 +28,10 @@ const statusStyles: Record<
 export function ServerCard({ server, cpuData, memData, editing, tags }: ServerCardProps) {
 	const style = statusStyles[server.status] ?? statusStyles.offline;
 
-	const cpuLabel = server.current_cpu != null && server.current_cpu > 0
-		? `${server.current_cpu.toFixed(1)}%${server.cpu_cores ? ` (${server.cpu_cores} cores)` : ""}`
-		: "—";
+	const cpuLabel =
+		server.current_cpu != null && server.current_cpu > 0
+			? `${server.current_cpu.toFixed(1)}%${server.cpu_cores ? ` (${server.cpu_cores} cores)` : ""}`
+			: "—";
 
 	const ramLabel = (() => {
 		if (server.current_ram == null || server.current_ram <= 0) return "—";

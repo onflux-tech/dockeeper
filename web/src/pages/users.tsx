@@ -184,68 +184,65 @@ function UsersTab() {
 			</div>
 
 			<div className="rounded-md border">
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead>Email</TableHead>
-						<TableHead>Groups</TableHead>
-						<TableHead>Created</TableHead>
-						<TableHead className="w-[100px]" />
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{users?.map((user) => (
-						<TableRow key={user.id}>
-							<TableCell className="font-medium">{user.email}</TableCell>
-							<TableCell>
-								{user.groups?.length > 0 ? (
-									<div className="flex flex-wrap gap-1">
-										{user.groups.map((g) => (
-											<Badge key={g.id} variant="secondary" className="text-xs">
-												{g.name}
-											</Badge>
-										))}
-									</div>
-								) : (
-									<span className="text-xs text-muted-foreground">No group</span>
-								)}
-							</TableCell>
-							<TableCell className="text-muted-foreground">
-								{new Date(user.created).toLocaleDateString()}
-							</TableCell>
-							<TableCell>
-								<div className="flex items-center gap-1">
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() => openEdit(user)}
-									>
-										<Pencil className="h-4 w-4" />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() => setConfirmDeleteId(user.id)}
-									>
-										<Trash2 className="h-4 w-4 text-destructive" />
-									</Button>
-								</div>
-							</TableCell>
-						</TableRow>
-					))}
-					{users?.length === 0 && (
+				<Table>
+					<TableHeader>
 						<TableRow>
-							<TableCell colSpan={4} className="text-center text-muted-foreground">
-								No users found
-							</TableCell>
+							<TableHead>Email</TableHead>
+							<TableHead>Groups</TableHead>
+							<TableHead>Created</TableHead>
+							<TableHead className="w-[100px]" />
 						</TableRow>
-					)}
-				</TableBody>
-			</Table>
+					</TableHeader>
+					<TableBody>
+						{users?.map((user) => (
+							<TableRow key={user.id}>
+								<TableCell className="font-medium">{user.email}</TableCell>
+								<TableCell>
+									{user.groups?.length > 0 ? (
+										<div className="flex flex-wrap gap-1">
+											{user.groups.map((g) => (
+												<Badge key={g.id} variant="secondary" className="text-xs">
+													{g.name}
+												</Badge>
+											))}
+										</div>
+									) : (
+										<span className="text-xs text-muted-foreground">No group</span>
+									)}
+								</TableCell>
+								<TableCell className="text-muted-foreground">
+									{new Date(user.created).toLocaleDateString()}
+								</TableCell>
+								<TableCell>
+									<div className="flex items-center gap-1">
+										<Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
+											<Pencil className="h-4 w-4" />
+										</Button>
+										<Button variant="ghost" size="icon" onClick={() => setConfirmDeleteId(user.id)}>
+											<Trash2 className="h-4 w-4 text-destructive" />
+										</Button>
+									</div>
+								</TableCell>
+							</TableRow>
+						))}
+						{users?.length === 0 && (
+							<TableRow>
+								<TableCell colSpan={4} className="text-center text-muted-foreground">
+									No users found
+								</TableCell>
+							</TableRow>
+						)}
+					</TableBody>
+				</Table>
 			</div>
 
 			{/* Create / Edit User Dialog */}
-			<Dialog open={showCreate} onOpenChange={(open) => { if (!open) resetForm(); }}>
+			<Dialog
+				open={showCreate}
+				onOpenChange={(open) => {
+					if (!open) resetForm();
+				}}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>{editId ? "Edit User" : "Create User"}</DialogTitle>
@@ -296,7 +293,11 @@ function UsersTab() {
 						</Button>
 						<Button
 							onClick={editId ? handleUpdate : handleCreate}
-							disabled={!email || (!editId && !password) || (editId ? updateUser.isPending : createUser.isPending)}
+							disabled={
+								!email ||
+								(!editId && !password) ||
+								(editId ? updateUser.isPending : createUser.isPending)
+							}
 						>
 							{editId ? "Save" : "Create"}
 						</Button>
@@ -305,7 +306,10 @@ function UsersTab() {
 			</Dialog>
 
 			{/* Delete Confirmation Dialog */}
-			<AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+			<AlertDialog
+				open={!!confirmDeleteId}
+				onOpenChange={(open) => !open && setConfirmDeleteId(null)}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete User</AlertDialogTitle>
@@ -365,7 +369,13 @@ function GroupsTab() {
 		);
 	}
 
-	function openEdit(group: { id: string; name: string; description: string; capabilities: string[]; is_preset: boolean }) {
+	function openEdit(group: {
+		id: string;
+		name: string;
+		description: string;
+		capabilities: string[];
+		is_preset: boolean;
+	}) {
 		setEditingGroupId(group.id);
 		setName(group.name);
 		setDescription(group.description);
@@ -414,7 +424,11 @@ function GroupsTab() {
 
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{groups?.map((group) => (
-					<Card key={group.id} className="cursor-pointer hover:ring-1 hover:ring-ring" onClick={() => openEdit(group)}>
+					<Card
+						key={group.id}
+						className="cursor-pointer hover:ring-1 hover:ring-ring"
+						onClick={() => openEdit(group)}
+					>
 						<CardHeader className="pb-3">
 							<div className="flex items-center justify-between">
 								<CardTitle className="text-base">{group.name}</CardTitle>
@@ -440,9 +454,7 @@ function GroupsTab() {
 								</div>
 							</div>
 							{group.description && (
-								<CardDescription className="text-xs">
-									{group.description}
-								</CardDescription>
+								<CardDescription className="text-xs">{group.description}</CardDescription>
 							)}
 						</CardHeader>
 						<CardContent>
@@ -541,17 +553,30 @@ function GroupsTab() {
 					</div>
 					<DialogFooter>
 						{viewingPreset ? (
-							<Button onClick={() => { setEditingGroupId(null); setViewingPreset(false); }}>
+							<Button
+								onClick={() => {
+									setEditingGroupId(null);
+									setViewingPreset(false);
+								}}
+							>
 								Close
 							</Button>
 						) : (
 							<>
-								<Button variant="outline" onClick={() => { setShowCreate(false); setEditingGroupId(null); }}>
+								<Button
+									variant="outline"
+									onClick={() => {
+										setShowCreate(false);
+										setEditingGroupId(null);
+									}}
+								>
 									Cancel
 								</Button>
 								<Button
 									onClick={editingGroupId ? handleUpdate : handleCreate}
-									disabled={!name || (editingGroupId ? updateGroup.isPending : createGroup.isPending)}
+									disabled={
+										!name || (editingGroupId ? updateGroup.isPending : createGroup.isPending)
+									}
 								>
 									{editingGroupId ? "Save" : "Create"}
 								</Button>
@@ -562,7 +587,10 @@ function GroupsTab() {
 			</Dialog>
 
 			{/* Delete Confirmation Dialog */}
-			<AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+			<AlertDialog
+				open={!!confirmDeleteId}
+				onOpenChange={(open) => !open && setConfirmDeleteId(null)}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete Group</AlertDialogTitle>
@@ -643,57 +671,51 @@ function APIKeysTab() {
 			</div>
 
 			<div className="rounded-md border">
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead>Name</TableHead>
-						<TableHead>Prefix</TableHead>
-						<TableHead>Status</TableHead>
-						<TableHead>Last Used</TableHead>
-						<TableHead>Created</TableHead>
-						<TableHead className="w-[80px]" />
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{keys?.map((key) => (
-						<TableRow key={key.id}>
-							<TableCell className="font-medium">{key.name}</TableCell>
-							<TableCell>
-								<code className="text-xs">{key.key_prefix}...</code>
-							</TableCell>
-							<TableCell>
-								<Badge variant={key.enabled ? "default" : "secondary"}>
-									{key.enabled ? "Active" : "Disabled"}
-								</Badge>
-							</TableCell>
-							<TableCell className="text-muted-foreground text-sm">
-								{key.last_used_at
-									? new Date(key.last_used_at).toLocaleDateString()
-									: "Never"}
-							</TableCell>
-							<TableCell className="text-muted-foreground text-sm">
-								{new Date(key.created).toLocaleDateString()}
-							</TableCell>
-							<TableCell>
-								<Button
-									variant="ghost"
-									size="icon"
-									onClick={() => setConfirmDeleteId(key.id)}
-								>
-									<Trash2 className="h-4 w-4 text-destructive" />
-								</Button>
-							</TableCell>
-						</TableRow>
-					))}
-					{keys?.length === 0 && (
+				<Table>
+					<TableHeader>
 						<TableRow>
-							<TableCell colSpan={6} className="text-center text-muted-foreground">
-								No API keys found
-							</TableCell>
+							<TableHead>Name</TableHead>
+							<TableHead>Prefix</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead>Last Used</TableHead>
+							<TableHead>Created</TableHead>
+							<TableHead className="w-[80px]" />
 						</TableRow>
-					)}
-				</TableBody>
-			</Table>
+					</TableHeader>
+					<TableBody>
+						{keys?.map((key) => (
+							<TableRow key={key.id}>
+								<TableCell className="font-medium">{key.name}</TableCell>
+								<TableCell>
+									<code className="text-xs">{key.key_prefix}...</code>
+								</TableCell>
+								<TableCell>
+									<Badge variant={key.enabled ? "default" : "secondary"}>
+										{key.enabled ? "Active" : "Disabled"}
+									</Badge>
+								</TableCell>
+								<TableCell className="text-muted-foreground text-sm">
+									{key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : "Never"}
+								</TableCell>
+								<TableCell className="text-muted-foreground text-sm">
+									{new Date(key.created).toLocaleDateString()}
+								</TableCell>
+								<TableCell>
+									<Button variant="ghost" size="icon" onClick={() => setConfirmDeleteId(key.id)}>
+										<Trash2 className="h-4 w-4 text-destructive" />
+									</Button>
+								</TableCell>
+							</TableRow>
+						))}
+						{keys?.length === 0 && (
+							<TableRow>
+								<TableCell colSpan={6} className="text-center text-muted-foreground">
+									No API keys found
+								</TableCell>
+							</TableRow>
+						)}
+					</TableBody>
+				</Table>
 			</div>
 
 			{/* Create API Key Dialog */}
@@ -706,9 +728,7 @@ function APIKeysTab() {
 				<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
 					<DialogHeader>
 						<DialogTitle>Create API Key</DialogTitle>
-						<DialogDescription>
-							Generate a new API key for programmatic access.
-						</DialogDescription>
+						<DialogDescription>Generate a new API key for programmatic access.</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
 						<div className="space-y-2">
@@ -750,10 +770,7 @@ function APIKeysTab() {
 						<Button variant="outline" onClick={() => setShowCreate(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleCreate}
-							disabled={!keyName || createKey.isPending}
-						>
+						<Button onClick={handleCreate} disabled={!keyName || createKey.isPending}>
 							Generate
 						</Button>
 					</DialogFooter>
@@ -794,9 +811,7 @@ function APIKeysTab() {
 										variant="outline"
 										onClick={() => {
 											void navigator.clipboard.writeText(createdKey.key);
-											import("sonner").then(({ toast }) =>
-												toast.success("Copied to clipboard"),
-											);
+											import("sonner").then(({ toast }) => toast.success("Copied to clipboard"));
 										}}
 									>
 										Copy
@@ -819,12 +834,16 @@ function APIKeysTab() {
 			</Dialog>
 
 			{/* Delete API Key Confirmation Dialog */}
-			<AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+			<AlertDialog
+				open={!!confirmDeleteId}
+				onOpenChange={(open) => !open && setConfirmDeleteId(null)}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Revoke API Key</AlertDialogTitle>
 						<AlertDialogDescription>
-							Are you sure you want to revoke this API key? Applications using it will immediately lose access.
+							Are you sure you want to revoke this API key? Applications using it will immediately
+							lose access.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

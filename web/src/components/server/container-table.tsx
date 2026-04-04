@@ -312,27 +312,27 @@ export function ContainerTable({
 								currentDir={sortDir}
 								onToggle={toggleSort}
 							/>
-						<SortableHead
-							label="Uptime"
-							sortKey="uptime"
-							currentKey={sortKey}
-							currentDir={sortDir}
-							onToggle={toggleSort}
-						/>
-						<SortableHead
-							label="CPU%"
-							sortKey="cpu"
-							currentKey={sortKey}
-							currentDir={sortDir}
-							onToggle={toggleSort}
-						/>
-						<SortableHead
-							label="RAM"
-							sortKey="ram"
-							currentKey={sortKey}
-							currentDir={sortDir}
-							onToggle={toggleSort}
-						/>
+							<SortableHead
+								label="Uptime"
+								sortKey="uptime"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={toggleSort}
+							/>
+							<SortableHead
+								label="CPU%"
+								sortKey="cpu"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={toggleSort}
+							/>
+							<SortableHead
+								label="RAM"
+								sortKey="ram"
+								currentKey={sortKey}
+								currentDir={sortDir}
+								onToggle={toggleSort}
+							/>
 							<SortableHead
 								label="Image"
 								sortKey="image"
@@ -378,9 +378,7 @@ export function ContainerTable({
 											: "—"}
 									</TableCell>
 									<TableCell className="text-xs tabular-nums text-muted-foreground">
-										{c.current_ram != null && c.current_ram > 0
-											? formatBytes(c.current_ram)
-											: "—"}
+										{c.current_ram != null && c.current_ram > 0 ? formatBytes(c.current_ram) : "—"}
 									</TableCell>
 									<TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
 										{c.image}

@@ -52,26 +52,166 @@ function App() {
 					<Route element={<ProtectedRoute />}>
 						<Route element={<AppLayout />}>
 							<Route index element={<DashboardPage />} />
-							<Route path="servers" element={<Cap cap="servers.view"><ServersPage /></Cap>} />
-							<Route path="servers/create" element={<Cap cap="servers.manage"><ServerCreatePage /></Cap>} />
-							<Route path="servers/:id" element={<Cap cap="servers.view"><ServerDetailPage /></Cap>} />
-							<Route path="containers" element={<Cap cap="containers.view"><ContainersPage /></Cap>} />
-							<Route path="containers/create" element={<Cap cap="containers.manage"><ContainerCreatePage /></Cap>} />
-							<Route path="containers/:id" element={<Cap cap="containers.view"><ContainerDetailPage /></Cap>} />
-							<Route path="containers/:id/terminal" element={<Cap cap="containers.manage"><ContainerTerminalPage /></Cap>} />
-							<Route path="images" element={<Cap cap="images.view"><ImagesPage /></Cap>} />
-							<Route path="compose" element={<Cap cap="compose.view"><ComposePage /></Cap>} />
-							<Route path="compose/create" element={<Cap cap="compose.manage"><ComposeCreatePage /></Cap>} />
-							<Route path="networks" element={<Cap cap="networks.manage"><NetworksPage /></Cap>} />
-							<Route path="volumes" element={<Cap cap="volumes.manage"><VolumesPage /></Cap>} />
-							<Route path="alerts" element={<Cap cap="alerts.view"><AlertsPage /></Cap>} />
-							<Route path="health-checks" element={<Cap cap="health.view"><HealthChecksPage /></Cap>} />
-							<Route path="backups" element={<Cap cap="backups.view"><BackupsPage /></Cap>} />
-							<Route path="traefik" element={<Cap cap="traefik.view"><TraefikPage /></Cap>} />
-							<Route path="settings" element={<Cap cap="settings.view"><SettingsPage /></Cap>} />
-							<Route path="audit-logs" element={<Cap cap="audit.view"><AuditLogsPage /></Cap>} />
-							<Route path="users" element={<Cap cap="users.view"><UsersPage /></Cap>} />
-							<Route path="events" element={<Cap cap="events.view"><EventsPage /></Cap>} />
+							<Route
+								path="servers"
+								element={
+									<Cap cap="servers.view">
+										<ServersPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="servers/create"
+								element={
+									<Cap cap="servers.manage">
+										<ServerCreatePage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="servers/:id"
+								element={
+									<Cap cap="servers.view">
+										<ServerDetailPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="containers"
+								element={
+									<Cap cap="containers.view">
+										<ContainersPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="containers/create"
+								element={
+									<Cap cap="containers.manage">
+										<ContainerCreatePage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="containers/:id"
+								element={
+									<Cap cap="containers.view">
+										<ContainerDetailPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="containers/:id/terminal"
+								element={
+									<Cap cap="containers.manage">
+										<ContainerTerminalPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="images"
+								element={
+									<Cap cap="images.view">
+										<ImagesPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="compose"
+								element={
+									<Cap cap="compose.view">
+										<ComposePage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="compose/create"
+								element={
+									<Cap cap="compose.manage">
+										<ComposeCreatePage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="networks"
+								element={
+									<Cap cap="networks.manage">
+										<NetworksPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="volumes"
+								element={
+									<Cap cap="volumes.manage">
+										<VolumesPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="alerts"
+								element={
+									<Cap cap="alerts.view">
+										<AlertsPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="health-checks"
+								element={
+									<Cap cap="health.view">
+										<HealthChecksPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="backups"
+								element={
+									<Cap cap="backups.view">
+										<BackupsPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="traefik"
+								element={
+									<Cap cap="traefik.view">
+										<TraefikPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="settings"
+								element={
+									<Cap cap="settings.view">
+										<SettingsPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="audit-logs"
+								element={
+									<Cap cap="audit.view">
+										<AuditLogsPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="users"
+								element={
+									<Cap cap="users.view">
+										<UsersPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="events"
+								element={
+									<Cap cap="events.view">
+										<EventsPage />
+									</Cap>
+								}
+							/>
 						</Route>
 					</Route>
 				</Routes>

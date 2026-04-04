@@ -68,9 +68,10 @@ export function StackDetail({ stack, onDeleted }: StackDetailProps) {
 		filter: `compose_stack = '${stack.id}'`,
 		perPage: 20,
 	});
-	const stackContainerIds = (stackContainersResult?.items as ContainerRecord[] | undefined)
-		?.map((c) => c.id)
-		?.slice(0, 6) ?? [];
+	const stackContainerIds =
+		(stackContainersResult?.items as ContainerRecord[] | undefined)
+			?.map((c) => c.id)
+			?.slice(0, 6) ?? [];
 
 	const dirty = yaml !== stack.yaml_content;
 
@@ -187,11 +188,7 @@ export function StackDetail({ stack, onDeleted }: StackDetailProps) {
 
 				<div className="flex items-center gap-2">
 					{stackContainerIds.length >= 2 && (
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => setShowMultiLog(!showMultiLog)}
-						>
+						<Button variant="outline" size="sm" onClick={() => setShowMultiLog(!showMultiLog)}>
 							<List className="mr-1.5 h-3.5 w-3.5" />
 							{showMultiLog ? "Hide Logs" : "Multi-Logs"}
 						</Button>
@@ -302,10 +299,7 @@ export function StackDetail({ stack, onDeleted }: StackDetailProps) {
 
 			{/* Multi-Container Log Viewer */}
 			{showMultiLog && stackContainerIds.length >= 2 && (
-				<MultiLogViewer
-					containerIds={stackContainerIds}
-					onClose={() => setShowMultiLog(false)}
-				/>
+				<MultiLogViewer containerIds={stackContainerIds} onClose={() => setShowMultiLog(false)} />
 			)}
 
 			{/* Delete Confirmation */}

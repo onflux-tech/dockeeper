@@ -482,8 +482,7 @@ function AboutTab() {
 									<span>Current: {updateCheck.data.current}</span>
 									{updateCheck.data.published_at && (
 										<span>
-											Published:{" "}
-											{new Date(updateCheck.data.published_at).toLocaleDateString()}
+											Published: {new Date(updateCheck.data.published_at).toLocaleDateString()}
 										</span>
 									)}
 								</div>
@@ -636,9 +635,7 @@ function RegistryTab() {
 							</Table>
 						</div>
 					) : (
-						<p className="text-sm text-muted-foreground">
-							No registry credentials configured.
-						</p>
+						<p className="text-sm text-muted-foreground">No registry credentials configured.</p>
 					)}
 				</div>
 			)}
@@ -808,7 +805,14 @@ function BlackoutTab() {
 		setShowForm(false);
 	};
 
-	const openEdit = (w: { id: string; name: string; server?: string; server_ids?: string[]; start_time: string; end_time: string }) => {
+	const openEdit = (w: {
+		id: string;
+		name: string;
+		server?: string;
+		server_ids?: string[];
+		start_time: string;
+		end_time: string;
+	}) => {
 		setEditId(w.id);
 		setName(w.name);
 		const sid = w.server_ids?.length ? w.server_ids[0] : (w.server ?? "");
@@ -830,10 +834,7 @@ function BlackoutTab() {
 		};
 
 		if (editId) {
-			updateMut.mutate(
-				{ id: editId, fields },
-				{ onSuccess: resetForm },
-			);
+			updateMut.mutate({ id: editId, fields }, { onSuccess: resetForm });
 		} else {
 			createMut.mutate(fields, { onSuccess: resetForm });
 		}

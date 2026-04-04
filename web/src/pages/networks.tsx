@@ -98,7 +98,11 @@ export default function NetworksPage() {
 				<div className="flex items-center gap-2">
 					<Network className="h-5 w-5 text-muted-foreground" />
 					<h1 className="text-2xl font-semibold">Networks</h1>
-					{!isLoading && <Badge variant="secondary" className="ml-1">{totalNetworks}</Badge>}
+					{!isLoading && (
+						<Badge variant="secondary" className="ml-1">
+							{totalNetworks}
+						</Badge>
+					)}
 				</div>
 				<Button size="sm" onClick={() => setCreateOpen(true)} disabled={serverFilter === "all"}>
 					<Plus className="mr-1.5 h-3.5 w-3.5" />

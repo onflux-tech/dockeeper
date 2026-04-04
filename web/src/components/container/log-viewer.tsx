@@ -1,14 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-	Search,
-	Download,
-	Trash2,
-	Circle,
-	ArrowDown,
-	ArrowUp,
-	Clock,
-	Regex,
-} from "lucide-react";
+import { Search, Download, Trash2, Circle, ArrowDown, ArrowUp, Clock, Regex } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useContainerLogs, type LogEntry } from "@/hooks/use-container-logs";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -158,9 +144,7 @@ function LogLine({
 			className={`flex gap-2 py-0.5 px-2 font-mono text-xs leading-5 ${index % 2 === 0 ? "bg-transparent" : "bg-muted/20"} hover:bg-muted/40`}
 		>
 			{timeMode !== "off" && (
-				<span className="shrink-0 text-muted-foreground/70 select-none tabular-nums">
-					{ts}
-				</span>
+				<span className="shrink-0 text-muted-foreground/70 select-none tabular-nums">{ts}</span>
 			)}
 			{level !== "unknown" ? (
 				<span className={`shrink-0 w-8 text-center select-none font-semibold ${style.className}`}>
@@ -173,9 +157,7 @@ function LogLine({
 			) : (
 				<span className="shrink-0 w-8" />
 			)}
-			<span className="whitespace-pre-wrap break-words min-w-0 flex-1">
-				{entry.message}
-			</span>
+			<span className="whitespace-pre-wrap break-words min-w-0 flex-1">{entry.message}</span>
 		</div>
 	);
 }
@@ -191,12 +173,14 @@ export function LogViewer({ containerId, containerName }: LogViewerProps) {
 	const [autoRefresh, setAutoRefresh] = useState(true);
 	const [search, setSearch] = useState("");
 
-	const { lines, connected, paused, bufferedCount, pause, resume, clear } =
-		useContainerLogs(containerId, {
+	const { lines, connected, paused, bufferedCount, pause, resume, clear } = useContainerLogs(
+		containerId,
+		{
 			follow: true,
 			tail,
 			maxLines: Math.max(tail, 5000),
-		});
+		},
+	);
 
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [autoScroll, setAutoScroll] = useState(true);

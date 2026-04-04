@@ -51,10 +51,10 @@ export function useGlobalSearch(query: string) {
 			const controller = new AbortController();
 			abortRef.current = controller;
 
-			const res = await fetch(
-				`/api/dk/search?q=${encodeURIComponent(debouncedQuery)}&limit=5`,
-				{ headers: authHeaders(), signal: controller.signal },
-			);
+			const res = await fetch(`/api/dk/search?q=${encodeURIComponent(debouncedQuery)}&limit=5`, {
+				headers: authHeaders(),
+				signal: controller.signal,
+			});
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({ error: res.statusText }));
 				throw new Error(body.error || res.statusText);

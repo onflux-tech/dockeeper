@@ -69,13 +69,18 @@ function EventDetailsCell({ event }: { event: EventRecord }) {
 	return (
 		<div className="flex flex-wrap gap-1">
 			{entries.map(([k, v]) => (
-				<span key={k} className="inline-flex items-center gap-0.5 rounded bg-muted px-1.5 py-0.5 text-xs">
+				<span
+					key={k}
+					className="inline-flex items-center gap-0.5 rounded bg-muted px-1.5 py-0.5 text-xs"
+				>
 					<span className="text-muted-foreground">{k}:</span>
 					<span className="max-w-[100px] truncate">{String(v)}</span>
 				</span>
 			))}
 			{Object.keys(event.details).length > 3 && (
-				<span className="text-xs text-muted-foreground">+{Object.keys(event.details).length - 3}</span>
+				<span className="text-xs text-muted-foreground">
+					+{Object.keys(event.details).length - 3}
+				</span>
 			)}
 		</div>
 	);
@@ -202,9 +207,7 @@ export default function EventsPage() {
 										</span>
 									</TableCell>
 									<TableCell>
-										<Badge variant={severityVariant(evt.severity)}>
-											{evt.severity}
-										</Badge>
+										<Badge variant={severityVariant(evt.severity)}>{evt.severity}</Badge>
 									</TableCell>
 									<TableCell className="whitespace-nowrap text-sm">
 										{evt.server_name || evt.server_id || "—"}

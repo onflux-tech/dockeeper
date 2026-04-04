@@ -34,7 +34,10 @@ export function useDesiredState() {
 		},
 		onSuccess: (_data, { desiredState }) => {
 			void queryClient.invalidateQueries({ queryKey: ["collection", "containers"] });
-			const label = desiredState === "none" ? "No enforcement" : `Should ${desiredState === "running" ? "run" : "stop"}`;
+			const label =
+				desiredState === "none"
+					? "No enforcement"
+					: `Should ${desiredState === "running" ? "run" : "stop"}`;
 			toast.success(`Desired state: ${label}`);
 		},
 		onError: (err) => {

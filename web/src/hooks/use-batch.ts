@@ -57,11 +57,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function useBatchSubmit() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (data: {
-			action: string;
-			container_ids?: string[];
-			tag_filter?: string;
-		}) =>
+		mutationFn: (data: { action: string; container_ids?: string[]; tag_filter?: string }) =>
 			fetchJson<{ job_id: string; status: string }>("/api/dk/batch", {
 				method: "POST",
 				headers: authHeaders(true),

@@ -123,7 +123,11 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 	// Aggregate sensors: keep one representative per hardware group.
 	// e.g. coretemp_core_0..N → "CPU Cores (max)" using the hottest core per tick.
 	const { aggregatedSensors, aggregatedTempData } = useMemo(() => {
-		if (tempSensors.length === 0) return { aggregatedSensors: [] as string[], aggregatedTempData: [] as Record<string, unknown>[] };
+		if (tempSensors.length === 0)
+			return {
+				aggregatedSensors: [] as string[],
+				aggregatedTempData: [] as Record<string, unknown>[],
+			};
 
 		// Group sensors by prefix (everything before the last _N suffix).
 		const groups = new Map<string, string[]>();
@@ -154,7 +158,9 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 			}
 			for (const [, { label, members }] of displayMap) {
 				if (members.length > 1) {
-					const vals = members.map((m) => tempMap.get(m)).filter((v): v is number => v !== undefined);
+					const vals = members
+						.map((m) => tempMap.get(m))
+						.filter((v): v is number => v !== undefined);
 					row[label] = vals.length > 0 ? Math.max(...vals) : undefined;
 				} else {
 					row[label] = tempMap.get(members[0]);
@@ -480,14 +486,8 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 									className="text-muted-foreground"
 									domain={["auto", "auto"]}
 								/>
-								<Tooltip
-									formatter={tooltipTemp}
-									{...tooltipStyle}
-									wrapperStyle={{ zIndex: 10 }}
-								/>
-								<Legend
-									wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-								/>
+								<Tooltip formatter={tooltipTemp} {...tooltipStyle} wrapperStyle={{ zIndex: 10 }} />
+								<Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
 								{aggregatedSensors.map((name, i) => (
 									<Line
 										key={name}

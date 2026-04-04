@@ -1,9 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from "react";
-import {
-	ResponsiveGridLayout,
-	useContainerWidth,
-	verticalCompactor,
-} from "react-grid-layout";
+import { ResponsiveGridLayout, useContainerWidth, verticalCompactor } from "react-grid-layout";
 import type { Layout, LayoutItem } from "react-grid-layout";
 import {
 	HeartPulse,
@@ -261,11 +257,7 @@ export default function DashboardPage() {
 					</div>
 
 					{/* Fixed stats — flat cards, no wrapper */}
-					<StatsOverview
-						servers={servers}
-						containers={containers as never}
-						isLoading={isLoading}
-					/>
+					<StatsOverview servers={servers} containers={containers as never} isLoading={isLoading} />
 
 					{/* Server cards — borderless, 3-col grid, scroll, drag to reorder */}
 					<ServerCardGrid
@@ -449,9 +441,7 @@ function WidgetWrapper({
 			{editing && (
 				<div className="widget-drag-handle flex items-center gap-1 border-b bg-muted/50 px-3 py-1.5 cursor-grab active:cursor-grabbing">
 					<GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-					<span className="text-xs font-medium text-muted-foreground">
-						{def?.label ?? id}
-					</span>
+					<span className="text-xs font-medium text-muted-foreground">{def?.label ?? id}</span>
 				</div>
 			)}
 			<div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
@@ -554,9 +544,7 @@ function WidgetContent({
 							<div className="flex min-w-0 flex-1 items-center justify-between gap-2">
 								<div className="min-w-0">
 									<span className="block truncate text-xs font-medium">
-										{ev.event_type
-											.replace(".", " ")
-											.replace(/\b\w/g, (c) => c.toUpperCase())}
+										{ev.event_type.replace(".", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
 									</span>
 									{ev.server_name && (
 										<span className="block truncate text-[10px] text-muted-foreground">

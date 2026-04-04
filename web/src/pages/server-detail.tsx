@@ -90,9 +90,7 @@ export default function ServerDetailPage() {
 							{server?.name || server?.hostname || "Server"}
 						</h1>
 						{server && <Badge variant={statusVariant}>{server.status}</Badge>}
-						{id && server && (
-							<TagSelector resourceType="server" resourceId={id} />
-						)}
+						{id && server && <TagSelector resourceType="server" resourceId={id} />}
 						{server && (
 							<Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
 								<Pencil className="mr-1.5 h-3.5 w-3.5" />
@@ -111,9 +109,7 @@ export default function ServerDetailPage() {
 								}}
 							>
 								<Download className="mr-1.5 h-3.5 w-3.5" />
-								{agentUpdate.isPending
-									? "Updating..."
-									: "Update Agent"}
+								{agentUpdate.isPending ? "Updating..." : "Update Agent"}
 							</Button>
 						)}
 					</>
@@ -186,10 +182,7 @@ export default function ServerDetailPage() {
 							/>
 						</div>
 					</div>
-					<ContainerTable
-						containers={containers}
-						isLoading={loadingContainers}
-					/>
+					<ContainerTable containers={containers} isLoading={loadingContainers} />
 					<PaginationControls
 						className="mt-4 flex items-center justify-between gap-3"
 						page={containersPage}

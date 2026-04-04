@@ -84,15 +84,11 @@ export function PullDialog({ open, onOpenChange, serverID }: PullDialogProps) {
 								<div className="max-h-40 overflow-auto space-y-1.5 rounded-md bg-muted/50 p-2">
 									{layerList.map((layer) => {
 										const pct =
-											layer.total > 0
-												? Math.round((layer.current / layer.total) * 100)
-												: 0;
+											layer.total > 0 ? Math.round((layer.current / layer.total) * 100) : 0;
 										return (
 											<div key={layer.id} className="space-y-0.5">
 												<div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
-													<span className="truncate max-w-[120px]">
-														{layer.id.slice(0, 12)}
-													</span>
+													<span className="truncate max-w-[120px]">{layer.id.slice(0, 12)}</span>
 													<span>
 														{layer.status === "Pull complete" || layer.status === "Already exists"
 															? layer.status

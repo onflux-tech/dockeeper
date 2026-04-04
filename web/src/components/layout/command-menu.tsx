@@ -73,9 +73,7 @@ export function CommandMenu() {
 				onValueChange={setSearch}
 			/>
 			<CommandList>
-				<CommandEmpty>
-					{isLoading ? "Searching..." : "No results found."}
-				</CommandEmpty>
+				<CommandEmpty>{isLoading ? "Searching..." : "No results found."}</CommandEmpty>
 
 				{/* Static navigation items – only in navigation mode */}
 				{!hasSearch &&
@@ -109,9 +107,7 @@ export function CommandMenu() {
 									<Icon className="mr-2 h-4 w-4" />
 									<span>{item.name}</span>
 									{item.subtitle && (
-										<span className="ml-2 text-xs text-muted-foreground">
-											{item.subtitle}
-										</span>
+										<span className="ml-2 text-xs text-muted-foreground">{item.subtitle}</span>
 									)}
 								</CommandItem>
 							))}

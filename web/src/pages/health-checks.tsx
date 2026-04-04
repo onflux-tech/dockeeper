@@ -34,12 +34,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -153,7 +148,12 @@ export default function HealthChecksPage() {
 					<CardContent className="flex flex-col items-center justify-center py-12 text-center">
 						<HeartPulse className="h-10 w-10 text-muted-foreground/50" />
 						<p className="mt-2 text-sm text-muted-foreground">No health checks configured.</p>
-						<Button variant="outline" size="sm" className="mt-4" onClick={() => setShowCreate(true)}>
+						<Button
+							variant="outline"
+							size="sm"
+							className="mt-4"
+							onClick={() => setShowCreate(true)}
+						>
 							<Plus className="mr-1.5 h-4 w-4" />
 							Create your first health check
 						</Button>
@@ -168,18 +168,18 @@ export default function HealthChecksPage() {
 									<div className="flex items-center gap-2">
 										<span className="font-medium truncate">{check.name}</span>
 										<StatusBadge status={check.status} />
-										{!check.enabled && (
-											<Badge variant="secondary">Disabled</Badge>
-										)}
+										{!check.enabled && <Badge variant="secondary">Disabled</Badge>}
 									</div>
 									<div className="flex items-center gap-3 text-xs text-muted-foreground">
 										<span>Port {check.port}</span>
 										<span>{check.url_path || "/"}</span>
 										<span>Every {check.interval_seconds}s</span>
-										{check.auto_restart && <Badge variant="outline" className="text-[10px]">Auto-restart</Badge>}
-										{check.last_check_at && (
-											<span>Last: {relativeTime(check.last_check_at)}</span>
+										{check.auto_restart && (
+											<Badge variant="outline" className="text-[10px]">
+												Auto-restart
+											</Badge>
 										)}
+										{check.last_check_at && <span>Last: {relativeTime(check.last_check_at)}</span>}
 									</div>
 								</div>
 								<div className="flex items-center gap-1 shrink-0">
@@ -229,10 +229,7 @@ export default function HealthChecksPage() {
 			)}
 
 			{/* Create dialog */}
-			<HealthCheckDialog
-				open={showCreate}
-				onOpenChange={setShowCreate}
-			/>
+			<HealthCheckDialog open={showCreate} onOpenChange={setShowCreate} />
 
 			{/* Edit dialog */}
 			<HealthCheckDialog
@@ -249,7 +246,10 @@ export default function HealthChecksPage() {
 			/>
 
 			{/* Delete confirmation */}
-			<AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+			<AlertDialog
+				open={!!confirmDeleteId}
+				onOpenChange={(open) => !open && setConfirmDeleteId(null)}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete Health Check</AlertDialogTitle>
@@ -302,11 +302,17 @@ function HealthCheckDialog({
 	const [expectedStatus, setExpectedStatus] = useState(check?.expected_status?.toString() ?? "200");
 	const [interval, setInterval] = useState(check?.interval_seconds?.toString() ?? "30");
 	const [timeout, setTimeout] = useState(check?.timeout_seconds?.toString() ?? "5");
-	const [failureThreshold, setFailureThreshold] = useState(check?.failure_threshold?.toString() ?? "3");
-	const [successThreshold, setSuccessThreshold] = useState(check?.success_threshold?.toString() ?? "1");
+	const [failureThreshold, setFailureThreshold] = useState(
+		check?.failure_threshold?.toString() ?? "3",
+	);
+	const [successThreshold, setSuccessThreshold] = useState(
+		check?.success_threshold?.toString() ?? "1",
+	);
 	const [autoRestart, setAutoRestart] = useState(check?.auto_restart ?? false);
 	const [maxRestarts, setMaxRestarts] = useState(check?.max_restarts?.toString() ?? "3");
-	const [restartWindow, setRestartWindow] = useState(check?.restart_window_minutes?.toString() ?? "60");
+	const [restartWindow, setRestartWindow] = useState(
+		check?.restart_window_minutes?.toString() ?? "60",
+	);
 	const [enabled, setEnabled] = useState(check?.enabled ?? true);
 
 	// Reset form when check changes
@@ -358,9 +364,7 @@ function HealthCheckDialog({
 
 	const isPending = createMut.isPending || updateMut.isPending;
 
-	const filteredContainers = containers?.items?.filter(
-		(c) => !server || c.server === server,
-	);
+	const filteredContainers = containers?.items?.filter((c) => !server || c.server === server);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -412,7 +416,14 @@ function HealthCheckDialog({
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label>Port</Label>
-							<Input type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} required />
+							<Input
+								type="number"
+								min={1}
+								max={65535}
+								value={port}
+								onChange={(e) => setPort(e.target.value)}
+								required
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>URL Path</Label>
@@ -423,33 +434,59 @@ function HealthCheckDialog({
 					<div className="grid grid-cols-3 gap-4">
 						<div className="space-y-2">
 							<Label>Expected Status</Label>
-							<Input type="number" value={expectedStatus} onChange={(e) => setExpectedStatus(e.target.value)} />
+							<Input
+								type="number"
+								value={expectedStatus}
+								onChange={(e) => setExpectedStatus(e.target.value)}
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Interval (s)</Label>
-							<Input type="number" min={5} value={interval} onChange={(e) => setInterval(e.target.value)} />
+							<Input
+								type="number"
+								min={5}
+								value={interval}
+								onChange={(e) => setInterval(e.target.value)}
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Timeout (s)</Label>
-							<Input type="number" min={1} value={timeout} onChange={(e) => setTimeout(e.target.value)} />
+							<Input
+								type="number"
+								min={1}
+								value={timeout}
+								onChange={(e) => setTimeout(e.target.value)}
+							/>
 						</div>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label>Failure Threshold</Label>
-							<Input type="number" min={1} value={failureThreshold} onChange={(e) => setFailureThreshold(e.target.value)} />
+							<Input
+								type="number"
+								min={1}
+								value={failureThreshold}
+								onChange={(e) => setFailureThreshold(e.target.value)}
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label>Success Threshold</Label>
-							<Input type="number" min={1} value={successThreshold} onChange={(e) => setSuccessThreshold(e.target.value)} />
+							<Input
+								type="number"
+								min={1}
+								value={successThreshold}
+								onChange={(e) => setSuccessThreshold(e.target.value)}
+							/>
 						</div>
 					</div>
 
 					<div className="flex items-center justify-between rounded-md border p-3">
 						<div>
 							<p className="text-sm font-medium">Auto-Restart</p>
-							<p className="text-xs text-muted-foreground">Restart container on failure threshold</p>
+							<p className="text-xs text-muted-foreground">
+								Restart container on failure threshold
+							</p>
 						</div>
 						<Switch checked={autoRestart} onCheckedChange={setAutoRestart} />
 					</div>
@@ -458,11 +495,21 @@ function HealthCheckDialog({
 						<div className="grid grid-cols-2 gap-4">
 							<div className="space-y-2">
 								<Label>Max Restarts</Label>
-								<Input type="number" min={1} value={maxRestarts} onChange={(e) => setMaxRestarts(e.target.value)} />
+								<Input
+									type="number"
+									min={1}
+									value={maxRestarts}
+									onChange={(e) => setMaxRestarts(e.target.value)}
+								/>
 							</div>
 							<div className="space-y-2">
 								<Label>Window (min)</Label>
-								<Input type="number" min={1} value={restartWindow} onChange={(e) => setRestartWindow(e.target.value)} />
+								<Input
+									type="number"
+									min={1}
+									value={restartWindow}
+									onChange={(e) => setRestartWindow(e.target.value)}
+								/>
 							</div>
 						</div>
 					)}
@@ -470,7 +517,9 @@ function HealthCheckDialog({
 					<div className="flex items-center justify-between rounded-md border p-3">
 						<div>
 							<p className="text-sm font-medium">Enabled</p>
-							<p className="text-xs text-muted-foreground">Start checking immediately after creation</p>
+							<p className="text-xs text-muted-foreground">
+								Start checking immediately after creation
+							</p>
 						</div>
 						<Switch checked={enabled} onCheckedChange={setEnabled} />
 					</div>
@@ -557,7 +606,12 @@ function LogsDialog({
 									Page {page} ({data.total_items} total)
 								</span>
 								<div className="flex gap-2">
-									<Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+									<Button
+										variant="outline"
+										size="sm"
+										disabled={page <= 1}
+										onClick={() => setPage((p) => p - 1)}
+									>
 										<ChevronLeft className="h-4 w-4" />
 									</Button>
 									<Button
