@@ -10,8 +10,6 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { ApiGroup, HttpMethod } from "@/types/docs";
 
-// ── Method dot colors ───────────────────────────────────────────────────────
-
 const METHOD_DOT: Record<HttpMethod, string> = {
   GET: "bg-blue-400",
   POST: "bg-green-400",
@@ -20,8 +18,6 @@ const METHOD_DOT: Record<HttpMethod, string> = {
   DELETE: "bg-red-400",
 };
 
-// ── Props ───────────────────────────────────────────────────────────────────
-
 interface DocsSidebarProps {
   groups: ApiGroup[];
   activeId: string | null;
@@ -29,8 +25,6 @@ interface DocsSidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
 }
-
-// ── Sidebar content (shared between desktop & mobile) ───────────────────────
 
 function SidebarNav({
   groups,
@@ -46,11 +40,12 @@ function SidebarNav({
   onSearchChange: (value: string) => void;
 }) {
   const navRef = useRef<HTMLElement>(null);
+  const pillRef = useRef<HTMLDivElement>(null);
+  const dotRef = useRef<HTMLSpanElement>(null);
+  const hasAnimated = useRef(false);
 
-  // Track which groups the user has manually toggled
   const [manualToggle, setManualToggle] = useState<Record<string, boolean>>({});
 
-  // Derive which group contains the active endpoint
   const activeGroupId = useMemo(() => {
     if (!activeId) return null;
     for (const group of groups) {
@@ -71,7 +66,6 @@ function SidebarNav({
     setManualToggle((prev) => ({ ...prev, [groupId]: open }));
   }, []);
 
-  // Auto-scroll sidebar to keep the active item visible
   useEffect(() => {
     if (!activeId || !navRef.current) return;
     const activeBtn = navRef.current.querySelector<HTMLElement>(
@@ -80,6 +74,69 @@ function SidebarNav({
     if (!activeBtn) return;
     activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [activeId]);
+
+  useEffect(() => {
+    const pill = pillRef.current;
+    const nav = navRef.current;
+    if (!pill || !nav) return;
+
+    const dot = dotRef.current;
+    if (!activeId) {
+      pill.style.opacity = "0";
+      if (dot) dot.style.opacity = "0";
+      return;
+    }
+
+    function position() {
+      if (!pill || !nav) return;
+
+      let target = nav.querySelector<HTMLElement>(
+        `[data-sidebar-id="${activeId}"]`,
+      );
+      if (!target && activeGroupId) {
+        target = nav.querySelector<HTMLElement>(
+          `[data-sidebar-id="${activeGroupId}"]`,
+        );
+      }
+      if (!target) {
+        pill.style.opacity = "0";
+        if (dot) dot.style.opacity = "0";
+        return;
+      }
+
+      const nr = nav.getBoundingClientRect();
+      const br = target.getBoundingClientRect();
+      const animate = hasAnimated.current;
+      hasAnimated.current = true;
+
+      pill.style.transition = animate
+        ? "top 200ms cubic-bezier(0.25,0.46,0.45,0.94), left 200ms cubic-bezier(0.25,0.46,0.45,0.94), width 200ms cubic-bezier(0.25,0.46,0.45,0.94), height 200ms cubic-bezier(0.25,0.46,0.45,0.94), opacity 150ms ease"
+        : "none";
+      pill.style.top = `${br.top - nr.top}px`;
+      pill.style.left = `${br.left - nr.left}px`;
+      pill.style.width = `${br.width}px`;
+      pill.style.height = `${br.height}px`;
+      pill.style.opacity = "1";
+
+      if (dot) {
+        const dotY = br.top - nr.top + br.height / 2 - 3;
+        const dotX = br.right - nr.left - 12.5;
+        dot.style.transition = animate
+          ? "top 400ms cubic-bezier(0.25,0.46,0.45,0.94) 80ms, left 400ms cubic-bezier(0.25,0.46,0.45,0.94) 80ms, opacity 150ms ease"
+          : "none";
+        dot.style.top = `${dotY}px`;
+        dot.style.left = `${dotX}px`;
+        dot.style.opacity = "1";
+      }
+    }
+
+    const frame = requestAnimationFrame(position);
+    const timer = setTimeout(() => requestAnimationFrame(position), 100);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [activeId, activeGroupId, manualToggle]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -123,7 +180,18 @@ function SidebarNav({
 
       {/* Groups */}
       <div className="flex-1 overflow-y-auto">
-        <nav ref={navRef} className="space-y-1 p-2">
+        <nav ref={navRef} className="relative p-2">
+          {/* Sliding active indicator */}
+          <div
+            ref={pillRef}
+            className="pointer-events-none absolute z-10 rounded-lg bg-primary/10 opacity-0"
+          />
+          <span
+            ref={dotRef}
+            className="pointer-events-none absolute z-10 h-1.5 w-1.5 rounded-full bg-primary opacity-0 shadow-[0_0_10px_oklch(0.723_0.219_149.579/0.5)]"
+          />
+
+          <div className="relative space-y-1">
           {filtered.length === 0 && (
             <p className="px-3 py-8 text-center text-xs text-muted-foreground">
               No results found
@@ -147,15 +215,12 @@ function SidebarNav({
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px]",
                     activeId === group.id
-                      ? "bg-primary/10 font-medium text-primary"
+                      ? "font-medium text-primary"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
                 >
                   <BookOpen className="h-4 w-4 shrink-0" />
                   <span>{group.title}</span>
-                  {activeId === group.id && (
-                    <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_10px_oklch(0.723_0.219_149.579/0.5)]" />
-                  )}
                 </button>
               );
             }
@@ -168,6 +233,7 @@ function SidebarNav({
               >
                 {/* Group trigger */}
                 <CollapsibleTrigger
+                  data-sidebar-id={group.id}
                   className={cn(
                     "group/trigger flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium",
                     hasActiveChild
@@ -220,7 +286,7 @@ function SidebarNav({
                           className={cn(
                             "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px]",
                             isActive
-                              ? "bg-primary/10 font-medium text-primary"
+                              ? "font-medium text-primary"
                               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                           )}
                         >
@@ -231,9 +297,6 @@ function SidebarNav({
                             )}
                           />
                           <span className="truncate">{ep.title}</span>
-                          {isActive && (
-                            <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_10px_oklch(0.723_0.219_149.579/0.5)]" />
-                          )}
                         </button>
                       );
                     })}
@@ -242,13 +305,12 @@ function SidebarNav({
               </Collapsible>
             );
           })}
+          </div>
         </nav>
       </div>
     </div>
   );
 }
-
-// ── Main component ──────────────────────────────────────────────────────────
 
 export function DocsSidebar({
   groups,
