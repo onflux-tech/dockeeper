@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { Eye, EyeOff, KeyRound, ShieldCheck, ShieldOff } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, ShieldCheck, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -35,19 +35,29 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 	const { apiKey, isAuthorized, authorize, deauthorize } = usePlaygroundAuth();
 	const [draft, setDraft] = useState("");
 	const [showKey, setShowKey] = useState(false);
+	const [isValidating, setIsValidating] = useState(false);
+	const [error, setError] = useState("");
 
-	const handleAuthorize = () => {
+	const handleAuthorize = async () => {
 		if (!draft.trim()) return;
-		authorize(draft.trim());
-		setDraft("");
-		setShowKey(false);
-		onOpenChange(false);
+		setIsValidating(true);
+		setError("");
+		const result = await authorize(draft.trim());
+		setIsValidating(false);
+		if (result.ok) {
+			setDraft("");
+			setShowKey(false);
+			onOpenChange(false);
+		} else {
+			setError(result.error ?? "Invalid API key");
+		}
 	};
 
 	const handleDeauthorize = () => {
 		deauthorize();
 		setDraft("");
 		setShowKey(false);
+		setError("");
 	};
 
 	return (
@@ -99,10 +109,14 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 									type={showKey ? "text" : "password"}
 									placeholder="dk_..."
 									value={draft}
-									onChange={(e) => setDraft(e.target.value)}
+									onChange={(e) => {
+										setDraft(e.target.value);
+										if (error) setError("");
+									}}
 									onKeyDown={(e) => e.key === "Enter" && handleAuthorize()}
-									className="pr-10 font-mono"
+									className={`pr-10 font-mono ${error ? "border-destructive" : ""}`}
 									autoFocus
+									disabled={isValidating}
 								/>
 								<Button
 									variant="ghost"
@@ -114,14 +128,19 @@ export function AuthorizeDialog({ open, onOpenChange }: AuthorizeDialogProps) {
 									{showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
 								</Button>
 							</div>
+							{error && <p className="text-xs text-destructive">{error}</p>}
 							<Button
 								size="sm"
 								className="w-full"
-								disabled={!draft.trim()}
+								disabled={!draft.trim() || isValidating}
 								onClick={handleAuthorize}
 							>
-								<ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
-								Authorize
+								{isValidating ? (
+									<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+								) : (
+									<ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+								)}
+								{isValidating ? "Validating..." : "Authorize"}
 							</Button>
 						</div>
 					)}

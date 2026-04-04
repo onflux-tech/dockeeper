@@ -5,7 +5,7 @@ const STORAGE_KEY = "dk-playground-key";
 export interface PlaygroundAuthCtx {
 	apiKey: string;
 	isAuthorized: boolean;
-	authorize: (key: string) => void;
+	authorize: (key: string) => Promise<{ ok: boolean; error?: string }>;
 	deauthorize: () => void;
 }
 
@@ -20,9 +20,20 @@ export function usePlaygroundAuth(): PlaygroundAuthCtx {
 export function usePlaygroundAuthValue(): PlaygroundAuthCtx {
 	const [apiKey, setApiKey] = useState(() => sessionStorage.getItem(STORAGE_KEY) ?? "");
 
-	const authorize = useCallback((key: string) => {
-		sessionStorage.setItem(STORAGE_KEY, key);
-		setApiKey(key);
+	const authorize = useCallback(async (key: string): Promise<{ ok: boolean; error?: string }> => {
+		try {
+			const res = await fetch("/api/dk/servers?perPage=1", {
+				headers: { "X-API-Key": key },
+			});
+			if (res.status === 401) {
+				return { ok: false, error: "Invalid API key" };
+			}
+			sessionStorage.setItem(STORAGE_KEY, key);
+			setApiKey(key);
+			return { ok: true };
+		} catch {
+			return { ok: false, error: "Network error — could not validate key" };
+		}
 	}, []);
 
 	const deauthorize = useCallback(() => {
