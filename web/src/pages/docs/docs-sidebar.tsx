@@ -224,7 +224,7 @@ function SidebarNav({
 									<CollapsibleTrigger
 										data-sidebar-id={group.id}
 										className={cn(
-											"group/trigger flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium",
+											"group/trigger flex w-full items-center gap-2.5 rounded-lg py-2 pl-3 pr-5 text-left text-[13px] font-medium",
 											hasActiveChild
 												? "bg-primary/5 text-primary"
 												: "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -243,21 +243,22 @@ function SidebarNav({
 
 										<span className="flex-1 truncate">{group.title}</span>
 
-										<span
-											className={cn(
-												"mr-0.5 min-w-5 text-center text-[10px] tabular-nums",
-												hasActiveChild ? "text-primary/60" : "text-muted-foreground/60",
-											)}
-										>
-											{group.endpoints.length}
+										<span className="flex items-center gap-1">
+											<span
+												className={cn(
+													"min-w-5 text-center text-[10px] tabular-nums",
+													hasActiveChild ? "text-primary/60" : "text-muted-foreground/60",
+												)}
+											>
+												{group.endpoints.length}
+											</span>
+											<ChevronDown
+												className={cn(
+													"h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-transform duration-200",
+													isOpen && "rotate-180",
+												)}
+											/>
 										</span>
-
-										<ChevronDown
-											className={cn(
-												"h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-transform duration-200",
-												isOpen && "rotate-180",
-											)}
-										/>
 									</CollapsibleTrigger>
 
 									{/* Endpoint list */}
