@@ -39,8 +39,8 @@ func (c *WhatsAppChannel) Send(ctx context.Context, msg AlertMessage) error {
 	text := formatMessage(msg)
 
 	payload := map[string]any{
-		"phone":   c.Phone,
-		"message": text,
+		"Phone": c.Phone,
+		"Body":  text,
 	}
 
 	body, err := json.Marshal(payload)
@@ -48,14 +48,14 @@ func (c *WhatsAppChannel) Send(ctx context.Context, msg AlertMessage) error {
 		return fmt.Errorf("whatsapp marshal: %w", err)
 	}
 
-	url := c.Endpoint + "/api/sendText"
+	url := c.Endpoint + "/chat/send/text"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("whatsapp request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("token", c.Token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)

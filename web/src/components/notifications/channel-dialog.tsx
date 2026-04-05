@@ -215,6 +215,7 @@ export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialog
 										placeholder="5511999999999"
 										value={waPhone}
 										onChange={(e) => setWaPhone(e.target.value)}
+										autoComplete="off"
 									/>
 								</div>
 								<div className="space-y-1.5">
@@ -224,6 +225,7 @@ export function ChannelDialog({ open, onOpenChange, editChannel }: ChannelDialog
 										placeholder="API token"
 										value={waToken}
 										onChange={(e) => setWaToken(e.target.value)}
+										autoComplete="off"
 									/>
 								</div>
 							</div>
