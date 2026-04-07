@@ -286,8 +286,7 @@ export const changelog: ChangelogEntry[] = [
 			{
 				type: "feat",
 				area: "manager",
-				description:
-					"mTLS certificate CN cross-check on RenewCert to enforce agent identity.",
+				description: "mTLS certificate CN cross-check on RenewCert to enforce agent identity.",
 			},
 			{
 				type: "feat",
