@@ -144,6 +144,14 @@ func (a *Agent) Run(ctx context.Context) error {
 		go traefikColl.Run(ctx)
 	}
 
+	// Host inventory runs with or without a container runtime.
+	hostCollector := collector.NewHostInventoryCollector(a.logger)
+	hostReporter := NewHostReporter(a.client.Host(), a.cfg.ServerID, a.logger)
+	hostReporter.SetServerGoneCallback(triggerReEnrollment)
+	go hostCollector.Run(ctx, 15*time.Second, func(inventory *collector.HostInventory) error {
+		return hostReporter.Report(ctx, inventory)
+	})
+
 	// Start reverse tunnel client — replaces the old agent gRPC server.
 	// The tunnel client opens a persistent CommandChannel to the manager
 	// and spawns on-demand DataStream/ExecStream sessions when signalled.
