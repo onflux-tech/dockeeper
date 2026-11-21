@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -6,6 +7,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 const mocks = vi.hoisted(() => ({
 	agentVersion: "v0.9.0",
 	latest: "v0.9.0",
+	orchestrator: "docker",
 }));
 
 vi.mock("@/hooks/use-record", () => ({
@@ -15,6 +17,7 @@ vi.mock("@/hooks/use-record", () => ({
 			name: "srv",
 			status: "online",
 			agent_version: mocks.agentVersion,
+			orchestrator: mocks.orchestrator,
 		},
 		isLoading: false,
 	}),
@@ -73,5 +76,19 @@ describe("ServerDetailPage agent update", () => {
 		mocks.latest = "v0.9.0";
 		renderPage();
 		expect(screen.getByText("Update Agent")).toBeInTheDocument();
+	});
+
+	it("shows the host tab when the server has no container runtime", () => {
+		mocks.orchestrator = "none";
+		renderPage();
+		expect(screen.getByRole("tab", { name: "Host" })).toBeInTheDocument();
+	});
+
+	it("replaces the containers table with the no runtime state", async () => {
+		const user = userEvent.setup();
+		mocks.orchestrator = "none";
+		renderPage();
+		await user.click(screen.getByRole("tab", { name: /Containers/ }));
+		expect(screen.getByText("No container runtime")).toBeInTheDocument();
 	});
 });

@@ -20,6 +20,11 @@ import { useServerMetrics, type TimeRange } from "@/hooks/use-server-metrics";
 import { ServerInfo } from "@/components/server/server-info";
 import { MetricsCharts } from "@/components/server/metrics-charts";
 import { ContainerTable } from "@/components/server/container-table";
+import { HostNotice } from "@/components/server/host-notice";
+import { HostSummaryCards } from "@/components/server/host-summary-cards";
+import { HostAppsTable } from "@/components/server/host-apps-table";
+import { HostProcessesTable } from "@/components/server/host-processes-table";
+import { useHostApps, useHostProcesses } from "@/hooks/use-host-inventory";
 import { CONTAINER_SORT_FIELDS, type SortDir, type SortKey } from "@/lib/container-constants";
 import { statusOptions } from "@/lib/container-constants";
 import { EditServerDialog } from "@/components/server/edit-server-dialog";
@@ -65,6 +70,12 @@ export default function ServerDetailPage() {
 	useRealtime("servers");
 	useRealtime("server_metrics_raw");
 	useRealtime("containers");
+
+	const hostOnly = server?.orchestrator === "none";
+	const { data: hostApps, isLoading: loadingHostApps } = useHostApps(hostOnly ? id : undefined);
+	const { data: hostProcesses, isLoading: loadingHostProcesses } = useHostProcesses(
+		hostOnly ? id : undefined,
+	);
 
 	const containers = containersResult?.items ?? [];
 	const metrics = metricsData ?? [];
@@ -143,6 +154,7 @@ export default function ServerDetailPage() {
 					<TabsTrigger value="containers">
 						Containers ({containersResult?.totalItems ?? containers.length})
 					</TabsTrigger>
+					{hostOnly && <TabsTrigger value="host">Host</TabsTrigger>}
 				</TabsList>
 
 				{/* Overview Tab */}
@@ -176,54 +188,82 @@ export default function ServerDetailPage() {
 
 				{/* Containers Tab */}
 				<TabsContent value="containers" className="flex flex-col gap-4 mt-4">
-					<div className="flex items-center gap-3">
-						<Select
-							value={containerStatus}
-							onValueChange={(value) => {
-								setContainerStatus(value);
-								setContainersPage(1);
-							}}
-						>
-							<SelectTrigger className="w-36">
-								<SelectValue placeholder="Status" />
-							</SelectTrigger>
-							<SelectContent>
-								{statusOptions.map((s) => (
-									<SelectItem key={s} value={s}>
-										{s === "all" ? "All statuses" : s}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<div className="relative w-64">
-							<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-							<Input
-								placeholder="Search containers..."
-								className="pl-8"
-								value={containerSearch}
-								onChange={(e) => {
-									setContainerSearch(e.target.value);
-									setContainersPage(1);
-								}}
-							/>
+					{hostOnly ? (
+						<div className="rounded-md border border-dashed p-8 text-center">
+							<p className="text-sm font-medium">No container runtime</p>
+							<p className="mt-1 text-sm text-muted-foreground">
+								Docker is not available on this server. Check the Host tab for systemd units, PM2
+								applications and processes.
+							</p>
 						</div>
-					</div>
-					<ContainerTable
-						containers={containers}
-						isLoading={loadingContainers}
-						sortKey={containerSortKey}
-						sortDir={containerSortDir}
-						onSortChange={handleContainerSort}
-					/>
-					<PaginationControls
-						className="mt-4 flex items-center justify-between gap-3"
-						page={containersPage}
-						totalPages={containersResult?.totalPages ?? 0}
-						totalItems={containersResult?.totalItems ?? containers.length}
-						onPageChange={setContainersPage}
-						label="containers"
-					/>
+					) : (
+						<>
+							<div className="flex items-center gap-3">
+								<Select
+									value={containerStatus}
+									onValueChange={(value) => {
+										setContainerStatus(value);
+										setContainersPage(1);
+									}}
+								>
+									<SelectTrigger className="w-36">
+										<SelectValue placeholder="Status" />
+									</SelectTrigger>
+									<SelectContent>
+										{statusOptions.map((s) => (
+											<SelectItem key={s} value={s}>
+												{s === "all" ? "All statuses" : s}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								<div className="relative w-64">
+									<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+									<Input
+										placeholder="Search containers..."
+										className="pl-8"
+										value={containerSearch}
+										onChange={(e) => {
+											setContainerSearch(e.target.value);
+											setContainersPage(1);
+										}}
+									/>
+								</div>
+							</div>
+							<ContainerTable
+								containers={containers}
+								isLoading={loadingContainers}
+								sortKey={containerSortKey}
+								sortDir={containerSortDir}
+								onSortChange={handleContainerSort}
+							/>
+							<PaginationControls
+								className="mt-4 flex items-center justify-between gap-3"
+								page={containersPage}
+								totalPages={containersResult?.totalPages ?? 0}
+								totalItems={containersResult?.totalItems ?? containers.length}
+								onPageChange={setContainersPage}
+								label="containers"
+							/>
+						</>
+					)}
 				</TabsContent>
+
+				{hostOnly && (
+					<TabsContent value="host" className="flex flex-col gap-4 mt-4">
+						<HostNotice />
+						<HostSummaryCards metrics={metrics} />
+						<div className="flex items-center justify-between">
+							<h2 className="text-lg font-medium">Applications</h2>
+							<Button variant="ghost" size="sm" asChild>
+								<Link to="/apps">View all</Link>
+							</Button>
+						</div>
+						<HostAppsTable apps={hostApps} isLoading={loadingHostApps} />
+						<h2 className="text-lg font-medium">Top processes</h2>
+						<HostProcessesTable processes={hostProcesses} isLoading={loadingHostProcesses} />
+					</TabsContent>
+				)}
 			</Tabs>
 
 			{server && (

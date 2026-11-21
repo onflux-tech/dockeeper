@@ -16,7 +16,7 @@ export interface ServerRecord extends BaseRecord {
 	docker_version: string;
 	agent_version: string;
 	status: "online" | "offline" | "error" | "pending";
-	orchestrator: "docker" | "podman" | "kubernetes";
+	orchestrator: "docker" | "podman" | "kubernetes" | "none";
 	last_seen: string;
 	enrolled_at: string;
 	labels: unknown;
@@ -366,6 +366,49 @@ export interface TagRecord extends BaseRecord {
 	resource_id: string;
 }
 
+export interface HostAppRecord extends BaseRecord {
+	server: string;
+	source: "systemd" | "pm2" | "process";
+	name: string;
+	unit: string;
+	pm_id: string;
+	status: "running" | "stopped" | "failed" | "unknown";
+	pids: number[];
+	ports: number[];
+	cpu_percent: number;
+	mem_bytes: number;
+	disk_read_bytes: number;
+	disk_write_bytes: number;
+	restarts: number;
+	uptime_seconds: number;
+	user: string;
+	cwd: string;
+	exec_path: string;
+	log_path: string;
+	last_seen: string;
+}
+
+export interface HostProcessRecord extends BaseRecord {
+	server: string;
+	pid: number;
+	name: string;
+	app: string;
+	cpu_percent: number;
+	mem_bytes: number;
+	threads: number;
+	last_seen: string;
+}
+
+export interface HostAppMetricRecord extends BaseRecord {
+	server: string;
+	app: string;
+	source: string;
+	timestamp: string;
+	cpu_percent: number;
+	mem_bytes: number;
+	restarts: number;
+}
+
 // ── Collection name → record type map ───────────────────────────────────────
 
 export interface Collections {
@@ -396,6 +439,9 @@ export interface Collections {
 	health_check_logs: HealthCheckLogRecord;
 	batch_jobs: BatchJobRecord;
 	tags: TagRecord;
+	host_apps: HostAppRecord;
+	host_processes: HostProcessRecord;
+	host_app_metrics_raw: HostAppMetricRecord;
 }
 
 /** All valid collection names. */
