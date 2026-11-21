@@ -3,11 +3,53 @@ import type { ChangelogEntry } from "@/types/docs";
 export const changelog: ChangelogEntry[] = [
 	{
 		version: "Unreleased",
-		date: "2026-11-20",
+		date: "2026-11-21",
 		title: "Next release",
-		summary:
-			"Quality, documentation and agent harness work since v0.8.0. No user-facing feature yet.",
+		summary: "Work in progress.",
+		changes: [],
+	},
+	{
+		version: "0.9.0",
+		date: "2026-11-21",
+		title: "Agent performance and review harness",
+		summary: "Agent performance, review harness and quality fixes since v0.8.0.",
 		changes: [
+			{
+				type: "perf",
+				area: "agent",
+				description:
+					"Stopped measuring Docker when the manager is unreachable, with exponential backoff before retrying.",
+			},
+			{
+				type: "perf",
+				area: "agent",
+				description:
+					"Detected Traefik from container summaries and inspected only the Traefik container.",
+			},
+			{
+				type: "perf",
+				area: "agent",
+				description:
+					"Refreshed container discovery from Docker events, with a full sync every 10 minutes as a safety net.",
+			},
+			{
+				type: "perf",
+				area: "agent",
+				description:
+					"Collected container stats with one-shot requests and up to eight concurrent calls, keeping the CPU delta in the agent.",
+			},
+			{
+				type: "fix",
+				area: "agent",
+				description:
+					"Logged one warning when the command channel drops and another when it reconnects, moving repeated retries to debug.",
+			},
+			{
+				type: "feat",
+				area: "infra",
+				description:
+					"Added an adversarial review refuter and a shared read-only shell guard for Claude Code and OpenCode.",
+			},
 			{
 				type: "fix",
 				area: "manager",
