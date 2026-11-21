@@ -72,7 +72,7 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 | `make harness-check` | falha em drift, referência quebrada, doc fora do índice ou migration fora de sequência |
 | `make harness-test` | testa o gerador, o check e o changelog |
 | `make changelog-draft` | rascunho de `git log` desde a última tag para curar o `Unreleased` |
-| `make changelog-check` | falha em versão fantasma, duplicada ou data inválida |
+| `make changelog-check` | falha em versão fantasma (exceto a próxima sem tag), duplicada ou data inválida |
 | `make release-check VERSION=x.y.z` | falha se a tag existe, falta entrada no changelog ou a árvore está suja |
 | `make tools` | instala `goimports` |
 | `make hooks` | instala o hook `pre-push` |

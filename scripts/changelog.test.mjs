@@ -18,9 +18,31 @@ test("checkEntries aceita versão com tag", () => {
 	assert.deepEqual(checkEntries(parseChangelog(sample), new Set(["v0.8.0"])), []);
 });
 
-test("checkEntries recusa versão fantasma", () => {
-	const entries = [...parseChangelog(sample), { version: "1.0.0", date: "2026-11-20" }];
-	assert.equal(checkEntries(entries, new Set(["v0.8.0"])).length, 1);
+test("checkEntries aceita a próxima versão sem tag", () => {
+	const entries = [...parseChangelog(sample), { version: "0.9.0", date: "2026-11-21" }];
+	assert.deepEqual(checkEntries(entries, new Set(["v0.8.0"])), []);
+});
+
+test("checkEntries recusa versão fantasma abaixo da próxima", () => {
+	const entries = [
+		{ version: "0.9.0", date: "2026-11-21" },
+		{ version: "0.7.0", date: "2026-10-01" },
+		{ version: "0.8.0", date: "2026-04-06" },
+	];
+	const errors = checkEntries(entries, new Set(["v0.8.0"]));
+	assert.equal(errors.length, 1);
+	assert.match(errors[0], /0\.7\.0: sem tag/);
+});
+
+test("checkEntries recusa duas versões sem tag", () => {
+	const entries = [
+		{ version: "0.10.0", date: "2026-12-01" },
+		{ version: "0.9.0", date: "2026-11-21" },
+		{ version: "0.8.0", date: "2026-04-06" },
+	];
+	const errors = checkEntries(entries, new Set(["v0.8.0"]));
+	assert.equal(errors.length, 1);
+	assert.match(errors[0], /0\.9\.0: sem tag/);
 });
 
 test("isSemver e isDate", () => {
