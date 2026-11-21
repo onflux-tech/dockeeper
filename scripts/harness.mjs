@@ -15,6 +15,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const HARNESS = join(ROOT, "harness");
 const MARKER = "# Gerado por make harness-sync a partir de ";
+const MARKER_JS = "// Gerado por make harness-sync a partir de ";
+const MARKERS = [MARKER.trim(), MARKER_JS.trim()];
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/;
 const DOC_ROW = /^\| `([^`]+)` \|/gm;
 const MAKE_TARGET = /^([A-Za-z0-9_.-]+):/gm;
@@ -47,7 +49,15 @@ const REF_ALLOW = new Set([
 	".claude/settings.local.json",
 ]);
 const REF_ALLOW_PREFIXES = ["web/dist", "web/node_modules", "bin/", "dk_data/", "dk-agent-data/", "tmp/", "dist/"];
-const PORT_DIRS = [".claude/skills", ".claude/commands", ".claude/agents", ".opencode/skills", ".opencode/commands", ".opencode/agents"];
+const PORT_DIRS = [
+	".claude/skills",
+	".claude/commands",
+	".claude/agents",
+	".claude/hooks",
+	".opencode/skills",
+	".opencode/commands",
+	".opencode/agents",
+];
 const SECRETS = [
 	{ re: /C:\\Users\\/i, name: "path pessoal do Windows" },
 	{ re: /\/home\/(?!dockeeper\/)[A-Za-z0-9._-]+\//, name: "path pessoal do Linux" },
@@ -147,6 +157,12 @@ export function readOnlyClaudeErrors(name, yaml) {
 	for (const tool of ["Write", "Edit", "Patch"]) {
 		if (tools.includes(tool)) errors.push(`harness/agents/${name}/claude.yaml: agente read-only não pode ter ${tool}`);
 	}
+	if (!/^hooks:\n  PreToolUse:/m.test(yaml)) {
+		errors.push(`harness/agents/${name}/claude.yaml: falta o hook PreToolUse escopado ao subagente`);
+	}
+	if (!yaml.includes(".claude/hooks/subagent-guard.mjs")) {
+		errors.push(`harness/agents/${name}/claude.yaml: falta referência a .claude/hooks/subagent-guard.mjs`);
+	}
 	return errors;
 }
 
@@ -160,6 +176,10 @@ export function renderAgent(name, body, yaml, harness) {
 	const head = harness === "claude" ? `name: ${name}\n` : "";
 	const sourceRel = `harness/agents/${name}/${harness}.yaml`;
 	return `---\n${MARKER}${sourceRel}\n${head}${yaml.trim()}\n---\n\n${body.trim()}\n`;
+}
+
+export function renderHook(text, sourceRel) {
+	return `${MARKER_JS}${sourceRel}\n\n${normalize(text).trim()}\n`;
 }
 
 export function parseDocsIndex(text) {
@@ -250,6 +270,17 @@ function readSources() {
 		sources.push({ kind: "agent", name, body, claude, opencode });
 	}
 
+	const hooksDir = join(HARNESS, "hooks");
+	if (existsSync(hooksDir)) {
+		for (const entry of readdirSync(hooksDir, { withFileTypes: true })) {
+			if (!entry.isFile() || !entry.name.endsWith(".mjs")) continue;
+			const name = basename(entry.name, ".mjs");
+			const text = read(join(hooksDir, entry.name));
+			if (!text.trim()) throw new Error(`harness/hooks/${entry.name}: vazio`);
+			sources.push({ kind: "hook", name, text });
+		}
+	}
+
 	return sources;
 }
 
@@ -264,6 +295,8 @@ function expectedPorts(sources) {
 			const content = renderPort(source.text, `harness/commands/${source.name}.md`);
 			ports.set(`.claude/commands/${source.name}.md`, content);
 			ports.set(`.opencode/commands/${source.name}.md`, content);
+		} else if (source.kind === "hook") {
+			ports.set(`.claude/hooks/${source.name}.mjs`, renderHook(source.text, `harness/hooks/${source.name}.mjs`));
 		} else {
 			ports.set(`.claude/agents/${source.name}.md`, renderAgent(source.name, source.body, source.claude, "claude"));
 			ports.set(`.opencode/agents/${source.name}.md`, renderAgent(source.name, source.body, source.opencode, "opencode"));
@@ -280,9 +313,9 @@ function syncPorts(ports) {
 	}
 	for (const dir of PORT_DIRS) {
 		for (const file of walk(join(ROOT, dir))) {
-			if (!file.endsWith(".md")) continue;
+			if (!file.endsWith(".md") && !file.endsWith(".mjs")) continue;
 			if (ports.has(rel(file))) continue;
-			if (read(file).split("\n").slice(0, 10).some((line) => line.startsWith(MARKER.trim()))) {
+			if (read(file).split("\n").slice(0, 10).some((line) => MARKERS.some((marker) => line.startsWith(marker)))) {
 				rmSync(file);
 			}
 		}
@@ -299,8 +332,9 @@ function checkPorts(ports) {
 	}
 	for (const dir of PORT_DIRS) {
 		for (const file of walk(join(ROOT, dir))) {
-			if (!file.endsWith(".md") || ports.has(rel(file))) continue;
-			if (read(file).split("\n").slice(0, 10).some((line) => line.startsWith(MARKER.trim()))) {
+			if (!file.endsWith(".md") && !file.endsWith(".mjs")) continue;
+			if (ports.has(rel(file))) continue;
+			if (read(file).split("\n").slice(0, 10).some((line) => MARKERS.some((marker) => line.startsWith(marker)))) {
 				errors.push(`${rel(file)}: porta gerada órfã; rode make harness-sync`);
 			}
 		}

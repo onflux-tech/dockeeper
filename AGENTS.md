@@ -123,7 +123,7 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 ## Review
 
 - `/verify` roda o gate (`make verify` ou `make verify-fast`) e cola a saída real.
-- `/review` despacha `dockeeper-reviewer` e depois `dockeeper-refuter` no mesmo diff; nenhum dos dois edita ou re-roda a suíte. Achado `REFUTED` não é corrigido; achado `UPHELD` ou `INCONCLUSIVO` continua valendo.
+- `/review` despacha `dockeeper-reviewer` e depois `dockeeper-refuter` no mesmo diff; nenhum dos dois edita ou re-roda a suíte. Achado `REFUTED` não é corrigido; achado `UPHELD` ou `INCONCLUSIVO` continua valendo. A lente operacional do refuter pode abrir achado novo, que bloqueia como qualquer Important.
 - Contrato, eixos, evidência, refutação e formato: `docs/review.md`.
 
 ## Notas internas

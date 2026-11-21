@@ -57,3 +57,6 @@ release/
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/dockeeper-*/
+!.claude/hooks/
+.claude/hooks/*
+!.claude/hooks/*.mjs

@@ -1,2 +1,9 @@
 description: "Refutação adversarial dos achados do dockeeper-reviewer: tenta derrubar cada achado e o veredito GO com evidência. Read-only; reporta UPHELD, REFUTED ou INCONCLUSIVO."
 tools: Read, Grep, Glob, Bash, Skill
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: node "${CLAUDE_PROJECT_DIR}/.claude/hooks/subagent-guard.mjs"
+          timeout: 10

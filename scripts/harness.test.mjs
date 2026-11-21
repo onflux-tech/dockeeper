@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { evaluate as evaluateSubagentShell } from "../harness/hooks/subagent-guard.mjs";
 import {
 	makeRefErrors,
 	parseDocsIndex,
@@ -81,4 +82,23 @@ test("readOnlyClaudeErrors exige Skill e rejeita Write", () => {
 	assert.match(readOnlyClaudeErrors("x", withoutSkill).join("\n"), /falta tool Skill/);
 	const write = claude.replace("Bash, Skill", "Bash, Skill, Write");
 	assert.match(readOnlyClaudeErrors("x", write).join("\n"), /não pode ter Write/);
+});
+
+test("subagent-guard libera git read-only e go test focado", () => {
+	assert.equal(evaluateSubagentShell("git status --short"), null);
+	assert.equal(evaluateSubagentShell("git log --oneline -5"), null);
+	assert.equal(evaluateSubagentShell("git diff 4cdcbc3...HEAD"), null);
+	assert.equal(evaluateSubagentShell("git diff $(git merge-base develop HEAD)...HEAD"), null);
+	assert.equal(evaluateSubagentShell("git diff --stat HEAD"), null);
+	assert.equal(evaluateSubagentShell("go test ./internal/agent/collector/ -run 'TestDiscovery' -count=1"), null);
+});
+
+test("subagent-guard nega escrita, composto e teste amplo", () => {
+	assert.match(evaluateSubagentShell("git stash"), /git de escrita/);
+	assert.match(evaluateSubagentShell("git checkout develop"), /git de escrita/);
+	assert.match(evaluateSubagentShell("git status && git stash"), /BLOQUEADO/);
+	assert.match(evaluateSubagentShell("git diff > out.log"), /BLOQUEADO/);
+	assert.match(evaluateSubagentShell("go test ./..."), /BLOQUEADO/);
+	assert.match(evaluateSubagentShell("go test ./pkg"), /BLOQUEADO/);
+	assert.match(evaluateSubagentShell("cat file"), /BLOQUEADO/);
 });

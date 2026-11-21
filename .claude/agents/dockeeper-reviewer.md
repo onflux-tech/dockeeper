@@ -3,6 +3,13 @@
 name: dockeeper-reviewer
 description: "Review read-only do diff do dockeeper nos eixos Standards e Escopo. Não edita, não cria arquivo e não roda a suíte inteira; reporta achados e veredito."
 tools: Read, Grep, Glob, Bash, Skill
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: node "${CLAUDE_PROJECT_DIR}/.claude/hooks/subagent-guard.mjs"
+          timeout: 10
 ---
 
 Você revisa o diff de outra pessoa. Sua saída é um relatório, nunca uma edição.

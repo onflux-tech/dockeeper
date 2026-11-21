@@ -4,8 +4,8 @@ Fonte única, portas geradas e checagem de drift para Claude Code e OpenCode.
 
 | Campo | Valor |
 |---|---|
-| Fontes | `harness/skills/`, `harness/commands/`, `harness/agents/` |
-| Portas | `.claude/{skills,commands,agents}/` e `.opencode/{skills,commands,agents}/` |
+| Fontes | `harness/skills/`, `harness/commands/`, `harness/agents/`, `harness/hooks/` |
+| Portas | `.claude/{skills,commands,agents,hooks}/` e `.opencode/{skills,commands,agents}/` |
 | Gerador | `make harness-sync` (`scripts/harness.mjs sync`) |
 | Checagem | `make harness-check` (`scripts/harness.mjs check`) |
 | Testes do gerador e do changelog | `make harness-test` (`node --test scripts/harness.test.mjs scripts/changelog.test.mjs`) |
@@ -56,6 +56,8 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | 2026-11-21 | Fluxo com PR: feature em `develop` por squash, promoção em `production` por merge commit, template de PR e base de review por PR. |
 | 2026-11-21 | Papel `dockeeper-refuter`: refutação adversarial dos achados e do `GO` do `dockeeper-reviewer`, orquestrada pelo `/review`, com contrato em `docs/review.md`. |
 | 2026-11-21 | Permissões de reviewer e refuter alinhadas ao contrato: `skill` e `go test` focado liberados; shell git simples, na raiz do repo, sem comandos compostos. |
+| 2026-11-21 | Hook `subagent-guard.mjs` gerado para `.claude/hooks/` e referenciado no frontmatter dos agentes read-only: no Claude, nega git de escrita, composto, pipe e teste sem `-run`; no OpenCode, a allowlist de `permissions` faz o mesmo. |
+| 2026-11-21 | Refuter alinhado ao `reviewer-2` do takeflow: refutação por achado mais lente operacional (concorrência, stream, recurso, modo degradado, silêncio), com achado novo permitido nessa lente. |
 
 ## Cadência
 

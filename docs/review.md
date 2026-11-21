@@ -49,6 +49,7 @@ Toda afirmação sobre gate precisa de comando, saída e exit code. Sem isso, é
 - Uma suíte por vez.
 - Warning em saída de teste ou build é achado.
 - Reviewer e refuter rodam na raiz do repo, com um comando git por chamada; sem `cd`, `-C`, pipe, `;`, `&&`, `echo`, `cat`, `head` ou `make`. Shell liberado: git read-only e `go test` focado com `-run`, nunca `./...`.
+- No OpenCode, a allowlist de `permissions` impõe essa lista. No Claude, o hook `PreToolUse` de `.claude/hooks/subagent-guard.mjs`, referenciado no frontmatter do agente, nega git de escrita, composto, pipe e teste sem `-run`.
 - Falha pré-existente só com baseline: `git stash`, rodar, `git stash pop`, rodar, as duas saídas coladas.
 - Saída sem alvo identificado é `INCONCLUSIVA`, não PASS.
 
@@ -77,7 +78,7 @@ GO ou NO-GO, com a razão em uma linha.
 
 ## Refutação adversarial
 
-O `/review` despacha o `dockeeper-refuter` logo depois do reviewer. Ele recebe o relatório, busca o mesmo diff pela base e tenta derrubar cada achado. A refutação existe para tirar falso positivo e para dar segunda opinião ao `GO`; ela não substitui o reviewer nem procura achado novo.
+O `/review` despacha o `dockeeper-refuter` logo depois do reviewer. Ele recebe o relatório, busca o mesmo diff pela base e tenta derrubar cada achado. A refutação existe para tirar falso positivo e para dar segunda opinião ao `GO`; ela não substitui o reviewer. O refuter também cobre uma lente operacional que o reviewer não usa, e um achado novo dessa lente é dele.
 
 ### Regras
 
@@ -85,7 +86,18 @@ O `/review` despacha o `dockeeper-refuter` logo depois do reviewer. Ele recebe o
 - `UPHELD` quando o cenário de falha é alcançável. `INCONCLUSIVO` quando a decisão exige execução; o parecer traz o comando exato que falta.
 - Severidade não muda na refutação. `REFUTED` em Minor não apaga o achado do relatório; o usuário tria.
 - Reviewer com `GO`: o refuter ataca as 2 ou 3 afirmações mais frágeis do relatório. Sem afirmações, ataca 2 ou 3 hipóteses de falha nas partes mais arriscadas do diff.
+- O refuter não cria achado novo no diff do reviewer. A exceção é o defeito que derruba um `GO` e o achado da lente operacional, ambos com severidade e cenário.
 - O refuter não edita, não cria arquivo, não muda branch e não roda a suíte inteira.
+
+### Lente operacional
+
+O que quebra em produção e não aparece na leitura estática:
+
+- concorrência: EventBus single-goroutine, mutex, ordem de escrita, cache e dirty;
+- goroutine e stream: watcher, canal sem dreno, reconexão, cancelamento de ctx;
+- recurso: cache sem limite, conexão por ciclo, goroutine por reconexão;
+- modo degradado: gate fechado, Docker ou manager fora, backoff;
+- silêncio: erro que vira log e some, inspect que falha e não volta.
 
 ### Formato
 
@@ -97,6 +109,9 @@ UPHELD | REFUTED | INCONCLUSIVO — prova em uma ou duas frases; em REFUTED, o a
 ## GO
 (apenas se o reviewer deu GO) afirmações atacadas e GO CONFIRMADO ou GO REFUTADO.
 
+## Lente operacional
+[Critical | Important | Minor] arquivo:linha e o cenário de falha; ou "nenhum achado".
+
 ## Veredito
 NO-GO MANTIDO | NO-GO REFUTADO | GO CONFIRMADO | GO REFUTADO
 ```
@@ -105,8 +120,8 @@ NO-GO MANTIDO | NO-GO REFUTADO | GO CONFIRMADO | GO REFUTADO
 
 - `UPHELD` e `INCONCLUSIVO` continuam valendo; Important só é corrigido depois de confirmação no código.
 - `REFUTED` não é corrigido; fica registrado com a prova.
-- `NO-GO REFUTADO` exige todos os Critical e Important refutados; vira `GO`.
-- `GO REFUTADO` é achado novo, bloqueia e vai para a triagem do usuário.
+- `NO-GO REFUTADO` exige todos os Critical e Important refutados e nenhum achado da lente; vira `GO`.
+- `GO REFUTADO` e achado Critical/Important da lente bloqueiam e vão para a triagem do usuário.
 
 ## Depois da correção
 
