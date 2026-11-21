@@ -12,6 +12,12 @@ export const changelog: ChangelogEntry[] = [
 				type: "fix",
 				area: "manager",
 				description:
+					"Reused existing server records on re-enrollment so agents no longer appear twice after rejoining.",
+			},
+			{
+				type: "fix",
+				area: "manager",
+				description:
 					"Raised text field limits so long compose YAML keeps saving after the PocketBase upgrade.",
 			},
 			{
