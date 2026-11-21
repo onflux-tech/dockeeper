@@ -102,6 +102,7 @@ export function validateDescription(fm, file) {
 }
 
 const READ_ONLY_SHELL_DENY = [
+	"git -*",
 	"git stash*",
 	"git checkout*",
 	"git switch*",
@@ -119,12 +120,16 @@ const READ_ONLY_SHELL_DENY = [
 	"go test * ./...*",
 	"npm test*",
 	"npm run test*",
+	"npm --prefix*test*",
 	"vitest*",
 	"jest*",
 	"make verify*",
 	"make test*",
+	"make -C*verify*",
 	"rm *",
 	"*--no-verify*",
+	"gh pr checkout*",
+	"gh api -X*",
 ];
 
 const READ_ONLY_TOOLS = ["Read", "Grep", "Glob", "Bash", "Skill"];

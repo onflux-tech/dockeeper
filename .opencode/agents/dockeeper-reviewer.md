@@ -22,6 +22,9 @@ permissions:
     resource: "*"
     effect: allow
   - action: shell
+    resource: "git -*"
+    effect: deny
+  - action: shell
     resource: "git stash*"
     effect: deny
   - action: shell
@@ -118,6 +121,9 @@ permissions:
     resource: "npm run test*"
     effect: deny
   - action: shell
+    resource: "npm --prefix*test*"
+    effect: deny
+  - action: shell
     resource: "vitest*"
     effect: deny
   - action: shell
@@ -134,6 +140,15 @@ permissions:
     effect: deny
   - action: shell
     resource: "make release*"
+    effect: deny
+  - action: shell
+    resource: "make -C*verify*"
+    effect: deny
+  - action: shell
+    resource: "make --directory*verify*"
+    effect: deny
+  - action: shell
+    resource: "make -C*test*"
     effect: deny
   - action: shell
     resource: "rm *"
@@ -176,6 +191,27 @@ permissions:
     effect: deny
   - action: shell
     resource: "gh release*"
+    effect: deny
+  - action: shell
+    resource: "gh pr checkout*"
+    effect: deny
+  - action: shell
+    resource: "gh workflow run*"
+    effect: deny
+  - action: shell
+    resource: "gh secret*"
+    effect: deny
+  - action: shell
+    resource: "gh repo create*"
+    effect: deny
+  - action: shell
+    resource: "gh repo delete*"
+    effect: deny
+  - action: shell
+    resource: "gh api -X*"
+    effect: deny
+  - action: shell
+    resource: "gh api --method*"
     effect: deny
 ---
 
