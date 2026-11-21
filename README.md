@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Dockeeper" src="web/public/favicon.png" width="96">
+  <img alt="Dockeeper — every Docker host, one dashboard" src="docs/assets/banner.png" width="100%">
 </p>
 
 <h1 align="center">Dockeeper</h1>
