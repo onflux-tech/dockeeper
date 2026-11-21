@@ -120,16 +120,18 @@ func (a *Agent) Run(ctx context.Context) error {
 			cancel()
 		}
 
-		discovery := collector.NewDiscoveryCollector(orch, a.client.Discovery(), a.cfg.ServerID, a.logger)
+		gate := collector.NewConnectionGate(a.client.Conn())
+
+		discovery := collector.NewDiscoveryCollector(orch, a.client.Discovery(), a.cfg.ServerID, gate, a.logger)
 		discovery.SetServerGoneCallback(triggerReEnrollment)
 		go discovery.Run(ctx)
 
-		metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, a.logger)
+		metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, gate, a.logger)
 		metrics.SetServerGoneCallback(triggerReEnrollment)
 		go metrics.Run(ctx)
 
 		// Traefik route collector (60s cycle, graceful skip if not installed).
-		traefikColl := collector.NewTraefikCollector(orch, a.client.Traefik(), a.cfg.ServerID, a.logger)
+		traefikColl := collector.NewTraefikCollector(orch, a.client.Traefik(), a.cfg.ServerID, gate, a.logger)
 		traefikColl.SetServerGoneCallback(triggerReEnrollment)
 		go traefikColl.Run(ctx)
 

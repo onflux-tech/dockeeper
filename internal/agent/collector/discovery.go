@@ -23,6 +23,7 @@ type DiscoveryCollector struct {
 	client       agentpb.AgentDiscoveryServiceClient
 	serverID     string
 	logger       *slog.Logger
+	gate         *ConnectionGate
 	hashes       map[string][32]byte
 	onServerGone func() // called when the manager reports the server was deleted
 }
@@ -32,6 +33,7 @@ func NewDiscoveryCollector(
 	orch OrchestratorClient,
 	client agentpb.AgentDiscoveryServiceClient,
 	serverID string,
+	gate *ConnectionGate,
 	logger *slog.Logger,
 ) *DiscoveryCollector {
 	return &DiscoveryCollector{
@@ -39,6 +41,7 @@ func NewDiscoveryCollector(
 		client:   client,
 		serverID: serverID,
 		logger:   logger,
+		gate:     gate,
 		hashes:   make(map[string][32]byte),
 	}
 }
@@ -68,6 +71,10 @@ func (d *DiscoveryCollector) Run(ctx context.Context) {
 }
 
 func (d *DiscoveryCollector) collect(ctx context.Context) {
+	if !d.gate.Allow() {
+		return
+	}
+
 	d.reportContainers(ctx)
 	d.reportImages(ctx)
 	d.reportNetworks(ctx)
@@ -95,6 +102,7 @@ func (d *DiscoveryCollector) reportContainers(ctx context.Context) {
 		d.handleRPCError("containers", err)
 		return
 	}
+	d.gate.Succeeded()
 	d.logger.Info("discovery: containers reported", "count", resp.GetReceivedCount())
 }
 
@@ -119,6 +127,7 @@ func (d *DiscoveryCollector) reportImages(ctx context.Context) {
 		d.handleRPCError("images", err)
 		return
 	}
+	d.gate.Succeeded()
 	d.logger.Info("discovery: images reported", "count", resp.GetReceivedCount())
 }
 
@@ -143,6 +152,7 @@ func (d *DiscoveryCollector) reportNetworks(ctx context.Context) {
 		d.handleRPCError("networks", err)
 		return
 	}
+	d.gate.Succeeded()
 	d.logger.Info("discovery: networks reported", "count", resp.GetReceivedCount())
 }
 
@@ -167,6 +177,7 @@ func (d *DiscoveryCollector) reportVolumes(ctx context.Context) {
 		d.handleRPCError("volumes", err)
 		return
 	}
+	d.gate.Succeeded()
 	d.logger.Info("discovery: volumes reported", "count", resp.GetReceivedCount())
 }
 
@@ -175,6 +186,7 @@ func (d *DiscoveryCollector) reportVolumes(ctx context.Context) {
 // an mTLS/certificate failure (e.g. the manager CA was rotated or the DB was
 // recreated). In both cases the agent clears its enrollment and re-enrolls.
 func (d *DiscoveryCollector) handleRPCError(resource string, err error) {
+	d.gate.Failed()
 	delete(d.hashes, resource)
 	if status.Code(err) == codes.NotFound && d.onServerGone != nil {
 		d.logger.Warn("discovery: server not found on manager, triggering re-enrollment",
