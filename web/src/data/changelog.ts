@@ -6,7 +6,14 @@ export const changelog: ChangelogEntry[] = [
 		date: "2026-11-21",
 		title: "Next release",
 		summary: "Work in progress.",
-		changes: [],
+		changes: [
+			{
+				type: "fix",
+				area: "web",
+				description:
+					"Fixed the dashboard container count to include every reported container instead of only the first page.",
+			},
+		],
 	},
 	{
 		version: "0.9.0",

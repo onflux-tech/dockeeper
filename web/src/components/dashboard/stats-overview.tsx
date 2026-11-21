@@ -1,11 +1,11 @@
 import { Server, Activity, AlertTriangle, Container } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ServerRecord, ContainerRecord } from "@/types/pocketbase";
+import type { ServerRecord } from "@/types/pocketbase";
 
 interface StatsOverviewProps {
 	servers: ServerRecord[];
-	containers: ContainerRecord[];
+	totalContainers: number;
 	isLoading: boolean;
 }
 
@@ -45,7 +45,7 @@ function StatCardSkeleton() {
 	);
 }
 
-export function StatsOverview({ servers, containers, isLoading }: StatsOverviewProps) {
+export function StatsOverview({ servers, totalContainers, isLoading }: StatsOverviewProps) {
 	if (isLoading) {
 		return (
 			<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -58,7 +58,6 @@ export function StatsOverview({ servers, containers, isLoading }: StatsOverviewP
 
 	const online = servers.filter((s) => s.status === "online").length;
 	const offline = servers.filter((s) => s.status !== "online").length;
-	const totalContainers = containers.length;
 
 	return (
 		<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
