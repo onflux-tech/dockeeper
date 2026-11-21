@@ -1,4 +1,5 @@
 ---
+# Gerado por make harness-sync a partir de harness/skills/dockeeper-migration/SKILL.md
 name: dockeeper-migration
 description: "Use ao adicionar ou alterar collection, migration, model, constante ou campo do PocketBase no dockeeper."
 ---

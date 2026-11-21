@@ -1,4 +1,5 @@
 ---
+# Gerado por make harness-sync a partir de harness/commands/verify.md
 description: Roda make verify (ou verify-fast) e reporta a saída real
 argument-hint: [fast]
 ---

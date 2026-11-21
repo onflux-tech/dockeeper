@@ -1,4 +1,5 @@
 ---
+# Gerado por make harness-sync a partir de harness/commands/review.md
 description: Review read-only do diff atual contra AGENTS.md e docs/review.md
 argument-hint: [base]
 ---

@@ -1,4 +1,5 @@
 ---
+# Gerado por make harness-sync a partir de harness/agents/dockeeper-reviewer/claude.yaml
 name: dockeeper-reviewer
 description: "Review read-only do diff do dockeeper nos eixos Standards e Escopo. Não edita, não cria arquivo e não roda a suíte inteira; reporta achados e veredito."
 tools: Read, Grep, Glob, Bash

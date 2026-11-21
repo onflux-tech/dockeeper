@@ -1,4 +1,5 @@
 ---
+# Gerado por make harness-sync a partir de harness/skills/dockeeper-release/SKILL.md
 name: dockeeper-release
 description: "Use ao preparar ou publicar um release do dockeeper: versão, changelog, tag, GoReleaser, GHCR e CI."
 ---

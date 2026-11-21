@@ -1,4 +1,5 @@
 ---
+# Gerado por make harness-sync a partir de harness/agents/dockeeper-reviewer/opencode.yaml
 description: "Review read-only do diff do dockeeper nos eixos Standards e Escopo. Não edita e não roda a suíte inteira; reporta achados e veredito."
 mode: subagent
 permissions:

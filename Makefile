@@ -9,7 +9,8 @@ GO_PACKAGES = ./cmd/... ./internal/... ./migrations/...
 
 .PHONY: all build-manager build-agent build lint format test clean dev dev-manager dev-agent dev-all run proto-gen \
         dev-web build-web lint-web format-web test-web \
-        build-all build-agent-dist docker-build docker-push release verify verify-fast pre-push hooks tools
+        build-all build-agent-dist docker-build docker-push release verify verify-fast pre-push hooks tools \
+        harness-sync harness-check harness-test
 
 all: build
 
@@ -40,6 +41,15 @@ format:
 
 tools:
 	$(GO) install golang.org/x/tools/cmd/goimports@v0.42.0
+
+harness-sync:
+	node scripts/harness.mjs sync
+
+harness-check:
+	node scripts/harness.mjs check
+
+harness-test:
+	node --test scripts/harness.test.mjs
 
 format-check:
 	@files="$$(gofmt -l cmd internal migrations)"; if [ -n "$$files" ]; then echo "gofmt needed:"; echo "$$files"; exit 1; fi
@@ -89,9 +99,9 @@ test-web:
 
 ## ── Verificação ──────────────────────────────────────
 
-verify: format-check build-web lint test lint-web format-web test-web
+verify: format-check harness-check harness-test build-web lint test lint-web format-web test-web
 
-verify-fast: format-check test lint-web
+verify-fast: format-check harness-check test lint-web
 
 pre-push: verify
 

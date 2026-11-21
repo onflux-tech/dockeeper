@@ -66,6 +66,9 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 | `make format` | `gofmt` + `goimports` no Go |
 | `make format-check` | falha se `gofmt` precisar mudar algo |
 | `make format-web` | `prettier --check` em `web/` |
+| `make harness-sync` | fonte de `harness/` → portas em `.claude/` e `.opencode/` |
+| `make harness-check` | falha em drift, referência quebrada, doc fora do índice ou migration fora de sequência |
+| `make harness-test` | testa o gerador e o check |
 | `make tools` | instala `goimports` |
 | `make hooks` | instala o hook `pre-push` |
 | `make pre-push` | `verify`, chamado pelo hook |
@@ -105,7 +108,8 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 ## Ferramentas
 
 - `context7` (MCP) para documentação atual das bibliotecas; configurado em `.opencode/opencode.json` e `.mcp.json`.
-- Skills locais em `.opencode/skills/` e `.claude/skills/`: `dockeeper-migration`, `dockeeper-e2e`, `dockeeper-release` e `dockeeper-implement`.
+- Harness: fonte em `harness/`; `make harness-sync` gera `.claude/` e `.opencode/`; `make harness-check` falha em drift. Não edite as portas à mão.
+- Skills locais: `dockeeper-migration`, `dockeeper-e2e`, `dockeeper-release`, `dockeeper-implement` e `dockeeper-close`.
 - Review: `dockeeper-reviewer` em `.claude/agents/` e `.opencode/agents/`; `/verify` e `/review` em `.claude/commands/` e `.opencode/commands/`.
 - Memória entre sessões, browser e busca web ficam na configuração global de cada harness, não no repositório.
 
@@ -128,6 +132,7 @@ Leia só o documento que o gatilho pedir; não abra `docs/` inteiro.
 | `docs/architecture.md` | antes de mexer em manager/agent, streams, auth, EventBus, pastas ou collections | visão detalhada da topologia |
 | `docs/gotchas.md` | antes de tocar migration, proto, RBAC, embed, TLS, self-update, Docker socket ou EventBus | falhas silenciosas e como evitá-las |
 | `docs/migrations.md` | antes de criar ou alterar collection, campo, índice ou relação | checklist de migration |
+| `docs/harness.md` | antes de mudar skill, command, agent ou gate | fonte, portas, evolução e check |
 | `docs/review.md` | antes de review, push ou correção de achado | eixos, evidência, formato e veredito |
 | `docs/e2e.md` | antes de validar localmente ou em staging | runbook e formato de evidência |
 | `docs/release.md` | antes de tag, release ou deploy | GoReleaser, GHCR, versão e CI |

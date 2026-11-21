@@ -1,9 +1,10 @@
 ---
+# Gerado por make harness-sync a partir de harness/commands/review.md
 description: Review read-only do diff atual contra AGENTS.md e docs/review.md
 argument-hint: [base]
 ---
 
-Despache o agent `dockeeper-reviewer` para revisar o diff atual.
+Despache o subagent `dockeeper-reviewer` para revisar o diff atual.
 
 - Sem argumento: working tree (`git status --short`, `git diff`, `git diff --cached` e untracked relevantes).
 - Com base: `git merge-base $ARGUMENTS HEAD` e `git diff <merge-base>...HEAD`.

@@ -1,4 +1,5 @@
 ---
+# Gerado por make harness-sync a partir de harness/skills/dockeeper-implement/SKILL.md
 name: dockeeper-implement
 description: "Use ao implementar issue, feature ou correção no dockeeper, com critérios de aceite, TDD, gates e review antes do push."
 ---
