@@ -117,14 +117,14 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 - `context7` (MCP) para documentação atual das bibliotecas; configurado em `.opencode/opencode.json` e `.mcp.json`.
 - Harness: fonte em `harness/`; `make harness-sync` gera `.claude/` e `.opencode/`; `make harness-check` falha em drift. Não edite as portas à mão.
 - Skills locais: `dockeeper-migration`, `dockeeper-e2e`, `dockeeper-release`, `dockeeper-implement` e `dockeeper-close`.
-- Review: `dockeeper-reviewer` em `.claude/agents/` e `.opencode/agents/`; `/verify` e `/review` em `.claude/commands/` e `.opencode/commands/`.
+- Review: `dockeeper-reviewer` e `dockeeper-refuter` em `.claude/agents/` e `.opencode/agents/`; `/verify` e `/review` em `.claude/commands/` e `.opencode/commands/`.
 - Memória entre sessões, browser e busca web ficam na configuração global de cada harness, não no repositório.
 
 ## Review
 
 - `/verify` roda o gate (`make verify` ou `make verify-fast`) e cola a saída real.
-- `/review` despacha `dockeeper-reviewer` no diff atual; o agente não edita e não re-roda a suíte.
-- Contrato, eixos, evidência e formato: `docs/review.md`.
+- `/review` despacha `dockeeper-reviewer` e depois `dockeeper-refuter` no mesmo diff; nenhum dos dois edita ou re-roda a suíte. Achado `REFUTED` não é corrigido; achado `UPHELD` ou `INCONCLUSIVO` continua valendo. A lente operacional do refuter pode abrir achado novo, que bloqueia como qualquer Important.
+- Contrato, eixos, evidência, refutação e formato: `docs/review.md`.
 
 ## Notas internas
 

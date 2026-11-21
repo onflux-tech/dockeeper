@@ -59,7 +59,7 @@ Falhas que não aparecem no CI atual. Leia antes de mexer na área correspondent
 ## Custo do Docker socket no agent
 
 **Sintoma:** host com muitos containers fica lento; `ContainerStats` demora minutos; discovery faz inspect demais.
-**Causa:** o discovery ainda faz `ContainerInspect` de todos a cada 30 s; o fallback `fetchFromLabels` do Traefik ainda faz `ListContainers` (inspect de todos) quando a API não responde. A detecção do Traefik já usa o resumo do `ContainerList` e inspeciona no máximo o container encontrado; `collectContainers` abre o stream antes de medir.
+**Causa:** o discovery faz `ContainerInspect` de todos só no full sync de 10 min; fora dele, inspeciona apenas os containers avisados por evento. `health_status` ainda gera um inspect sem mudar o payload, porque `ContainerInfo` não carrega saúde. O fallback `fetchFromLabels` do Traefik ainda faz `ListContainers` (inspect de todos) quando a API não responde. A detecção do Traefik já usa o resumo do `ContainerList` e inspeciona no máximo o container encontrado; `collectContainers` abre o stream antes de medir.
 **Correção:** meça antes de aumentar a frequência; não há memória de área versionada.
 
 ## EventBus bloqueado

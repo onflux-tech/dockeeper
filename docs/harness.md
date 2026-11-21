@@ -4,15 +4,15 @@ Fonte única, portas geradas e checagem de drift para Claude Code e OpenCode.
 
 | Campo | Valor |
 |---|---|
-| Fontes | `harness/skills/`, `harness/commands/`, `harness/agents/` |
-| Portas | `.claude/{skills,commands,agents}/` e `.opencode/{skills,commands,agents}/` |
+| Fontes | `harness/skills/`, `harness/commands/`, `harness/agents/`, `harness/hooks/` |
+| Portas | `.claude/{skills,commands,agents,hooks}/` e `.opencode/{skills,commands,agents}/` |
 | Gerador | `make harness-sync` (`scripts/harness.mjs sync`) |
 | Checagem | `make harness-check` (`scripts/harness.mjs check`) |
 | Testes do gerador e do changelog | `make harness-test` (`node --test scripts/harness.test.mjs scripts/changelog.test.mjs`) |
 
 ## Regra de ouro
 
-Edite `harness/` e rode `make harness-sync`. Não edite as portas à mão; o header `Gerado por make harness-sync` marca o que é gerado. `make harness-check` falha em drift, referência quebrada, doc fora do índice, target inexistente, migration fora de sequência, collection sem constante, frontmatter inválido, path pessoal ou segredo.
+Edite `harness/` e rode `make harness-sync`. Não edite as portas à mão; o header `Gerado por make harness-sync` marca o que é gerado. `make harness-check` falha em drift, referência quebrada, doc fora do índice, target inexistente, migration fora de sequência, collection sem constante, frontmatter inválido, path pessoal, segredo e agente read-only sem shell amplo, com `edit`/`write` liberado ou sem hook/plugin registrado.
 
 ## Fluxo de evolução
 
@@ -54,6 +54,12 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | 2026-11-20 | Fonte única em `harness/`, `make harness-sync`/`harness-check` e skill `dockeeper-close`. |
 | 2026-11-20 | Changelog com `Unreleased` e versões tagueadas, `changelog-draft`/`changelog-check`/`release-check` e gate de changelog no `verify` e no CI. |
 | 2026-11-21 | Fluxo com PR: feature em `develop` por squash, promoção em `production` por merge commit, template de PR e base de review por PR. |
+| 2026-11-21 | Papel `dockeeper-refuter`: refutação adversarial dos achados e do `GO` do `dockeeper-reviewer`, orquestrada pelo `/review`, com contrato em `docs/review.md`. |
+| 2026-11-21 | Permissões de reviewer e refuter alinhadas ao contrato: `skill` e `go test` focado liberados; shell git simples, na raiz do repo, sem comandos compostos. |
+| 2026-11-21 | Hook `subagent-guard.mjs` gerado para `.claude/hooks/` e referenciado no frontmatter dos agentes read-only: no Claude, nega git de escrita, composto, pipe e teste sem `-run`; no OpenCode, a allowlist de `permissions` faz o mesmo. |
+| 2026-11-21 | Refuter alinhado ao `reviewer-2` do takeflow: refutação por achado mais lente operacional (concorrência, stream, recurso, modo degradado, silêncio), com achado novo permitido nessa lente. |
+| 2026-11-21 | Modelo de Bash amplo + deny-list: sem Edit/Write, shell livre para leitura (git, gh, cat, rg, compostos) e bloqueio de mutação de git, suíte, pipe de teste, flags de escrita e destrutivos no OpenCode e no hook do Claude. |
+| 2026-11-21 | Guarda única: hook do Claude e plugin `.opencode/plugins/subagent-guard.js` aplicam a mesma `evaluate`; as `permissions` do OpenCode ficam só com a estrutura read-only e o Bash amplo. |
 
 ## Cadência
 
