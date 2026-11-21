@@ -15,12 +15,14 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 - Quando houver um plano de implementação aprovado para uma issue, feature ou refactor amplo, pergunte via ask/question como executar: **Nativo (Recomendado)** na sessão principal ou **Subagent-driven** (superpowers).
 - Mudanças pontuais de config, docs, dependências ou harness não passam por essa pergunta; execute nativo.
 - A escolha não altera os gates: `make verify-fast` antes de commitar e `make verify` antes de push ou release.
+- Trabalho novo sai de `develop` em branch própria e entra por PR; não commite direto em `develop` nem em `production`.
 
 ## Autorizações
 
 - **Commit local:** sempre autorizado ao fim de uma task, sem pedir.
-- **Push remoto:** nunca automático. Peça com a tool de ask/question e espere um sim explícito. Autorização anterior não vale para o próximo push.
-- **Merge e tag de release:** pedido explícito do usuário.
+- **Push remoto:** nunca automático. Peça com a tool de ask/question e espere um sim explícito. Vale para branch e para criação de PR; autorização anterior não vale para o próximo push.
+- **Merge de PR:** pedido explícito. Feature em `develop` usa squash; promoção em `production` usa merge commit.
+- **Tag de release:** pedido explícito do usuário.
 - O hook `.githooks/pre-push` roda `make pre-push`; nenhum push remoto passa sem format, lint e testes. Não use `--no-verify`.
 - `--no-verify` e force-push em branch compartilhada são proibidos.
 - **SSH de staging:** o host/alias fica em configuração local, não versionada. Só acesse quando o usuário pedir na mensagem atual, para depurar deploy ou aplicação. Comece por leitura; mutação só com confirmação. Não inicie SSH por conta própria.
@@ -88,13 +90,15 @@ Medido em 20/11/2026:
 - `npm run lint` passa.
 - `npm run format:check` passa.
 - `npm test` passa: 21 testes.
-- O CI roda `quality` em push e pull request (format, lint, build, test) e o build Docker apenas em push.
+- O CI roda `quality` em PR e push para `develop`/`production`; `docker` só em push e depende de `quality`.
 
 Não declare “pronto” sem colar a saída real. Uma falha só é pré-existente com prova de baseline (`git stash`, rodar, restaurar).
 
 ## Git e release
 
-- Branches `develop` e `production`; histórico linear, sem merge commit e sem PR no histórico. O fluxo é commit em `develop`, promoção para `production` e tag anotada `vX.Y.Z`.
+- Branches `develop` (integração) e `production` (release). Trabalho novo sai de `develop` em `feat/`, `fix/` ou `chore/` e entra por PR com squash; o título do PR vira o commit e `develop` fica linear.
+- `production` recebe só o PR de promoção `develop -> production`, mergeado com merge commit. Esse é o único merge commit do fluxo e é onde a tag `vX.Y.Z` é criada.
+- Issues fecham com `Closes #N` no body do PR de promoção, o merge no default branch. O PR de feature referencia a issue, mas não fecha.
 - Commits em inglês, conventional commits, tipo minúsculo, escopo por área e imperativo. Sem co-autoria.
 - Release: push da tag dispara GoReleaser, que builda linux/darwin amd64/arm64, archives, checksums, changelog e imagens GHCR multi-arch.
 - O changelog do produto fica em `web/src/data/changelog.ts`, com `Unreleased` no topo e só versões já tagueadas abaixo.
@@ -136,7 +140,7 @@ Leia só o documento que o gatilho pedir; não abra `docs/` inteiro.
 | `docs/gotchas.md` | antes de tocar migration, proto, RBAC, embed, TLS, self-update, Docker socket ou EventBus | falhas silenciosas e como evitá-las |
 | `docs/migrations.md` | antes de criar ou alterar collection, campo, índice ou relação | checklist de migration |
 | `docs/harness.md` | antes de mudar skill, command, agent ou gate | fonte, portas, evolução e check |
-| `docs/review.md` | antes de review, push ou correção de achado | eixos, evidência, formato e veredito |
+| `docs/review.md` | antes de review, PR ou correção de achado | eixos, evidência, formato e veredito |
 | `docs/e2e.md` | antes de validar localmente ou em staging | runbook e formato de evidência |
 | `docs/release.md` | antes de tag, release ou deploy | GoReleaser, GHCR, versão e CI |
 | `CLAUDE.md` | ao usar Claude Code | importa este arquivo e detalhes do CLI |

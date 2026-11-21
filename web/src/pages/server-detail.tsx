@@ -20,6 +20,7 @@ import { useServerMetrics, type TimeRange } from "@/hooks/use-server-metrics";
 import { ServerInfo } from "@/components/server/server-info";
 import { MetricsCharts } from "@/components/server/metrics-charts";
 import { ContainerTable } from "@/components/server/container-table";
+import { CONTAINER_SORT_FIELDS, type SortDir, type SortKey } from "@/lib/container-constants";
 import { statusOptions } from "@/lib/container-constants";
 import { EditServerDialog } from "@/components/server/edit-server-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -38,6 +39,8 @@ export default function ServerDetailPage() {
 	const { id } = useParams();
 	const [range, setRange] = useState<TimeRange>("1h");
 	const [containersPage, setContainersPage] = useState(1);
+	const [containerSortKey, setContainerSortKey] = useState<SortKey>("name");
+	const [containerSortDir, setContainerSortDir] = useState<SortDir>("asc");
 	const [containerSearch, setContainerSearch] = useState("");
 	const [containerStatus, setContainerStatus] = useState("all");
 	const [editOpen, setEditOpen] = useState(false);
@@ -53,6 +56,7 @@ export default function ServerDetailPage() {
 			containsAnyFilter(["name", "image"], containerSearch),
 			containerStatus !== "all" ? eqFilter("status", containerStatus) : "",
 		]),
+		sort: `${containerSortDir === "desc" ? "-" : ""}${CONTAINER_SORT_FIELDS[containerSortKey]}`,
 		enabled: !!id,
 	});
 
@@ -62,6 +66,16 @@ export default function ServerDetailPage() {
 
 	const containers = containersResult?.items ?? [];
 	const metrics = metricsData ?? [];
+
+	function handleContainerSort(key: SortKey) {
+		setContainersPage(1);
+		if (key === containerSortKey) {
+			setContainerSortDir(containerSortDir === "asc" ? "desc" : "asc");
+		} else {
+			setContainerSortKey(key);
+			setContainerSortDir("asc");
+		}
+	}
 
 	const statusVariant =
 		server?.status === "online"
@@ -182,7 +196,13 @@ export default function ServerDetailPage() {
 							/>
 						</div>
 					</div>
-					<ContainerTable containers={containers} isLoading={loadingContainers} />
+					<ContainerTable
+						containers={containers}
+						isLoading={loadingContainers}
+						sortKey={containerSortKey}
+						sortDir={containerSortDir}
+						onSortChange={handleContainerSort}
+					/>
 					<PaginationControls
 						className="mt-4 flex items-center justify-between gap-3"
 						page={containersPage}

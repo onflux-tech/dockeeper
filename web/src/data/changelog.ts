@@ -12,6 +12,23 @@ export const changelog: ChangelogEntry[] = [
 				type: "fix",
 				area: "manager",
 				description:
+					"Removed pruned images from the store immediately so the listing refreshes after a prune.",
+			},
+			{
+				type: "fix",
+				area: "web",
+				description: "Fixed container column sorting on the server detail page.",
+			},
+			{
+				type: "fix",
+				area: "manager",
+				description:
+					"Reused existing server records on re-enrollment so agents no longer appear twice after rejoining.",
+			},
+			{
+				type: "fix",
+				area: "manager",
+				description:
 					"Raised text field limits so long compose YAML keeps saving after the PocketBase upgrade.",
 			},
 			{
@@ -53,6 +70,18 @@ export const changelog: ChangelogEntry[] = [
 				area: "infra",
 				description:
 					"Added architecture, gotchas, migrations, review, release and e2e documentation.",
+			},
+			{
+				type: "docs",
+				area: "infra",
+				description:
+					"Published a bilingual README with configuration, security and network requirements, under the MIT license.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Replaced the raster logo with the vector Hull D mark, favicon and README banner.",
 			},
 		],
 	},

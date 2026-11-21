@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -172,6 +173,49 @@ func (s *ImageService) PruneImages(ctx context.Context, serverID string, all boo
 
 	details["success"] = resp.GetSuccess()
 	details["space_reclaimed"] = resp.GetSpaceReclaimed()
+	details["records_removed"] = s.cleanupPrunedImages(serverID, resp)
 	s.audit.Log("image.prune", userID, "image", "", ip, details)
 	return resp, nil
+}
+
+func (s *ImageService) cleanupPrunedImages(serverID string, resp *agentpb.ImagePruneResponse) int {
+	if !resp.GetSuccess() {
+		return 0
+	}
+	return s.deletePrunedImages(serverID, resp.GetDeleted())
+}
+
+func (s *ImageService) deletePrunedImages(serverID string, deleted []string) int {
+	removed := 0
+	for _, value := range deleted {
+		imageID := shortImageID(value)
+		records, err := s.app.FindRecordsByFilter(
+			constants.CollImages,
+			"server = {:server} && image_id = {:image}",
+			"",
+			0,
+			0,
+			map[string]any{"server": serverID, "image": imageID},
+		)
+		if err != nil {
+			slog.Warn("prune images: find image records failed", "server_id", serverID, "image_id", imageID, "error", err)
+			continue
+		}
+		for _, rec := range records {
+			if err := s.app.Delete(rec); err != nil {
+				slog.Warn("prune images: delete image record failed", "server_id", serverID, "image_id", imageID, "error", err)
+				continue
+			}
+			removed++
+		}
+	}
+	return removed
+}
+
+func shortImageID(value string) string {
+	id := strings.TrimPrefix(value, "sha256:")
+	if len(id) > constants.ImageShortIDLength {
+		return id[:constants.ImageShortIDLength]
+	}
+	return id
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,13 +22,13 @@ import (
 // EnrollmentHandler implements the AgentEnrollmentService gRPC server.
 type EnrollmentHandler struct {
 	agentpb.UnimplementedAgentEnrollmentServiceServer
-	app *pocketbase.PocketBase
+	app core.App
 	ca  *services.CertAuthority
 	bus *events.Bus
 }
 
 // NewEnrollmentHandler creates a new enrollment handler.
-func NewEnrollmentHandler(app *pocketbase.PocketBase, ca *services.CertAuthority, bus *events.Bus) *EnrollmentHandler {
+func NewEnrollmentHandler(app core.App, ca *services.CertAuthority, bus *events.Bus) *EnrollmentHandler {
 	return &EnrollmentHandler{app: app, ca: ca, bus: bus}
 }
 
@@ -54,14 +53,13 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 			return nil, status.Error(codes.Unauthenticated, "invalid enrollment token")
 		}
 
-		// Create new server record (legacy flow).
-		col, colErr := h.app.FindCachedCollectionByNameOrId(constants.CollServers)
-		if colErr != nil {
-			slog.Error("failed to find servers collection", "error", colErr)
+		// Reuse an existing server with the same hostname to avoid duplicates
+		// on re-enrollment with the legacy global token.
+		server, err = h.serverForEnrollment(info)
+		if err != nil {
+			slog.Error("failed to resolve server record", "error", err)
 			return nil, status.Error(codes.Internal, "internal error")
 		}
-		server = core.NewRecord(col)
-		server.Set("name", info.GetHostname())
 	}
 
 	// Update server record with agent info.
@@ -221,4 +219,26 @@ func (h *EnrollmentHandler) findProvisionedServer(token string) (*core.Record, e
 		return nil, fmt.Errorf("no provisioned server found for token")
 	}
 	return records[0], nil
+}
+
+func (h *EnrollmentHandler) serverForEnrollment(info *agentpb.ServerInfo) (*core.Record, error) {
+	if hostname := info.GetHostname(); hostname != "" {
+		records, err := h.app.FindRecordsByFilter(
+			constants.CollServers,
+			"hostname = {:hostname}",
+			"-last_seen", 1, 0,
+			map[string]any{"hostname": hostname},
+		)
+		if err == nil && len(records) > 0 {
+			return records[0], nil
+		}
+	}
+
+	col, err := h.app.FindCachedCollectionByNameOrId(constants.CollServers)
+	if err != nil {
+		return nil, fmt.Errorf("find collection %s: %w", constants.CollServers, err)
+	}
+	server := core.NewRecord(col)
+	server.Set("name", info.GetHostname())
+	return server, nil
 }

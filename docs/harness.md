@@ -53,10 +53,12 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 |---|---|
 | 2026-11-20 | Fonte única em `harness/`, `make harness-sync`/`harness-check` e skill `dockeeper-close`. |
 | 2026-11-20 | Changelog com `Unreleased` e versões tagueadas, `changelog-draft`/`changelog-check`/`release-check` e gate de changelog no `verify` e no CI. |
+| 2026-11-21 | Fluxo com PR: feature em `develop` por squash, promoção em `production` por merge commit, template de PR e base de review por PR. |
 
 ## Cadência
 
 - `make harness-check` roda em `make verify`, no pre-push e no CI.
+- O `/review` roda no diff do PR antes do merge; a promoção revisa contra `origin/production`.
 - No release, rode `make harness-check` e confira o registro de evolução.
 - Quando o check falhar, corrija a fonte e regenere; não edite a porta.
 - Prosa desatualizada não é detectável por check; o fechamento de cada entrega é o ponto de revisão.

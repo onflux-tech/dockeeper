@@ -55,6 +55,7 @@ import {
 import { useBatchSubmit } from "@/hooks/use-batch";
 import { useTags } from "@/hooks/use-tags";
 import { formatUptimeFromDate, formatBytes } from "@/lib/format";
+import type { SortDir, SortKey } from "@/lib/container-constants";
 import type { ContainerRecord } from "@/types/pocketbase";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -63,13 +64,10 @@ interface ContainerTableProps {
 	containers: ContainerRecord[];
 	isLoading: boolean;
 	showServer?: boolean;
-	sortKey?: SortKey;
-	sortDir?: SortDir;
-	onSortChange?: (key: SortKey) => void;
+	sortKey: SortKey;
+	sortDir: SortDir;
+	onSortChange: (key: SortKey) => void;
 }
-
-export type SortKey = "name" | "status" | "image" | "created" | "uptime" | "cpu" | "ram";
-export type SortDir = "asc" | "desc";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -90,18 +88,14 @@ export function ContainerTable({
 	containers,
 	isLoading,
 	showServer,
-	sortKey: externalSortKey,
-	sortDir: externalSortDir,
+	sortKey,
+	sortDir,
 	onSortChange,
 }: ContainerTableProps) {
-	const [localSortKey, setLocalSortKey] = useState<SortKey>("name");
-	const [localSortDir, setLocalSortDir] = useState<SortDir>("asc");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [removeTarget, setRemoveTarget] = useState<{ ids: string[]; name: string } | null>(null);
 	const [updateTarget, setUpdateTarget] = useState<string | null>(null);
 	const [bulkLoading, setBulkLoading] = useState(false);
-	const sortKey = externalSortKey ?? localSortKey;
-	const sortDir = externalSortDir ?? localSortDir;
 
 	const actions = useContainerActions();
 	const removeCascade = useRemoveContainerWithCascade();
@@ -145,19 +139,6 @@ export function ContainerTable({
 			else next.add(id);
 			return next;
 		});
-	}
-
-	function toggleSort(key: SortKey) {
-		if (onSortChange) {
-			onSortChange(key);
-		} else {
-			if (localSortKey === key) {
-				setLocalSortDir((d) => (d === "asc" ? "desc" : "asc"));
-			} else {
-				setLocalSortKey(key);
-				setLocalSortDir("asc");
-			}
-		}
 	}
 
 	// ── Bulk action via batch API ───────────────────────────────────────
@@ -304,14 +285,14 @@ export function ContainerTable({
 								sortKey="status"
 								currentKey={sortKey}
 								currentDir={sortDir}
-								onToggle={toggleSort}
+								onToggle={onSortChange}
 							/>
 							<SortableHead
 								label="Name"
 								sortKey="name"
 								currentKey={sortKey}
 								currentDir={sortDir}
-								onToggle={toggleSort}
+								onToggle={onSortChange}
 							/>
 							<SortableHead
 								className="w-24"
@@ -319,7 +300,7 @@ export function ContainerTable({
 								sortKey="uptime"
 								currentKey={sortKey}
 								currentDir={sortDir}
-								onToggle={toggleSort}
+								onToggle={onSortChange}
 							/>
 							<SortableHead
 								className="w-16"
@@ -327,7 +308,7 @@ export function ContainerTable({
 								sortKey="cpu"
 								currentKey={sortKey}
 								currentDir={sortDir}
-								onToggle={toggleSort}
+								onToggle={onSortChange}
 							/>
 							<SortableHead
 								className="w-20"
@@ -335,14 +316,14 @@ export function ContainerTable({
 								sortKey="ram"
 								currentKey={sortKey}
 								currentDir={sortDir}
-								onToggle={toggleSort}
+								onToggle={onSortChange}
 							/>
 							<SortableHead
 								label="Image"
 								sortKey="image"
 								currentKey={sortKey}
 								currentDir={sortDir}
-								onToggle={toggleSort}
+								onToggle={onSortChange}
 							/>
 							<TableHead className="w-24">Tags</TableHead>
 							{showServer && <TableHead className="w-28">Server</TableHead>}

@@ -21,6 +21,8 @@
     { "action": "shell", "resource": "git push --force*", "effect": "deny" },
     { "action": "shell", "resource": "git push -f*", "effect": "deny" },
     { "action": "shell", "resource": "git merge*", "effect": "ask" },
-    { "action": "shell", "resource": "git tag*", "effect": "ask" }
+    { "action": "shell", "resource": "git tag*", "effect": "ask" },
+    { "action": "shell", "resource": "gh pr create*", "effect": "ask" },
+    { "action": "shell", "resource": "gh pr merge*", "effect": "ask" }
   ]
 }
