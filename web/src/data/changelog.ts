@@ -8,6 +8,30 @@ export const changelog: ChangelogEntry[] = [
 		summary: "Work in progress.",
 		changes: [
 			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Kept the agent online on hosts without Docker, reporting systemd units, PM2 apps, processes and listening ports every 15 seconds.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Persisted the host inventory and per-app metrics, pruning rows that disappear from the latest report.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Added a read-only Host tab for host-only servers with live applications, top processes and system metrics.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Added a global Applications page with server, source, status and search filters.",
+			},
+			{
 				type: "fix",
 				area: "web",
 				description:
