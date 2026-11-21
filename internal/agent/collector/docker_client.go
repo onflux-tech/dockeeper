@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/events"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
@@ -33,12 +35,18 @@ type ContainerMetrics struct {
 	PIDs        uint32
 }
 
+type ContainerEvent struct {
+	ContainerID string
+	Action      string
+}
+
 // OrchestratorClient is the interface for collecting resource data from a
 // container runtime (Docker, Podman, Kubernetes).
 type OrchestratorClient interface {
 	ListContainers(ctx context.Context) ([]*agentpb.ContainerInfo, error)
 	ListContainerSummaries(ctx context.Context) ([]*agentpb.ContainerInfo, error)
 	InspectContainer(ctx context.Context, containerID string) (*agentpb.ContainerInfo, error)
+	WatchContainerEvents(ctx context.Context) (<-chan ContainerEvent, <-chan error)
 	ListImages(ctx context.Context) ([]*agentpb.ImageInfo, error)
 	ListNetworks(ctx context.Context) ([]*agentpb.NetworkInfo, error)
 	ListVolumes(ctx context.Context) ([]*agentpb.VolumeInfo, error)
@@ -107,6 +115,43 @@ func (d *DockerClient) ListContainerSummaries(ctx context.Context) ([]*agentpb.C
 
 func (d *DockerClient) InspectContainer(ctx context.Context, containerID string) (*agentpb.ContainerInfo, error) {
 	return d.inspectContainer(ctx, containerID)
+}
+
+func (d *DockerClient) WatchContainerEvents(ctx context.Context) (<-chan ContainerEvent, <-chan error) {
+	messages, errs := d.cli.Events(ctx, events.ListOptions{
+		Filters: filters.NewArgs(filters.Arg("type", "container")),
+	})
+
+	out := make(chan ContainerEvent, 16)
+	outErr := make(chan error, 1)
+	go func() {
+		defer close(out)
+		defer close(outErr)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-messages:
+				if !ok {
+					return
+				}
+				select {
+				case out <- ContainerEvent{ContainerID: msg.Actor.ID, Action: string(msg.Action)}:
+				case <-ctx.Done():
+					return
+				}
+			case err, ok := <-errs:
+				if ok && err != nil {
+					select {
+					case outErr <- err:
+					case <-ctx.Done():
+					}
+				}
+				return
+			}
+		}
+	}()
+	return out, outErr
 }
 
 func (d *DockerClient) inspectContainer(ctx context.Context, id string) (*agentpb.ContainerInfo, error) {

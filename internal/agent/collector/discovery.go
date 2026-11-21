@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"log/slog"
+	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -13,7 +16,11 @@ import (
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
-const discoveryInterval = 30 * time.Second
+const (
+	discoveryInterval         = 30 * time.Second
+	discoveryFullSyncInterval = 10 * time.Minute
+	discoveryEventRetry       = 30 * time.Second
+)
 
 // DiscoveryCollector periodically collects container, image, network and volume
 // data from the orchestrator and sends it to the manager via gRPC. It uses
@@ -25,6 +32,11 @@ type DiscoveryCollector struct {
 	logger       *slog.Logger
 	gate         *ConnectionGate
 	hashes       map[string][32]byte
+	mu           sync.Mutex
+	containers   map[string]*agentpb.ContainerInfo
+	dirty        map[string]struct{}
+	removed      map[string]struct{}
+	lastFullSync time.Time
 	onServerGone func() // called when the manager reports the server was deleted
 }
 
@@ -37,12 +49,15 @@ func NewDiscoveryCollector(
 	logger *slog.Logger,
 ) *DiscoveryCollector {
 	return &DiscoveryCollector{
-		orch:     orch,
-		client:   client,
-		serverID: serverID,
-		logger:   logger,
-		gate:     gate,
-		hashes:   make(map[string][32]byte),
+		orch:       orch,
+		client:     client,
+		serverID:   serverID,
+		logger:     logger,
+		gate:       gate,
+		hashes:     make(map[string][32]byte),
+		containers: make(map[string]*agentpb.ContainerInfo),
+		dirty:      make(map[string]struct{}),
+		removed:    make(map[string]struct{}),
 	}
 }
 
@@ -54,6 +69,8 @@ func (d *DiscoveryCollector) SetServerGoneCallback(fn func()) {
 
 // Run starts the periodic discovery loop. It blocks until ctx is cancelled.
 func (d *DiscoveryCollector) Run(ctx context.Context) {
+	go d.watchContainerEvents(ctx)
+
 	// Collect immediately on start.
 	d.collect(ctx)
 
@@ -81,16 +98,168 @@ func (d *DiscoveryCollector) collect(ctx context.Context) {
 	d.reportVolumes(ctx)
 }
 
-func (d *DiscoveryCollector) reportContainers(ctx context.Context) {
+func (d *DiscoveryCollector) refreshContainers(ctx context.Context) error {
+	d.mu.Lock()
+	full := d.lastFullSync.IsZero() || time.Since(d.lastFullSync) >= discoveryFullSyncInterval
+	d.mu.Unlock()
+
+	if full {
+		return d.fullSync(ctx)
+	}
+	d.incrementalSync(ctx)
+	return nil
+}
+
+func (d *DiscoveryCollector) fullSync(ctx context.Context) error {
+	d.mu.Lock()
+	d.dirty = make(map[string]struct{})
+	d.removed = make(map[string]struct{})
+	d.mu.Unlock()
+
 	containers, err := d.orch.ListContainers(ctx)
 	if err != nil {
+		return err
+	}
+
+	cache := make(map[string]*agentpb.ContainerInfo, len(containers))
+	for _, c := range containers {
+		cache[c.GetContainerId()] = c
+	}
+
+	d.mu.Lock()
+	for id := range d.removed {
+		delete(cache, id)
+	}
+	d.removed = make(map[string]struct{})
+	d.containers = cache
+	d.lastFullSync = time.Now()
+	d.mu.Unlock()
+	return nil
+}
+
+func (d *DiscoveryCollector) incrementalSync(ctx context.Context) {
+	d.mu.Lock()
+	ids := make([]string, 0, len(d.dirty))
+	for id := range d.dirty {
+		ids = append(ids, id)
+	}
+	d.dirty = make(map[string]struct{})
+	d.mu.Unlock()
+
+	for _, id := range ids {
+		info, err := d.orch.InspectContainer(ctx, id)
+		if err != nil {
+			d.logger.Debug("discovery: inspect changed container failed", "container", id, "error", err)
+			d.mu.Lock()
+			if _, removed := d.removed[id]; !removed {
+				d.dirty[id] = struct{}{}
+			}
+			d.mu.Unlock()
+			continue
+		}
+		if info == nil {
+			continue
+		}
+
+		d.mu.Lock()
+		if _, removed := d.removed[id]; !removed {
+			d.containers[id] = info
+		}
+		d.mu.Unlock()
+	}
+}
+
+func (d *DiscoveryCollector) containerSnapshot() []*agentpb.ContainerInfo {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	containers := make([]*agentpb.ContainerInfo, 0, len(d.containers))
+	for _, c := range d.containers {
+		containers = append(containers, c)
+	}
+	sort.Slice(containers, func(i, j int) bool {
+		return containers[i].GetContainerId() < containers[j].GetContainerId()
+	})
+	return containers
+}
+
+func (d *DiscoveryCollector) handleContainerEvent(ev ContainerEvent) {
+	id := containerEventID(ev.ContainerID)
+	action := strings.ToLower(ev.Action)
+	if strings.HasPrefix(action, "health_status") {
+		action = "health_status"
+	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	switch action {
+	case "destroy":
+		delete(d.containers, id)
+		delete(d.dirty, id)
+		d.removed[id] = struct{}{}
+	case "create", "start", "die", "update", "rename", "health_status", "stop", "kill", "pause", "unpause":
+		delete(d.removed, id)
+		d.dirty[id] = struct{}{}
+	}
+}
+
+func (d *DiscoveryCollector) watchContainerEvents(ctx context.Context) {
+	for {
+		err := d.consumeContainerEvents(ctx)
+		if ctx.Err() != nil {
+			return
+		}
+		if err != nil {
+			d.logger.Warn("discovery: container events stream failed", "error", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(discoveryEventRetry):
+		}
+	}
+}
+
+func (d *DiscoveryCollector) consumeContainerEvents(ctx context.Context) error {
+	events, errs := d.orch.WatchContainerEvents(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ev, ok := <-events:
+			if !ok {
+				return nil
+			}
+			d.handleContainerEvent(ev)
+		case err, ok := <-errs:
+			if !ok {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func containerEventID(id string) string {
+	if len(id) > 12 {
+		return id[:12]
+	}
+	return id
+}
+
+func (d *DiscoveryCollector) reportContainers(ctx context.Context) {
+	if err := d.refreshContainers(ctx); err != nil {
 		d.logger.Error("discovery: list containers failed", "error", err)
 		return
 	}
 
 	req := &agentpb.ReportContainersRequest{
 		ServerId:   d.serverID,
-		Containers: containers,
+		Containers: d.containerSnapshot(),
 	}
 
 	if !d.changed("containers", req) {

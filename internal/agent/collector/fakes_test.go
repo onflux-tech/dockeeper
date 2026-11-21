@@ -27,6 +27,8 @@ type fakeOrchestrator struct {
 	inspectCalls   []string
 	inspectResult  *agentpb.ContainerInfo
 	inspectErr     error
+	events         chan ContainerEvent
+	eventsErr      chan error
 	stats          []ContainerMetrics
 	statsErr       error
 	onStats        func()
@@ -48,6 +50,10 @@ func (f *fakeOrchestrator) InspectContainer(_ context.Context, containerID strin
 		return nil, f.inspectErr
 	}
 	return f.inspectResult, nil
+}
+
+func (f *fakeOrchestrator) WatchContainerEvents(context.Context) (<-chan ContainerEvent, <-chan error) {
+	return f.events, f.eventsErr
 }
 
 func (f *fakeOrchestrator) ListImages(context.Context) ([]*agentpb.ImageInfo, error) {
@@ -112,15 +118,17 @@ func (f *fakeMetricsClient) StreamContainerMetrics(context.Context, ...grpc.Call
 
 type fakeDiscoveryClient struct {
 	agentpb.AgentDiscoveryServiceClient
-	containers int
-	images     int
-	networks   int
-	volumes    int
-	err        error
+	containers     int
+	images         int
+	networks       int
+	volumes        int
+	err            error
+	lastContainers *agentpb.ReportContainersRequest
 }
 
-func (f *fakeDiscoveryClient) ReportContainers(context.Context, *agentpb.ReportContainersRequest, ...grpc.CallOption) (*agentpb.ReportContainersResponse, error) {
+func (f *fakeDiscoveryClient) ReportContainers(_ context.Context, in *agentpb.ReportContainersRequest, _ ...grpc.CallOption) (*agentpb.ReportContainersResponse, error) {
 	f.containers++
+	f.lastContainers = in
 	if f.err != nil {
 		return nil, f.err
 	}
