@@ -144,7 +144,7 @@ func (t *TraefikCollector) detectTraefik(ctx context.Context) bool {
 		return false
 	}
 
-	containers, err := t.orch.ListContainers(ctx)
+	containers, err := t.orch.ListContainerSummaries(ctx)
 	if err != nil {
 		t.detected = false
 		return true
@@ -155,7 +155,7 @@ func (t *TraefikCollector) detectTraefik(ctx context.Context) bool {
 		if strings.Contains(img, "traefik") {
 			t.detected = true
 			// Try to find the API port from container info.
-			t.apiURL = t.resolveAPIURL(c)
+			t.apiURL = t.resolveAPIURL(ctx, c)
 			t.logger.Info("traefik: detected", "container", c.GetName(), "api", t.apiURL)
 			return true
 		}
@@ -169,7 +169,7 @@ func (t *TraefikCollector) detectTraefik(ctx context.Context) bool {
 // resolveAPIURL attempts to determine the Traefik API URL from container ports.
 // It checks host-mapped ports first, then falls back to the container IP (useful
 // in Docker Swarm where port 8080 is often not published to the host).
-func (t *TraefikCollector) resolveAPIURL(c *agentpb.ContainerInfo) string {
+func (t *TraefikCollector) resolveAPIURL(ctx context.Context, c *agentpb.ContainerInfo) string {
 	// Try to parse ports from JSON to find 8080 mapping.
 	if portsJSON := c.GetPortsJson(); portsJSON != "" {
 		var ports []map[string]any
@@ -185,7 +185,7 @@ func (t *TraefikCollector) resolveAPIURL(c *agentpb.ContainerInfo) string {
 	}
 
 	// Try to get container IP from Docker inspect (works in Swarm overlay networks).
-	if ip := t.resolveContainerIP(c.GetContainerId()); ip != "" {
+	if ip := t.resolveContainerIP(ctx, c.GetContainerId()); ip != "" {
 		return fmt.Sprintf("http://%s:8080", ip)
 	}
 
@@ -194,27 +194,29 @@ func (t *TraefikCollector) resolveAPIURL(c *agentpb.ContainerInfo) string {
 }
 
 // resolveContainerIP inspects the container to find an IP address in any network.
-func (t *TraefikCollector) resolveContainerIP(containerID string) string {
+func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID string) string {
 	if containerID == "" {
 		return ""
 	}
-	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
-	if err != nil {
-		return ""
-	}
-	defer func() { _ = cli.Close() }()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	inspect, err := cli.ContainerInspect(ctx, containerID)
+	info, err := t.orch.InspectContainer(ctx, containerID)
 	if err != nil {
 		return ""
 	}
 
-	for _, net := range inspect.NetworkSettings.Networks {
-		if net.IPAddress != "" {
-			return net.IPAddress
+	var networks map[string]struct {
+		IPAddress string `json:"IPAddress"`
+	}
+	if err := json.Unmarshal([]byte(info.GetNetworksJson()), &networks); err != nil {
+		return ""
+	}
+
+	for _, network := range networks {
+		if network.IPAddress != "" {
+			return network.IPAddress
 		}
 	}
 	return ""
