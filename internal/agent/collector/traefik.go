@@ -41,6 +41,7 @@ type TraefikCollector struct {
 	client       agentpb.AgentTraefikServiceClient
 	serverID     string
 	logger       *slog.Logger
+	gate         *ConnectionGate
 	lastHash     [32]byte
 	hashSet      bool
 	apiURL       string // cached Traefik API base URL
@@ -54,6 +55,7 @@ func NewTraefikCollector(
 	orch OrchestratorClient,
 	client agentpb.AgentTraefikServiceClient,
 	serverID string,
+	gate *ConnectionGate,
 	logger *slog.Logger,
 ) *TraefikCollector {
 	return &TraefikCollector{
@@ -61,6 +63,7 @@ func NewTraefikCollector(
 		client:   client,
 		serverID: serverID,
 		logger:   logger,
+		gate:     gate,
 	}
 }
 
@@ -88,10 +91,15 @@ func (t *TraefikCollector) Run(ctx context.Context) {
 }
 
 func (t *TraefikCollector) collect(ctx context.Context) {
+	if !t.gate.Allow() {
+		return
+	}
+
 	// Re-check for Traefik every 5 minutes.
 	if time.Since(t.checkedAt) > 5*time.Minute {
-		t.detectTraefik(ctx)
-		t.checkedAt = time.Now()
+		if t.detectTraefik(ctx) {
+			t.checkedAt = time.Now()
+		}
 	}
 
 	if !t.detected {
@@ -117,6 +125,7 @@ func (t *TraefikCollector) collect(ctx context.Context) {
 
 	resp, err := t.client.ReportTraefikRoutes(ctx, req)
 	if err != nil {
+		t.gate.Failed()
 		if IsAuthError(err) && t.onServerGone != nil {
 			t.logger.Warn("traefik: mTLS authentication failed — triggering re-enrollment", "error", err)
 			t.onServerGone()
@@ -125,15 +134,20 @@ func (t *TraefikCollector) collect(ctx context.Context) {
 		t.logger.Error("traefik: report routes failed", "error", err)
 		return
 	}
+	t.gate.Succeeded()
 	t.logger.Info("traefik: routes reported", "count", resp.GetReceivedCount())
 }
 
 // detectTraefik checks if a Traefik container is running via Docker.
-func (t *TraefikCollector) detectTraefik(ctx context.Context) {
-	containers, err := t.orch.ListContainers(ctx)
+func (t *TraefikCollector) detectTraefik(ctx context.Context) bool {
+	if !t.gate.Allow() {
+		return false
+	}
+
+	containers, err := t.orch.ListContainerSummaries(ctx)
 	if err != nil {
 		t.detected = false
-		return
+		return true
 	}
 
 	for _, c := range containers {
@@ -141,36 +155,37 @@ func (t *TraefikCollector) detectTraefik(ctx context.Context) {
 		if strings.Contains(img, "traefik") {
 			t.detected = true
 			// Try to find the API port from container info.
-			t.apiURL = t.resolveAPIURL(c)
+			t.apiURL = t.resolveAPIURL(ctx, c)
 			t.logger.Info("traefik: detected", "container", c.GetName(), "api", t.apiURL)
-			return
+			return true
 		}
 	}
 
 	t.detected = false
 	t.apiURL = ""
+	return true
 }
 
 // resolveAPIURL attempts to determine the Traefik API URL from container ports.
 // It checks host-mapped ports first, then falls back to the container IP (useful
 // in Docker Swarm where port 8080 is often not published to the host).
-func (t *TraefikCollector) resolveAPIURL(c *agentpb.ContainerInfo) string {
+func (t *TraefikCollector) resolveAPIURL(ctx context.Context, c *agentpb.ContainerInfo) string {
 	// Try to parse ports from JSON to find 8080 mapping.
 	if portsJSON := c.GetPortsJson(); portsJSON != "" {
 		var ports []map[string]any
 		if err := json.Unmarshal([]byte(portsJSON), &ports); err == nil {
 			for _, p := range ports {
-				cp, _ := p["container_port"].(float64)
-				hp, _ := p["host_port"].(float64)
-				if int(cp) == 8080 && int(hp) != 0 {
-					return fmt.Sprintf("http://127.0.0.1:%d", int(hp))
+				privatePort, _ := p["PrivatePort"].(float64)
+				publicPort, _ := p["PublicPort"].(float64)
+				if int(privatePort) == 8080 && int(publicPort) != 0 {
+					return fmt.Sprintf("http://127.0.0.1:%d", int(publicPort))
 				}
 			}
 		}
 	}
 
 	// Try to get container IP from Docker inspect (works in Swarm overlay networks).
-	if ip := t.resolveContainerIP(c.GetContainerId()); ip != "" {
+	if ip := t.resolveContainerIP(ctx, c.GetContainerId()); ip != "" {
 		return fmt.Sprintf("http://%s:8080", ip)
 	}
 
@@ -179,27 +194,31 @@ func (t *TraefikCollector) resolveAPIURL(c *agentpb.ContainerInfo) string {
 }
 
 // resolveContainerIP inspects the container to find an IP address in any network.
-func (t *TraefikCollector) resolveContainerIP(containerID string) string {
+func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID string) string {
 	if containerID == "" {
 		return ""
 	}
-	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
-	if err != nil {
-		return ""
-	}
-	defer func() { _ = cli.Close() }()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	inspect, err := cli.ContainerInspect(ctx, containerID)
+	info, err := t.orch.InspectContainer(ctx, containerID)
 	if err != nil {
+		t.logger.Debug("traefik: inspect container failed", "container", containerID, "error", err)
 		return ""
 	}
 
-	for _, net := range inspect.NetworkSettings.Networks {
-		if net.IPAddress != "" {
-			return net.IPAddress
+	var networks map[string]struct {
+		IPAddress string `json:"IPAddress"`
+	}
+	if err := json.Unmarshal([]byte(info.GetNetworksJson()), &networks); err != nil {
+		t.logger.Debug("traefik: parse container networks failed", "container", containerID, "error", err)
+		return ""
+	}
+
+	for _, network := range networks {
+		if network.IPAddress != "" {
+			return network.IPAddress
 		}
 	}
 	return ""

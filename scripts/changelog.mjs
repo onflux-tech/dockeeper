@@ -25,13 +25,21 @@ export function isDate(date) {
 export function checkEntries(entries, tags) {
 	const errors = [];
 	const seen = new Set();
+	const pending = entries
+		.filter((entry) => entry.version !== "Unreleased" && isSemver(entry.version) && !tags.has(`v${entry.version}`))
+		.reduce((latest, entry) => (latest && latest.localeCompare(entry.version, undefined, { numeric: true }) >= 0 ? latest : entry.version), "");
 	for (const entry of entries) {
 		if (seen.has(entry.version)) errors.push(`versão duplicada: ${entry.version}`);
 		seen.add(entry.version);
 		if (!isDate(entry.date)) errors.push(`${entry.version}: data inválida (${entry.date})`);
 		if (entry.version === "Unreleased") continue;
-		if (!isSemver(entry.version)) errors.push(`versão inválida: ${entry.version}`);
-		if (!tags.has(`v${entry.version}`)) errors.push(`${entry.version}: sem tag v${entry.version}`);
+		if (!isSemver(entry.version)) {
+			errors.push(`versão inválida: ${entry.version}`);
+			continue;
+		}
+		if (!tags.has(`v${entry.version}`) && entry.version !== pending) {
+			errors.push(`${entry.version}: sem tag v${entry.version}`);
+		}
 	}
 	return errors;
 }

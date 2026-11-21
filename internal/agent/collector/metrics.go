@@ -19,6 +19,7 @@ type MetricsCollector struct {
 	client       agentpb.AgentMetricsServiceClient
 	serverID     string
 	logger       *slog.Logger
+	gate         *ConnectionGate
 	system       *SystemCollector
 	onServerGone func() // called on mTLS/auth failures to trigger re-enrollment
 }
@@ -28,6 +29,7 @@ func NewMetricsCollector(
 	orch OrchestratorClient,
 	client agentpb.AgentMetricsServiceClient,
 	serverID string,
+	gate *ConnectionGate,
 	logger *slog.Logger,
 ) *MetricsCollector {
 	return &MetricsCollector{
@@ -35,6 +37,7 @@ func NewMetricsCollector(
 		client:   client,
 		serverID: serverID,
 		logger:   logger,
+		gate:     gate,
 		system:   NewSystemCollector(),
 	}
 }
@@ -51,6 +54,7 @@ func (m *MetricsCollector) SetServerGoneCallback(fn func()) {
 func (m *MetricsCollector) Run(ctx context.Context) {
 	// First collection to prime CPU/net deltas (results will have zero deltas).
 	m.collectSystem(ctx)
+	m.collectContainers(ctx)
 
 	ticker := time.NewTicker(metricsInterval)
 	defer ticker.Stop()
@@ -142,24 +146,28 @@ func (m *MetricsCollector) collectSystem(ctx context.Context) {
 }
 
 func (m *MetricsCollector) collectContainers(ctx context.Context) {
-	stats, err := m.orch.ListContainerStats(ctx)
-	if err != nil {
-		m.logger.Error("metrics: collect container stats failed", "error", err)
-		return
-	}
-
-	if len(stats) == 0 {
+	if !m.gate.Allow() {
 		return
 	}
 
 	stream, err := m.client.StreamContainerMetrics(ctx)
 	if err != nil {
+		m.gate.Failed()
 		if IsAuthError(err) && m.onServerGone != nil {
 			m.logger.Warn("metrics: mTLS authentication failed — triggering re-enrollment", "error", err)
 			m.onServerGone()
 			return
 		}
 		m.logger.Error("metrics: open container stream failed", "error", err)
+		return
+	}
+
+	stats, err := m.orch.ListContainerStats(ctx)
+	if err != nil {
+		m.logger.Error("metrics: collect container stats failed", "error", err)
+		if _, closeErr := stream.CloseAndRecv(); closeErr != nil {
+			m.logger.Debug("metrics: close empty container stream failed", "error", closeErr)
+		}
 		return
 	}
 
@@ -179,6 +187,7 @@ func (m *MetricsCollector) collectContainers(ctx context.Context) {
 			Pids:        s.PIDs,
 		}
 		if err := stream.Send(req); err != nil {
+			m.gate.Failed()
 			m.logger.Error("metrics: send container metrics failed", "container", s.ContainerID, "error", err)
 			return
 		}
@@ -186,8 +195,10 @@ func (m *MetricsCollector) collectContainers(ctx context.Context) {
 
 	resp, err := stream.CloseAndRecv()
 	if err != nil {
+		m.gate.Failed()
 		m.logger.Error("metrics: close container stream failed", "error", err)
 		return
 	}
+	m.gate.Succeeded()
 	m.logger.Debug("metrics: container metrics streamed", "received_count", resp.GetReceivedCount())
 }

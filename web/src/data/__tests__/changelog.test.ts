@@ -7,7 +7,7 @@ describe("changelog", () => {
 	});
 
 	it("exposes the latest released version", () => {
-		expect(latestRelease?.version).toBe("0.8.0");
+		expect(latestRelease?.version).toBe("0.9.0");
 	});
 
 	it("has unique versions", () => {

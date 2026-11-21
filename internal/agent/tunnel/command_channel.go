@@ -94,17 +94,25 @@ func NewClient(
 // It blocks until ctx is cancelled.
 func (c *Client) Run(ctx context.Context) error {
 	var attempt int
+	reportedDown := false
 	for {
-		err := c.runOnce(ctx)
+		connected, err := c.runOnce(ctx)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
 		attempt++
 		wait := reconnectBackoff(attempt)
-		c.logger.Warn("command channel disconnected, reconnecting",
-			"error", err, "attempt", attempt, "retry_in", wait,
-		)
+		if connected || !reportedDown {
+			c.logger.Warn("command channel disconnected, reconnecting",
+				"error", err, "attempt", attempt, "retry_in", wait,
+			)
+			reportedDown = true
+		} else {
+			c.logger.Debug("command channel reconnect failed",
+				"error", err, "attempt", attempt, "retry_in", wait,
+			)
+		}
 
 		select {
 		case <-ctx.Done():
@@ -116,10 +124,10 @@ func (c *Client) Run(ctx context.Context) error {
 
 // runOnce opens a single CommandChannel session and processes messages until
 // the stream ends or context is cancelled.
-func (c *Client) runOnce(ctx context.Context) error {
+func (c *Client) runOnce(ctx context.Context) (bool, error) {
 	stream, err := c.cc.OpenChannel(ctx)
 	if err != nil {
-		return fmt.Errorf("open command channel: %w", err)
+		return false, fmt.Errorf("open command channel: %w", err)
 	}
 
 	// Send ChannelInit as first message.
@@ -128,7 +136,7 @@ func (c *Client) runOnce(ctx context.Context) error {
 			Init: &agentpb.ChannelInit{ServerId: c.serverID},
 		},
 	}); err != nil {
-		return fmt.Errorf("send channel init: %w", err)
+		return false, fmt.Errorf("send channel init: %w", err)
 	}
 
 	c.logger.Info("command channel connected", "server_id", c.serverID)
@@ -147,7 +155,7 @@ func (c *Client) runOnce(ctx context.Context) error {
 	// Wait for heartbeat goroutine to finish.
 	wg.Wait()
 
-	return err
+	return true, err
 }
 
 // heartbeatLoop sends periodic heartbeats over the command channel.

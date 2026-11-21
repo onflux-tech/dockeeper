@@ -54,6 +54,7 @@ func TestHandleRPCErrorAllowsRetry(t *testing.T) {
 	d := &DiscoveryCollector{
 		hashes: make(map[string][32]byte),
 		logger: slog.Default(),
+		gate:   &ConnectionGate{},
 	}
 
 	req := &agentpb.ReportContainersRequest{ServerId: "srv1"}

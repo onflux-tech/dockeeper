@@ -1,6 +1,6 @@
 ---
 # Gerado por make harness-sync a partir de harness/agents/dockeeper-reviewer/opencode.yaml
-description: "Review read-only do diff do dockeeper nos eixos Standards e Escopo. Não edita e não roda a suíte inteira; reporta achados e veredito."
+description: "Review read-only do diff do dockeeper nos eixos Standards e Escopo. Não edita, não cria arquivo e não roda a suíte inteira; reporta achados e veredito."
 mode: subagent
 permissions:
   - action: "*"
@@ -15,29 +15,11 @@ permissions:
   - action: grep
     resource: "*"
     effect: allow
-  - action: shell
-    resource: "git status*"
+  - action: skill
+    resource: "*"
     effect: allow
   - action: shell
-    resource: "git log*"
-    effect: allow
-  - action: shell
-    resource: "git diff*"
-    effect: allow
-  - action: shell
-    resource: "git show*"
-    effect: allow
-  - action: shell
-    resource: "git merge-base*"
-    effect: allow
-  - action: shell
-    resource: "git ls-files*"
-    effect: allow
-  - action: shell
-    resource: "git blame*"
-    effect: allow
-  - action: shell
-    resource: "git rev-parse*"
+    resource: "*"
     effect: allow
 ---
 
@@ -45,7 +27,7 @@ Você revisa o diff de outra pessoa. Sua saída é um relatório, nunca uma edi�
 
 ## Read-only
 
-Não edite, crie, mova nem apague arquivo. Não mude working tree, index, HEAD ou branch. Git permitido: `status`, `log`, `diff`, `show`, `merge-base`, `ls-files`, `blame`. Não rode a suíte inteira; um teste focado só se a leitura levantar uma dúvida concreta que você consegue nomear.
+Não edite, crie, mova nem apague arquivo. Não mude working tree, index, HEAD ou branch. Git de escrita, suíte de teste, pipe de teste, flags que escrevem e comandos destrutivos são bloqueados pelo harness. Bash é amplo para leitura: git read-only, `gh pr view`, `cat`, `rg`, pipes de leitura e comandos compostos. Não rode a suíte inteira; um teste focado com `-run` só se a leitura levantar uma dúvida concreta que você consegue nomear, nunca `./...` nem pipe de teste.
 
 ## Diff
 
