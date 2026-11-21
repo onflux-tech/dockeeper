@@ -41,6 +41,7 @@ type TraefikCollector struct {
 	client       agentpb.AgentTraefikServiceClient
 	serverID     string
 	logger       *slog.Logger
+	gate         *ConnectionGate
 	lastHash     [32]byte
 	hashSet      bool
 	apiURL       string // cached Traefik API base URL
@@ -54,6 +55,7 @@ func NewTraefikCollector(
 	orch OrchestratorClient,
 	client agentpb.AgentTraefikServiceClient,
 	serverID string,
+	gate *ConnectionGate,
 	logger *slog.Logger,
 ) *TraefikCollector {
 	return &TraefikCollector{
@@ -61,6 +63,7 @@ func NewTraefikCollector(
 		client:   client,
 		serverID: serverID,
 		logger:   logger,
+		gate:     gate,
 	}
 }
 
@@ -88,6 +91,10 @@ func (t *TraefikCollector) Run(ctx context.Context) {
 }
 
 func (t *TraefikCollector) collect(ctx context.Context) {
+	if !t.gate.Allow() {
+		return
+	}
+
 	// Re-check for Traefik every 5 minutes.
 	if time.Since(t.checkedAt) > 5*time.Minute {
 		t.detectTraefik(ctx)
@@ -117,6 +124,7 @@ func (t *TraefikCollector) collect(ctx context.Context) {
 
 	resp, err := t.client.ReportTraefikRoutes(ctx, req)
 	if err != nil {
+		t.gate.Failed()
 		if IsAuthError(err) && t.onServerGone != nil {
 			t.logger.Warn("traefik: mTLS authentication failed — triggering re-enrollment", "error", err)
 			t.onServerGone()
@@ -125,11 +133,16 @@ func (t *TraefikCollector) collect(ctx context.Context) {
 		t.logger.Error("traefik: report routes failed", "error", err)
 		return
 	}
+	t.gate.Succeeded()
 	t.logger.Info("traefik: routes reported", "count", resp.GetReceivedCount())
 }
 
 // detectTraefik checks if a Traefik container is running via Docker.
 func (t *TraefikCollector) detectTraefik(ctx context.Context) {
+	if !t.gate.Allow() {
+		return
+	}
+
 	containers, err := t.orch.ListContainers(ctx)
 	if err != nil {
 		t.detected = false
