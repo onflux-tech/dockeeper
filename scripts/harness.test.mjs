@@ -70,13 +70,11 @@ test("agentes reais passam no contrato read-only", () => {
 	}
 });
 
-test("readOnlyAgentErrors exige shell amplo, deny-list e nenhuma edição", () => {
+test("readOnlyAgentErrors exige shell amplo e nenhuma edição", () => {
 	const opencode = readFileSync(new URL("../harness/agents/dockeeper-reviewer/opencode.yaml", import.meta.url), "utf8").replace(
 		/\r\n/g,
 		"\n",
 	);
-	const noStash = opencode.replace('  - action: shell\n    resource: "git stash*"\n    effect: deny\n', "");
-	assert.match(readOnlyAgentErrors("x", noStash).join("\n"), /falta deny: git stash/);
 	const noBroad = opencode.replace('  - action: shell\n    resource: "*"\n    effect: allow\n', "");
 	assert.match(readOnlyAgentErrors("x", noBroad).join("\n"), /falta shell amplo/);
 	const edit = `${opencode}\n  - action: edit\n    resource: "*"\n    effect: allow\n`;
@@ -93,6 +91,7 @@ test("readOnlyClaudeErrors exige Skill e rejeita Write", () => {
 
 test("subagent-guard libera leitura ampla e teste focado", () => {
 	assert.equal(evaluateSubagentShell("git status --short"), null);
+	assert.equal(evaluateSubagentShell("sudo git status --short"), null);
 	assert.equal(evaluateSubagentShell("git -C . status --short"), null);
 	assert.equal(evaluateSubagentShell("git --no-pager log --oneline -5"), null);
 	assert.equal(evaluateSubagentShell("git diff $(git merge-base develop HEAD)...HEAD | head"), null);
@@ -105,19 +104,28 @@ test("subagent-guard libera leitura ampla e teste focado", () => {
 
 test("subagent-guard nega mutação, suíte, pipe de teste e destrutivo", () => {
 	assert.match(evaluateSubagentShell("git stash"), /git de escrita/);
+	assert.match(evaluateSubagentShell("sudo git branch -D main"), /git de escrita/);
+	assert.match(evaluateSubagentShell("env git branch -D main"), /git de escrita/);
+	assert.match(evaluateSubagentShell("command git branch -D main"), /git de escrita/);
+	assert.match(evaluateSubagentShell('bash -c "git branch -D main"'), /git de escrita/);
 	assert.match(evaluateSubagentShell("git -C . branch -D main"), /git de escrita/);
 	assert.match(evaluateSubagentShell("git -c core.hooksPath=/dev/null commit -m x"), /git de escrita/);
 	assert.match(evaluateSubagentShell("git --no-pager branch -D main"), /git de escrita/);
 	assert.match(evaluateSubagentShell("git --git-dir=.git branch -D main"), /git de escrita/);
 	assert.match(evaluateSubagentShell("git status\ngit branch -D main"), /git de escrita/);
 	assert.match(evaluateSubagentShell("git status\nrm -rf dk_data"), /destrutivo/);
+	assert.match(evaluateSubagentShell("sudo rm -rf dk_data"), /destrutivo/);
+	assert.match(evaluateSubagentShell("/bin/rm -rf dk_data"), /destrutivo/);
 	assert.match(evaluateSubagentShell("go test ./pkg -run X\nrm -rf"), /destrutivo/);
 	assert.match(evaluateSubagentShell("go test ./..."), /suíte/);
 	assert.match(evaluateSubagentShell("go test ./pkg"), /suíte/);
 	assert.match(evaluateSubagentShell("go test ./pkg -run X | head"), /suíte|pipe/);
 	assert.match(evaluateSubagentShell("npm test | tail"), /suíte/);
 	assert.match(evaluateSubagentShell("npm --prefix web test"), /suíte/);
+	assert.match(evaluateSubagentShell("npm -w web test"), /suíte/);
 	assert.match(evaluateSubagentShell("make -C . verify"), /suíte/);
+	assert.match(evaluateSubagentShell("make --directory=. test"), /suíte/);
+	assert.match(evaluateSubagentShell("node --test scripts/harness.test.mjs"), /suíte/);
 	assert.match(evaluateSubagentShell("go test ./pkg -exec 'rm' -run X"), /flag de escrita/);
 	assert.match(evaluateSubagentShell("git diff --output=out"), /flag de escrita/);
 	assert.match(evaluateSubagentShell("ssh host"), /flag de escrita|remoto/);
@@ -127,8 +135,36 @@ test("subagent-guard nega mutação, suíte, pipe de teste e destrutivo", () => 
 	assert.match(evaluateSubagentShell("gh issue close 1"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh release create v1"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api -X PUT /repos/x"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh api -f title=x repos/o/r/issues"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh api --field title=x repos/o/r/issues"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh api --input body.json repos/o/r/issues"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh repo clone owner/repo"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh variable set X"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh workflow disable 1"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("python -c 'print(1)'"), /script inline/);
 	assert.match(evaluateSubagentShell("git push"), /git de escrita/);
 	assert.match(evaluateSubagentShell("--no-verify"), /destrutivo/);
+});
+
+test("plugin OpenCode aplica o guard só nos agentes de review", async () => {
+	const { default: plugin } = await import("../.opencode/plugins/subagent-guard.js");
+	const hooks = {};
+	const ctx = {
+		tool: {
+			hook: async (name, callback) => {
+				hooks[name] = callback;
+			},
+		},
+		session: {
+			get: async ({ sessionID }) => ({ agent: sessionID === "review" ? "dockeeper-refuter" : "build" }),
+		},
+	};
+	await plugin.setup(ctx);
+	const run = (sessionID, command) => hooks["execute.before"]({ tool: "shell", sessionID, input: { command } });
+	await assert.rejects(() => run("review", "git stash"), /git de escrita/);
+	await assert.rejects(() => run("review", 'bash -c "git branch -D main"'), /git de escrita/);
+	await run("review", "git status --short");
+	await run("main", "git stash");
 });
 
 test("porta gerada do subagent-guard é JS válido", () => {

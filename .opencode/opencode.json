@@ -15,6 +15,7 @@
       }
     }
   },
+  "plugins": ["./.opencode/plugins/subagent-guard.js"],
   "permissions": [
     { "action": "shell", "resource": "*", "effect": "allow" },
     { "action": "shell", "resource": "git push*", "effect": "ask" },

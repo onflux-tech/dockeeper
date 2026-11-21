@@ -26,10 +26,12 @@ const MUTATING_SUBCOMMANDS = new Set([
 	"branch",
 ]);
 
-const GIT_COMMAND = /(?:^|[;&|(\n]|`)\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*git\b([^\n;&|`]*)/g;
+const GIT_COMMAND = /\bgit\b([^\n;&|`]*)/g;
 
 const DESTRUCTIVE = [
-	/(?:^|[;&|(\n]|`)\s*rm\s+/i,
+	/\brm\s+/i,
+	/\bdel\s+/i,
+	/\brd\s+/i,
 	/\bRemove-Item\b/i,
 	/\btaskkill\b/i,
 	/\bpkill\b/i,
@@ -43,19 +45,31 @@ const TEST_SUITE = [
 	/\bgo\s+test\b[^\n]*\.\.\./i,
 	/\bnpm\b[^\n]*(?:run\s+)?test\b/i,
 	/\b(?:vitest|jest)\b/i,
+	/\bnode\s+--test\b/i,
 	/\bmake\b[^\n]*(?:verify(?:-fast)?|test|pre-push|release)\b/i,
 ];
 
-const TEST_PIPE = /\b(?:go\s+test|npm|vitest|jest|make)\b[^\n|]*\|\s*(?:tail|head|grep|less|more)\b/i;
+const TEST_PIPE = /\b(?:go\s+test|npm|vitest|jest|node\s+--test|make)\b[^\n|]*\|\s*(?:tail|head|grep|less|more)\b/i;
 
 const GH_MUTATION = [
 	/\bgh\s+pr\s+(?:create|merge|edit|review|checkout|close|reopen)\b/i,
 	/\bgh\s+issue\s+(?:create|close|reopen|comment|edit|delete)\b/i,
 	/\bgh\s+release\s+(?:create|delete|edit|upload)\b/i,
-	/\bgh\s+repo\s+(?:create|delete|edit|archive|rename|transfer)\b/i,
-	/\bgh\s+workflow\s+run\b/i,
-	/\bgh\s+secret\s+(?:set|delete)\b/i,
+	/\bgh\s+repo\s+(?:create|delete|edit|archive|rename|transfer|clone|fork)\b/i,
+	/\bgh\s+workflow\s+(?:run|enable|disable|delete)\b/i,
+	/\bgh\s+(?:secret|variable)\s+(?:set|delete)\b/i,
+	/\bgh\s+auth\s+(?:login|logout|refresh|switch|setup-git|token)\b/i,
+	/\bgh\s+gist\s+(?:create|delete|edit|rename)\b/i,
 	/\bgh\s+api\b[^\n]*(?:-X\s*|--method[=\s]+)(?:POST|PUT|PATCH|DELETE)\b/i,
+	/\bgh\s+api\b[^\n]*(?:-f\s|-F\s|--field\b|--raw-field|--input)\b/i,
+];
+
+const SCRIPTING = [
+	/\bpython3?\s+-c\b/i,
+	/\bnode\s+(?:-e|--eval)\b/i,
+	/\bperl\s+-e\b/i,
+	/\bruby\s+-e\b/i,
+	/\bphp\s+-r\b/i,
 ];
 
 const WRITE_FLAGS = [
@@ -129,6 +143,11 @@ export function evaluate(command) {
 	for (const rule of GH_MUTATION) {
 		if (rule.test(cmd)) {
 			return "BLOQUEADO: gh de mutação no subagente read-only. Use gh pr view ou consulte o principal.";
+		}
+	}
+	for (const rule of SCRIPTING) {
+		if (rule.test(cmd)) {
+			return "BLOQUEADO: script inline pode escrever no repositório. Use leitura de arquivo ou consulte o principal.";
 		}
 	}
 	for (const rule of WRITE_FLAGS) {

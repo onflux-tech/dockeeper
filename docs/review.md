@@ -49,8 +49,9 @@ Toda afirmação sobre gate precisa de comando, saída e exit code. Sem isso, é
 - Uma suíte por vez.
 - Warning em saída de teste ou build é achado.
 - Reviewer e refuter têm Bash amplo para leitura: git read-only, `gh`, `cat`, `rg`, pipes de leitura e comandos compostos. Mutações de git, suíte de teste, pipe de teste, flags que escrevem e comandos destrutivos são bloqueados pelo harness.
-- No OpenCode, a deny-list de `permissions` faz o bloqueio; no Claude, o hook `PreToolUse` de `.claude/hooks/subagent-guard.mjs`, referenciado no frontmatter do agente, faz o mesmo.
-- No OpenCode, `git -C`/`-c` são bloqueados; rode `git` direto da raiz do repo. `permissions` não expressa "go test sem `-run`", então isso fica no contrato do corpo; o hook do Claude bloqueia.
+- No OpenCode, o plugin `.opencode/plugins/subagent-guard.js` aplica a mesma função `evaluate` do hook; as `permissions` só liberam leitura e Bash e negam `edit`/`write`.
+- Os dois harnesses bloqueiam git de escrita, suíte, pipe de teste, flags de escrita, destrutivos, `gh` de mutação, script inline e wrappers como `sudo`/`env`/`bash -c`.
+- A guarda é best-effort: nega os caminhos conhecidos; o read-only estrutural (tools sem `Write`/`Edit`) e o contrato do corpo são a barreira.
 - Falha pré-existente só com baseline: `git stash`, rodar, `git stash pop`, rodar, as duas saídas coladas.
 - Saída sem alvo identificado é `INCONCLUSIVA`, não PASS.
 

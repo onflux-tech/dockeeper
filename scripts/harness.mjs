@@ -101,37 +101,6 @@ export function validateDescription(fm, file) {
 	return null;
 }
 
-const READ_ONLY_SHELL_DENY = [
-	"git -*",
-	"git stash*",
-	"git checkout*",
-	"git switch*",
-	"git reset*",
-	"git clean*",
-	"git restore*",
-	"git add*",
-	"git commit*",
-	"git merge *",
-	"git rebase*",
-	"git push*",
-	"git tag*",
-	"git branch*",
-	"go test ./...*",
-	"go test * ./...*",
-	"npm test*",
-	"npm run test*",
-	"npm --prefix*test*",
-	"vitest*",
-	"jest*",
-	"make verify*",
-	"make test*",
-	"make -C*verify*",
-	"rm *",
-	"*--no-verify*",
-	"gh pr checkout*",
-	"gh api -X*",
-];
-
 const READ_ONLY_TOOLS = ["Read", "Grep", "Glob", "Bash", "Skill"];
 
 export function readOnlyAgentErrors(name, yaml) {
@@ -147,11 +116,6 @@ export function readOnlyAgentErrors(name, yaml) {
 	}
 	if (!text.includes('  - action: shell\n    resource: "*"\n    effect: allow')) {
 		errors.push(`harness/agents/${name}/opencode.yaml: falta shell amplo para leitura`);
-	}
-	for (const resource of READ_ONLY_SHELL_DENY) {
-		if (!text.includes(`  - action: shell\n    resource: "${resource}"\n    effect: deny`)) {
-			errors.push(`harness/agents/${name}/opencode.yaml: falta deny: ${resource}`);
-		}
 	}
 	if (/^  - action: (edit|write|subagent|webfetch|websearch)$/m.test(text)) {
 		errors.push(`harness/agents/${name}/opencode.yaml: agente read-only não pode liberar edit/write/subagent/webfetch/websearch`);
@@ -447,6 +411,25 @@ function checkSensitive() {
 	return errors;
 }
 
+function checkOpenCodePlugin() {
+	const errors = [];
+	const plugin = join(ROOT, ".opencode/plugins/subagent-guard.js");
+	if (!existsSync(plugin)) {
+		errors.push(".opencode/plugins/subagent-guard.js: ausente");
+	} else {
+		const text = read(plugin);
+		for (const entry of readdirSync(join(HARNESS, "agents"), { withFileTypes: true })) {
+			if (entry.isDirectory() && !text.includes(`"${entry.name}"`)) {
+				errors.push(`.opencode/plugins/subagent-guard.js: agente ${entry.name} fora do guard`);
+			}
+		}
+	}
+	if (!read(join(ROOT, ".opencode/opencode.json")).includes(".opencode/plugins/subagent-guard.js")) {
+		errors.push(".opencode/opencode.json: subagent-guard não registrado");
+	}
+	return errors;
+}
+
 function checkGitignore(ports) {
 	const errors = [];
 	for (const path of ports.keys()) {
@@ -476,6 +459,7 @@ export function main(argv = process.argv.slice(2)) {
 				...checkFileRefs(),
 				...checkMigrations(),
 				...checkSensitive(),
+				...checkOpenCodePlugin(),
 				...checkGitignore(ports),
 			];
 			if (errors.length) {
