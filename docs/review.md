@@ -1,6 +1,6 @@
 # Review — Dockeeper
 
-Contrato de review pós-implementação. Vale para o agente principal, para o `dockeeper-reviewer` e para o `/review`.
+Contrato de review pós-implementação. Vale para o agente principal, para o `dockeeper-reviewer`, para o `dockeeper-refuter` e para o `/review`.
 
 ## Quando
 
@@ -73,6 +73,39 @@ GO ou NO-GO, com a razão em uma linha.
 - Minor não some: vai para o relatório e o usuário tria.
 - Defeito que o plano mandou fazer é decisão do usuário, não do revisor.
 - O revisor não edita, não cria arquivo, não muda branch e não roda a suíte inteira.
+
+## Refutação adversarial
+
+O `/review` despacha o `dockeeper-refuter` logo depois do reviewer. Ele recebe o relatório, busca o mesmo diff pela base e tenta derrubar cada achado. A refutação existe para tirar falso positivo e para dar segunda opinião ao `GO`; ela não substitui o reviewer nem procura achado novo.
+
+### Regras
+
+- O ônus da prova é de quem refuta. `REFUTED` exige `arquivo:linha`, teste com assert citado, trecho da spec/issue/plano ou comando com saída.
+- `UPHELD` quando o cenário de falha é alcançável. `INCONCLUSIVO` quando a decisão exige execução; o parecer traz o comando exato que falta.
+- Severidade não muda na refutação. `REFUTED` em Minor não apaga o achado do relatório; o usuário tria.
+- Reviewer com `GO`: o refuter ataca as 2 ou 3 afirmações mais frágeis do relatório. Sem afirmações, ataca 2 ou 3 hipóteses de falha nas partes mais arriscadas do diff.
+- O refuter não edita, não cria arquivo, não muda branch e não roda a suíte inteira.
+
+### Formato
+
+```text
+## Refutação
+[Critical | Important | Minor] arquivo:linha
+UPHELD | REFUTED | INCONCLUSIVO — prova em uma ou duas frases; em REFUTED, o arquivo:linha, teste ou trecho que derruba.
+
+## GO
+(apenas se o reviewer deu GO) afirmações atacadas e GO CONFIRMADO ou GO REFUTADO.
+
+## Veredito
+NO-GO MANTIDO | NO-GO REFUTADO | GO CONFIRMADO | GO REFUTADO
+```
+
+### Como o principal aplica
+
+- `UPHELD` e `INCONCLUSIVO` continuam valendo; Important só é corrigido depois de confirmação no código.
+- `REFUTED` não é corrigido; fica registrado com a prova.
+- `NO-GO REFUTADO` exige todos os Critical e Important refutados; vira `GO`.
+- `GO REFUTADO` é achado novo, bloqueia e vai para a triagem do usuário.
 
 ## Depois da correção
 

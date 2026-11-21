@@ -54,6 +54,7 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | 2026-11-20 | Fonte única em `harness/`, `make harness-sync`/`harness-check` e skill `dockeeper-close`. |
 | 2026-11-20 | Changelog com `Unreleased` e versões tagueadas, `changelog-draft`/`changelog-check`/`release-check` e gate de changelog no `verify` e no CI. |
 | 2026-11-21 | Fluxo com PR: feature em `develop` por squash, promoção em `production` por merge commit, template de PR e base de review por PR. |
+| 2026-11-21 | Papel `dockeeper-refuter`: refutação adversarial dos achados e do `GO` do `dockeeper-reviewer`, orquestrada pelo `/review`, com contrato em `docs/review.md`. |
 
 ## Cadência
 
