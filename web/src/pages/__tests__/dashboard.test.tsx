@@ -5,7 +5,10 @@ import { MemoryRouter } from "react-router";
 
 // Mock hooks that call PocketBase.
 vi.mock("@/hooks/use-collection", () => ({
-	useCollection: () => ({ data: null, isLoading: false }),
+	useCollection: (name: string) =>
+		name === "containers"
+			? { data: { items: [{}], totalItems: 438 }, isLoading: false }
+			: { data: null, isLoading: false },
 }));
 
 vi.mock("@/hooks/use-realtime", () => ({
@@ -42,6 +45,11 @@ describe("DashboardPage", () => {
 	it("renders the servers summary", () => {
 		renderDashboard();
 		expect(screen.getByText("Total Servers")).toBeInTheDocument();
+	});
+
+	it("shows the total container count from the collection total", () => {
+		renderDashboard();
+		expect(screen.getByText("438")).toBeInTheDocument();
 	});
 
 	it("shows empty state when no servers", () => {
