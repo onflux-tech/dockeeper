@@ -113,7 +113,6 @@ func (d *DiscoveryCollector) refreshContainers(ctx context.Context) error {
 func (d *DiscoveryCollector) fullSync(ctx context.Context) error {
 	d.mu.Lock()
 	d.dirty = make(map[string]struct{})
-	d.removed = make(map[string]struct{})
 	d.mu.Unlock()
 
 	containers, err := d.orch.ListContainers(ctx)
