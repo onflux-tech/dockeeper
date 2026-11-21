@@ -60,6 +60,12 @@ export const changelog: ChangelogEntry[] = [
 				description:
 					"Added architecture, gotchas, migrations, review, release and e2e documentation.",
 			},
+			{
+				type: "docs",
+				area: "infra",
+				description:
+					"Published a bilingual README with configuration, security and network requirements, under the MIT license.",
+			},
 		],
 	},
 	{

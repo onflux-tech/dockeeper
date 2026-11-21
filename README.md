@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/onflux-tech/dockeeper/actions/workflows/ci.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/ci/onflux-tech/dockeeper.svg?workflow=ci.yml&amp;branch=production&amp;variant=secondary&amp;size=sm&amp;mode=dark"><img alt="CI" src="https://www.shieldcn.dev/github/ci/onflux-tech/dockeeper.svg?workflow=ci.yml&amp;branch=production&amp;variant=secondary&amp;size=sm&amp;mode=light"></picture></a>
-  <a href="#license"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/License-unpublished-6B7280.svg?variant=secondary&amp;size=sm&amp;mode=dark"><img alt="License" src="https://www.shieldcn.dev/badge/License-unpublished-6B7280.svg?variant=secondary&amp;size=sm&amp;mode=light"></picture></a>
+  <a href="LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/license/onflux-tech/dockeeper.svg?variant=ghost&amp;size=sm&amp;mode=dark"><img alt="License" src="https://www.shieldcn.dev/github/license/onflux-tech/dockeeper.svg?variant=ghost&amp;size=sm&amp;mode=light"></picture></a>
   <a href="https://github.com/onflux-tech/dockeeper/commits/production"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/last-commit/onflux-tech/dockeeper.svg?variant=secondary&amp;size=sm&amp;mode=dark"><img alt="Last commit" src="https://www.shieldcn.dev/github/last-commit/onflux-tech/dockeeper.svg?variant=secondary&amp;size=sm&amp;mode=light"></picture></a>
   <a href="https://github.com/onflux-tech/dockeeper/stargazers"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/stars/onflux-tech/dockeeper.svg?variant=secondary&amp;size=sm&amp;mode=dark"><img alt="GitHub Stars" src="https://www.shieldcn.dev/github/stars/onflux-tech/dockeeper.svg?variant=secondary&amp;size=sm&amp;mode=light"></picture></a>
 </p>
@@ -20,7 +20,6 @@
   <a href="https://www.docker.com/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Runtime-Docker-2496ED.svg?logo=docker&amp;variant=branded&amp;size=sm&amp;mode=dark"><img alt="Runtime · Docker" src="https://www.shieldcn.dev/badge/Runtime-Docker-2496ED.svg?logo=docker&amp;variant=branded&amp;size=sm&amp;mode=light"></picture></a>
   <a href="https://react.dev/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Framework-React-61DAFB.svg?logo=react&amp;variant=branded&amp;size=sm&amp;mode=dark"><img alt="Framework · React" src="https://www.shieldcn.dev/badge/Framework-React-61DAFB.svg?logo=react&amp;variant=branded&amp;size=sm&amp;mode=light"></picture></a>
   <a href="https://pocketbase.io/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Database-PocketBase-1F2937.svg?variant=branded&amp;size=sm&amp;mode=dark"><img alt="Database · PocketBase" src="https://www.shieldcn.dev/badge/Database-PocketBase-1F2937.svg?variant=branded&amp;size=sm&amp;mode=light"></picture></a>
-  <a href="https://grpc.io/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Transport-gRPC-244C5A.svg?logo=grpc&amp;variant=branded&amp;size=sm&amp;mode=dark"><img alt="Transport · gRPC" src="https://www.shieldcn.dev/badge/Transport-gRPC-244C5A.svg?logo=grpc&amp;variant=branded&amp;size=sm&amp;mode=light"></picture></a>
   <a href="AGENTS.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Agent--friendly-AGENTS.md-D97757.svg?variant=secondary&amp;size=sm&amp;mode=dark"><img alt="Agent-friendly AGENTS.md" src="https://www.shieldcn.dev/badge/Agent--friendly-AGENTS.md-D97757.svg?variant=secondary&amp;size=sm&amp;mode=light"></picture></a>
 </p>
 
@@ -40,6 +39,9 @@
 - [Key Features](#key-features)
 - [Project Status](#project-status)
 - [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Security](#security)
+- [Requirements and Ports](#requirements-and-ports)
 - [Development](#development)
 - [Project Structure](#project-structure)
 - [Documentation](#documentation)
@@ -105,6 +107,60 @@ make dev-all
 ```
 
 `make dev-all` starts the manager on `8090`/`50051`, the agent on `localhost:50051` and the Vite dev server on `5173`. The manager uses `dk_data`; the agent uses `dk-agent-data`. Use `http://localhost:5173` for hot reload and `http://localhost:8090` for the embedded build.
+
+### Configuration
+
+The manager reads three environment variables and keeps the rest in the dashboard.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DK_GRPC_HOSTS` | `localhost` | Comma-separated DNS names and IPs added as SANs to the manager certificate. Required when agents connect through a hostname other than `localhost`. |
+| `DOCKEEPER_ENCRYPTION_KEY` | key generated in `pb_data/.encryption_key` | Encrypts registry credentials at rest. |
+| `DOCKEEPER_BASE_URL` | request origin | Public URL used in notifications and generated links. |
+
+The ports are fixed: `8090` serves the dashboard, the HTTP API and the agent install endpoints; `50051` serves gRPC for the agents. The manager data lives in `/home/dockeeper/pb_data` and holds the SQLite database, the internal CA and the encryption key. That volume is the only state to back up.
+
+The agent takes three flags: `--manager-url` (`host:50051`), `--token` (enrollment token generated in the dashboard) and `--data-dir` (`/var/lib/dockeeper-agent` in the systemd install, `/data` in the container). A per-server token only matches that pending server and is cleared on use; the global quick-install token stays valid until you regenerate it. After enrollment the agent authenticates with its client certificate and renews it before expiry.
+
+Metrics and log retention is set through `GET` and `PUT /api/dk/settings/retention`:
+
+| Key | Default |
+|---|---|
+| `retention_raw_hours` | `168` (7 days) |
+| `retention_hourly_days` | `30` |
+| `retention_daily_days` | `365` |
+| `retention_events_days` | `30` |
+| `retention_audit_logs_days` | `90` |
+| `retention_notification_logs_days` | `30` |
+
+Backup policies keep their own `retention_days`.
+
+### Security
+
+- **Mutual TLS** -- the manager generates an internal CA on first start under `pb_data/certs/`: `ca.pem` and `ca-key.pem` (10 years), `server.pem` and `server-key.pem` (5 years, covering `localhost`, `dockeeper-manager`, the loopback IPs and every entry in `DK_GRPC_HOSTS`, and regenerated when those SANs change).
+- **Agent certificates** -- issued with CN set to the server ID, valid for one year and renewed by the agent at 80% of the lifetime. The manager identifies every RPC by that CN.
+- **Outbound-only topology** -- agents dial the manager. Managed hosts expose no inbound ports, and the manager never opens a connection to an agent.
+- **HTTP authentication** -- the PocketBase superuser, an `X-API-Key` header or a 15-minute JWT issued to `dk_users`. Every custom route is bound to an RBAC capability such as `containers.manage` or `settings.view`; the public exceptions are health, agent install and action tokens.
+- **Least privilege** -- users receive capabilities directly or through groups, and API keys act as their owner.
+- **Audit log** -- mutations record the actor, the target and the payload.
+- **Secrets at rest** -- registry credentials are encrypted with `DOCKEEPER_ENCRYPTION_KEY` or the generated key in `pb_data/.encryption_key`.
+
+The data volume holds the CA, the server key and the encryption key. Back it up as a unit: restoring the database without these files breaks agent trust and stored credentials.
+
+### Requirements and Ports
+
+**Manager**: any Linux host with Docker, or the static binary. `amd64` and `arm64` images are published. The database is embedded (SQLite via PocketBase), so there is no external service to provision.
+
+**Managed host**: Linux with Docker Engine reachable through `/var/run/docker.sock`, plus root or sudo for the systemd install. The container install mounts the socket instead. No inbound port is needed.
+
+| From | To | Port | Notes |
+|---|---|---|---|
+| Browser | manager | `8090` | dashboard, HTTP API and agent install |
+| Agent | manager | `50051` | gRPC over mTLS, outbound from the host |
+| Agent | Docker Engine | `/var/run/docker.sock` | local socket |
+| Agent | container registries | `443` | image pulls |
+
+**From source**: Go 1.25+, Node.js 22+, npm, Docker and `air`.
 
 ### Development
 
@@ -176,7 +232,7 @@ The harness includes area skills, a reviewer agent, verification and review comm
 
 ### License
 
-A license has not been published yet. Until one is added, the source is available for viewing only.
+Released under the [MIT License](LICENSE).
 
 ---
 
@@ -190,6 +246,9 @@ A license has not been published yet. Until one is added, the source is availabl
 - [Principais recursos](#principais-recursos)
 - [Estado do projeto](#estado-do-projeto)
 - [Início rápido](#início-rápido)
+- [Configuração](#configuração)
+- [Segurança](#segurança)
+- [Requisitos e portas](#requisitos-e-portas)
 - [Desenvolvimento](#desenvolvimento)
 - [Estrutura do projeto](#estrutura-do-projeto)
 - [Documentação](#documentação)
@@ -256,6 +315,60 @@ make dev-all
 
 O `make dev-all` sobe o manager em `8090`/`50051`, o agent em `localhost:50051` e o Vite em `5173`. O manager usa `dk_data`; o agent usa `dk-agent-data`. Use `http://localhost:5173` para hot reload e `http://localhost:8090` para o build embutido.
 
+### Configuração
+
+O manager lê três variáveis de ambiente e mantém o restante no dashboard.
+
+| Variável | Padrão | Função |
+|---|---|---|
+| `DK_GRPC_HOSTS` | `localhost` | Nomes DNS e IPs, separados por vírgula, adicionados como SANs ao certificado do manager. Necessário quando os agents chegam por um hostname diferente de `localhost`. |
+| `DOCKEEPER_ENCRYPTION_KEY` | chave gerada em `pb_data/.encryption_key` | Criptografa as credenciais de registry em repouso. |
+| `DOCKEEPER_BASE_URL` | origem da requisição | URL pública usada em notificações e links gerados. |
+
+As portas são fixas: `8090` serve o dashboard, a API HTTP e os endpoints de instalação do agent; `50051` serve o gRPC para os agents. Os dados do manager ficam em `/home/dockeeper/pb_data` e contêm o banco SQLite, a CA interna e a chave de criptografia. Esse volume é o único estado a salvar.
+
+O agent recebe três flags: `--manager-url` (`host:50051`), `--token` (token de enrollment gerado no dashboard) e `--data-dir` (`/var/lib/dockeeper-agent` na instalação systemd, `/data` no container). O token por server só vale para aquele server pendente e é limpo após o uso; o token global do quick install continua válido até você regenerá-lo. Depois do enrollment o agent autentica com o certificado de cliente e o renova antes do vencimento.
+
+A retenção de métricas e logs é configurada por `GET` e `PUT /api/dk/settings/retention`:
+
+| Chave | Padrão |
+|---|---|
+| `retention_raw_hours` | `168` (7 dias) |
+| `retention_hourly_days` | `30` |
+| `retention_daily_days` | `365` |
+| `retention_events_days` | `30` |
+| `retention_audit_logs_days` | `90` |
+| `retention_notification_logs_days` | `30` |
+
+Políticas de backup mantêm o próprio `retention_days`.
+
+### Segurança
+
+- **mTLS** -- o manager gera uma CA interna no primeiro start em `pb_data/certs/`: `ca.pem` e `ca-key.pem` (10 anos), `server.pem` e `server-key.pem` (5 anos, cobrindo `localhost`, `dockeeper-manager`, os IPs de loopback e cada entrada de `DK_GRPC_HOSTS`, e regenerados quando esses SANs mudam).
+- **Certificados dos agents** -- emitidos com CN igual ao ID do server, válidos por um ano e renovados pelo agent em 80% do tempo de vida. O manager identifica cada RPC por esse CN.
+- **Topologia somente de saída** -- os agents discam para o manager. Hosts gerenciados não expõem portas de entrada, e o manager nunca abre conexão para um agent.
+- **Autenticação HTTP** -- superuser do PocketBase, header `X-API-Key` ou JWT de 15 minutos emitido para `dk_users`. Toda rota customizada está amarrada a uma capability de RBAC, como `containers.manage` ou `settings.view`; as exceções públicas são health, instalação de agent e action tokens.
+- **Menor privilégio** -- usuários recebem capabilities direto ou por grupo, e API keys agem como o dono.
+- **Audit log** -- mutações registram ator, alvo e payload.
+- **Segredos em repouso** -- credenciais de registry são criptografadas com `DOCKEEPER_ENCRYPTION_KEY` ou com a chave gerada em `pb_data/.encryption_key`.
+
+O volume de dados guarda a CA, a chave do server e a chave de criptografia. Faça backup como um conjunto: restaurar o banco sem esses arquivos quebra a confiança dos agents e as credenciais salvas.
+
+### Requisitos e portas
+
+**Manager**: qualquer host Linux com Docker, ou o binário estático. As imagens `amd64` e `arm64` são publicadas. O banco é embutido (SQLite via PocketBase), então não há serviço externo para provisionar.
+
+**Host gerenciado**: Linux com Docker Engine acessível por `/var/run/docker.sock`, mais root ou sudo para a instalação systemd. A instalação em container monta o socket. Nenhuma porta de entrada é necessária.
+
+| De | Para | Porta | Observação |
+|---|---|---|---|
+| Navegador | manager | `8090` | dashboard, API HTTP e instalação do agent |
+| Agent | manager | `50051` | gRPC sobre mTLS, de saída do host |
+| Agent | Docker Engine | `/var/run/docker.sock` | socket local |
+| Agent | registries de container | `443` | pull de imagens |
+
+**A partir do código**: Go 1.25+, Node.js 22+, npm, Docker e `air`.
+
 ### Desenvolvimento
 
 ```bash
@@ -311,4 +424,4 @@ O harness inclui skills por área, um agent revisor, comandos de verificação e
 
 ### Licença
 
-A licença ainda não foi publicada. Até que uma seja adicionada, o código está disponível apenas para visualização.
+Distribuído sob a [licença MIT](LICENSE).
