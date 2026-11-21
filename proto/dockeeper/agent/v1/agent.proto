@@ -869,3 +869,58 @@ message ExecStreamClose {}
 message ExecStreamExit {
   int32 exit_code = 1;
 }
+
+service AgentHostService {
+  rpc ReportHostInventory(ReportHostInventoryRequest) returns (ReportHostInventoryResponse);
+}
+
+message HostApp {
+  string source = 1;
+  string name = 2;
+  string unit = 3;
+  string pm_id = 4;
+  string status = 5;
+  repeated uint32 pids = 6;
+  repeated uint32 ports = 7;
+  double cpu_percent = 8;
+  uint64 mem_bytes = 9;
+  uint64 disk_read_bytes = 10;
+  uint64 disk_write_bytes = 11;
+  uint32 restarts = 12;
+  uint64 uptime_seconds = 13;
+  string user = 14;
+  string cwd = 15;
+  string exec_path = 16;
+  string log_path = 17;
+}
+
+message HostProcess {
+  uint32 pid = 1;
+  string name = 2;
+  string app = 3;
+  double cpu_percent = 4;
+  uint64 mem_bytes = 5;
+  uint32 threads = 6;
+}
+
+message HostPort {
+  uint32 port = 1;
+  string protocol = 2;
+  string address = 3;
+  uint32 pid = 4;
+  string app = 5;
+}
+
+message ReportHostInventoryRequest {
+  string server_id = 1;
+  repeated HostApp apps = 2;
+  repeated HostProcess processes = 3;
+  repeated HostPort ports = 4;
+  uint64 uptime_seconds = 5;
+  google.protobuf.Timestamp collected_at = 6;
+}
+
+message ReportHostInventoryResponse {
+  int32 received_apps = 1;
+  int32 received_processes = 2;
+}
