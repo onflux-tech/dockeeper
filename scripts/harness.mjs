@@ -91,6 +91,65 @@ export function validateDescription(fm, file) {
 	return null;
 }
 
+const READ_ONLY_SHELL = [
+	"go test *",
+	"git status *",
+	"git log *",
+	"git diff *",
+	"git show *",
+	"git merge-base *",
+	"git ls-files *",
+	"git blame *",
+	"git rev-parse *",
+];
+
+const READ_ONLY_TOOLS = ["Read", "Grep", "Glob", "Bash", "Skill"];
+
+export function readOnlyAgentErrors(name, yaml) {
+	const text = normalize(yaml).trim();
+	const errors = [];
+	if (!/^  - action: "\*"\n    resource: "\*"\n    effect: deny$/m.test(text)) {
+		errors.push(`harness/agents/${name}/opencode.yaml: falta a regra inicial action "*" resource "*" effect deny`);
+	}
+	for (const action of ["read", "glob", "grep", "skill"]) {
+		if (!new RegExp(`^  - action: ${action}$`, "m").test(text)) {
+			errors.push(`harness/agents/${name}/opencode.yaml: falta allow para ${action}`);
+		}
+	}
+	const shells = [...text.matchAll(/^  - action: shell\n    resource: "([^"]+)"\n    effect: allow$/gm)].map(
+		(match) => match[1],
+	);
+	for (const resource of shells) {
+		if (!READ_ONLY_SHELL.includes(resource)) {
+			errors.push(`harness/agents/${name}/opencode.yaml: shell allow fora da allowlist: ${resource}`);
+		}
+	}
+	for (const resource of READ_ONLY_SHELL) {
+		if (!shells.includes(resource)) {
+			errors.push(`harness/agents/${name}/opencode.yaml: falta shell allow: ${resource}`);
+		}
+	}
+	if (/^  - action: (edit|write|subagent|webfetch|websearch)$/m.test(text)) {
+		errors.push(`harness/agents/${name}/opencode.yaml: agente read-only não pode liberar edit/write/subagent/webfetch/websearch`);
+	}
+	return errors;
+}
+
+export function readOnlyClaudeErrors(name, yaml) {
+	const tools = field(yaml, "tools")
+		.split(",")
+		.map((tool) => tool.trim())
+		.filter(Boolean);
+	const errors = [];
+	for (const tool of READ_ONLY_TOOLS) {
+		if (!tools.includes(tool)) errors.push(`harness/agents/${name}/claude.yaml: falta tool ${tool}`);
+	}
+	for (const tool of ["Write", "Edit", "Patch"]) {
+		if (tools.includes(tool)) errors.push(`harness/agents/${name}/claude.yaml: agente read-only não pode ter ${tool}`);
+	}
+	return errors;
+}
+
 export function renderPort(text, sourceRel) {
 	const { fm, body } = parseFrontmatter(text);
 	const cleanBody = body.replace(/^\n+/, "").replace(/\s+$/, "");
@@ -186,6 +245,8 @@ function readSources() {
 		if (claudeError) throw new Error(claudeError);
 		if (opencodeError) throw new Error(opencodeError);
 		if (field(opencode, "mode") !== "subagent") throw new Error(`${rel(opencodeFile)}: mode deve ser subagent`);
+		const agentErrors = [...readOnlyAgentErrors(name, opencode), ...readOnlyClaudeErrors(name, claude)];
+		if (agentErrors.length) throw new Error(agentErrors.join("; "));
 		sources.push({ kind: "agent", name, body, claude, opencode });
 	}
 

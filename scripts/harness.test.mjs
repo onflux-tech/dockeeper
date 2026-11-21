@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
 	makeRefErrors,
 	parseDocsIndex,
 	parseFrontmatter,
 	parseMakeTargets,
+	readOnlyAgentErrors,
+	readOnlyClaudeErrors,
 	renderAgent,
 	renderPort,
 	sequenceErrors,
@@ -53,4 +56,29 @@ test("renderAgent separa claude e opencode", () => {
 	const opencode = renderAgent("r", "body", 'description: "d"\nmode: subagent', "opencode");
 	assert.doesNotMatch(opencode, /name: r/);
 	assert.match(opencode, /mode: subagent/);
+});
+
+test("agentes reais passam no contrato read-only", () => {
+	for (const name of ["dockeeper-reviewer", "dockeeper-refuter"]) {
+		const opencode = readFileSync(new URL(`../harness/agents/${name}/opencode.yaml`, import.meta.url), "utf8");
+		const claude = readFileSync(new URL(`../harness/agents/${name}/claude.yaml`, import.meta.url), "utf8");
+		assert.deepEqual(readOnlyAgentErrors(name, opencode), []);
+		assert.deepEqual(readOnlyClaudeErrors(name, claude), []);
+	}
+});
+
+test("readOnlyAgentErrors rejeita shell amplo e regra de edição", () => {
+	const opencode = readFileSync(new URL("../harness/agents/dockeeper-reviewer/opencode.yaml", import.meta.url), "utf8");
+	const broad = opencode.replace('resource: "go test *"', 'resource: "*"');
+	assert.match(readOnlyAgentErrors("x", broad).join("\n"), /fora da allowlist/);
+	const edit = `${opencode}\n  - action: edit\n    resource: "*"\n    effect: allow\n`;
+	assert.match(readOnlyAgentErrors("x", edit).join("\n"), /não pode liberar edit/);
+});
+
+test("readOnlyClaudeErrors exige Skill e rejeita Write", () => {
+	const claude = readFileSync(new URL("../harness/agents/dockeeper-reviewer/claude.yaml", import.meta.url), "utf8");
+	const withoutSkill = claude.replace(", Skill", "");
+	assert.match(readOnlyClaudeErrors("x", withoutSkill).join("\n"), /falta tool Skill/);
+	const write = claude.replace("Bash, Skill", "Bash, Skill, Write");
+	assert.match(readOnlyClaudeErrors("x", write).join("\n"), /não pode ter Write/);
 });

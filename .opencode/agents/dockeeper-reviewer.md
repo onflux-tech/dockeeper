@@ -15,29 +15,35 @@ permissions:
   - action: grep
     resource: "*"
     effect: allow
-  - action: shell
-    resource: "git status*"
+  - action: skill
+    resource: "*"
     effect: allow
   - action: shell
-    resource: "git log*"
+    resource: "go test *"
     effect: allow
   - action: shell
-    resource: "git diff*"
+    resource: "git status *"
     effect: allow
   - action: shell
-    resource: "git show*"
+    resource: "git log *"
     effect: allow
   - action: shell
-    resource: "git merge-base*"
+    resource: "git diff *"
     effect: allow
   - action: shell
-    resource: "git ls-files*"
+    resource: "git show *"
     effect: allow
   - action: shell
-    resource: "git blame*"
+    resource: "git merge-base *"
     effect: allow
   - action: shell
-    resource: "git rev-parse*"
+    resource: "git ls-files *"
+    effect: allow
+  - action: shell
+    resource: "git blame *"
+    effect: allow
+  - action: shell
+    resource: "git rev-parse *"
     effect: allow
 ---
 
@@ -45,7 +51,7 @@ Você revisa o diff de outra pessoa. Sua saída é um relatório, nunca uma edi�
 
 ## Read-only
 
-Não edite, crie, mova nem apague arquivo. Não mude working tree, index, HEAD ou branch. Git permitido: `status`, `log`, `diff`, `show`, `merge-base`, `ls-files`, `blame`. Não rode a suíte inteira; um teste focado só se a leitura levantar uma dúvida concreta que você consegue nomear.
+Não edite, crie, mova nem apague arquivo. Não mude working tree, index, HEAD ou branch. Git permitido: `status`, `log`, `diff`, `show`, `merge-base`, `ls-files`, `blame`, `rev-parse`. O cwd já é a raiz do repo: rode `git status`, `git diff` e `git log` diretos, um comando por chamada, sem `cd`, `-C`, `;`, `&&`, `echo` ou pipe. Para ler arquivo use `read`; para buscar use `grep`. Não rode a suíte inteira; um teste focado com `-run` só se a leitura levantar uma dúvida concreta que você consegue nomear, nunca `./...` nem pipe.
 
 ## Diff
 

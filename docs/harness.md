@@ -12,7 +12,7 @@ Fonte única, portas geradas e checagem de drift para Claude Code e OpenCode.
 
 ## Regra de ouro
 
-Edite `harness/` e rode `make harness-sync`. Não edite as portas à mão; o header `Gerado por make harness-sync` marca o que é gerado. `make harness-check` falha em drift, referência quebrada, doc fora do índice, target inexistente, migration fora de sequência, collection sem constante, frontmatter inválido, path pessoal ou segredo.
+Edite `harness/` e rode `make harness-sync`. Não edite as portas à mão; o header `Gerado por make harness-sync` marca o que é gerado. `make harness-check` falha em drift, referência quebrada, doc fora do índice, target inexistente, migration fora de sequência, collection sem constante, frontmatter inválido, path pessoal, segredo e agente read-only que libera `*`, `edit` ou shell fora da allowlist.
 
 ## Fluxo de evolução
 
@@ -55,6 +55,7 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | 2026-11-20 | Changelog com `Unreleased` e versões tagueadas, `changelog-draft`/`changelog-check`/`release-check` e gate de changelog no `verify` e no CI. |
 | 2026-11-21 | Fluxo com PR: feature em `develop` por squash, promoção em `production` por merge commit, template de PR e base de review por PR. |
 | 2026-11-21 | Papel `dockeeper-refuter`: refutação adversarial dos achados e do `GO` do `dockeeper-reviewer`, orquestrada pelo `/review`, com contrato em `docs/review.md`. |
+| 2026-11-21 | Permissões de reviewer e refuter alinhadas ao contrato: `skill` e `go test` focado liberados; shell git simples, na raiz do repo, sem comandos compostos. |
 
 ## Cadência
 
