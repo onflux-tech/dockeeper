@@ -57,6 +57,10 @@ func NewServer(app *pocketbase.PocketBase, ca *services.CertAuthority, addr stri
 	traefikHandler := NewTraefikHandler(app, traefikStore, bus)
 	agentpb.RegisterAgentTraefikServiceServer(gs, traefikHandler)
 
+	hostStore := store.NewHostStore(app)
+	hostHandler := NewHostHandler(app, hostStore, bus)
+	agentpb.RegisterAgentHostServiceServer(gs, hostHandler)
+
 	// Register reverse-tunnel services (agent connects to manager).
 	cmdChannelHandler := NewCommandChannelHandler(registry)
 	agentpb.RegisterAgentCommandChannelServiceServer(gs, cmdChannelHandler)

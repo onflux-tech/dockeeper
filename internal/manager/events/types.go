@@ -20,6 +20,8 @@ const (
 	ServerEnrolled EventType = "server.enrolled"
 	ServerRemoved  EventType = "server.removed"
 
+	ServerHostInventory EventType = "server.host_inventory"
+
 	// Compose events.
 	ComposeDeployed EventType = "compose.deployed"
 	ComposeStopped  EventType = "compose.stopped"
