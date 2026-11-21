@@ -101,16 +101,30 @@ export function validateDescription(fm, file) {
 	return null;
 }
 
-const READ_ONLY_SHELL = [
-	"go test *",
-	"git status *",
-	"git log *",
-	"git diff *",
-	"git show *",
-	"git merge-base *",
-	"git ls-files *",
-	"git blame *",
-	"git rev-parse *",
+const READ_ONLY_SHELL_DENY = [
+	"git stash*",
+	"git checkout*",
+	"git switch*",
+	"git reset*",
+	"git clean*",
+	"git restore*",
+	"git add*",
+	"git commit*",
+	"git merge *",
+	"git rebase*",
+	"git push*",
+	"git tag*",
+	"git branch*",
+	"go test ./...*",
+	"go test * ./...*",
+	"npm test*",
+	"npm run test*",
+	"vitest*",
+	"jest*",
+	"make verify*",
+	"make test*",
+	"rm *",
+	"*--no-verify*",
 ];
 
 const READ_ONLY_TOOLS = ["Read", "Grep", "Glob", "Bash", "Skill"];
@@ -118,25 +132,20 @@ const READ_ONLY_TOOLS = ["Read", "Grep", "Glob", "Bash", "Skill"];
 export function readOnlyAgentErrors(name, yaml) {
 	const text = normalize(yaml).trim();
 	const errors = [];
-	if (!/^  - action: "\*"\n    resource: "\*"\n    effect: deny$/m.test(text)) {
+	if (!text.includes('  - action: "*"\n    resource: "*"\n    effect: deny')) {
 		errors.push(`harness/agents/${name}/opencode.yaml: falta a regra inicial action "*" resource "*" effect deny`);
 	}
 	for (const action of ["read", "glob", "grep", "skill"]) {
-		if (!new RegExp(`^  - action: ${action}$`, "m").test(text)) {
+		if (!text.includes(`  - action: ${action}\n`)) {
 			errors.push(`harness/agents/${name}/opencode.yaml: falta allow para ${action}`);
 		}
 	}
-	const shells = [...text.matchAll(/^  - action: shell\n    resource: "([^"]+)"\n    effect: allow$/gm)].map(
-		(match) => match[1],
-	);
-	for (const resource of shells) {
-		if (!READ_ONLY_SHELL.includes(resource)) {
-			errors.push(`harness/agents/${name}/opencode.yaml: shell allow fora da allowlist: ${resource}`);
-		}
+	if (!text.includes('  - action: shell\n    resource: "*"\n    effect: allow')) {
+		errors.push(`harness/agents/${name}/opencode.yaml: falta shell amplo para leitura`);
 	}
-	for (const resource of READ_ONLY_SHELL) {
-		if (!shells.includes(resource)) {
-			errors.push(`harness/agents/${name}/opencode.yaml: falta shell allow: ${resource}`);
+	for (const resource of READ_ONLY_SHELL_DENY) {
+		if (!text.includes(`  - action: shell\n    resource: "${resource}"\n    effect: deny`)) {
+			errors.push(`harness/agents/${name}/opencode.yaml: falta deny: ${resource}`);
 		}
 	}
 	if (/^  - action: (edit|write|subagent|webfetch|websearch)$/m.test(text)) {

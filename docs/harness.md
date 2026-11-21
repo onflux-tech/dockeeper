@@ -12,7 +12,7 @@ Fonte única, portas geradas e checagem de drift para Claude Code e OpenCode.
 
 ## Regra de ouro
 
-Edite `harness/` e rode `make harness-sync`. Não edite as portas à mão; o header `Gerado por make harness-sync` marca o que é gerado. `make harness-check` falha em drift, referência quebrada, doc fora do índice, target inexistente, migration fora de sequência, collection sem constante, frontmatter inválido, path pessoal, segredo e agente read-only que libera `*`, `edit` ou shell fora da allowlist.
+Edite `harness/` e rode `make harness-sync`. Não edite as portas à mão; o header `Gerado por make harness-sync` marca o que é gerado. `make harness-check` falha em drift, referência quebrada, doc fora do índice, target inexistente, migration fora de sequência, collection sem constante, frontmatter inválido, path pessoal, segredo e agente read-only sem shell amplo, com deny-list crítica ausente ou com `edit`/`write` liberado.
 
 ## Fluxo de evolução
 
@@ -58,6 +58,7 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | 2026-11-21 | Permissões de reviewer e refuter alinhadas ao contrato: `skill` e `go test` focado liberados; shell git simples, na raiz do repo, sem comandos compostos. |
 | 2026-11-21 | Hook `subagent-guard.mjs` gerado para `.claude/hooks/` e referenciado no frontmatter dos agentes read-only: no Claude, nega git de escrita, composto, pipe e teste sem `-run`; no OpenCode, a allowlist de `permissions` faz o mesmo. |
 | 2026-11-21 | Refuter alinhado ao `reviewer-2` do takeflow: refutação por achado mais lente operacional (concorrência, stream, recurso, modo degradado, silêncio), com achado novo permitido nessa lente. |
+| 2026-11-21 | Modelo de Bash amplo + deny-list: sem Edit/Write, shell livre para leitura (git, gh, cat, rg, compostos) e bloqueio de mutação de git, suíte, pipe de teste, flags de escrita e destrutivos no OpenCode e no hook do Claude. |
 
 ## Cadência
 
