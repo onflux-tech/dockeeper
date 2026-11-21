@@ -74,6 +74,12 @@ Falhas que não aparecem no CI atual. Leia antes de mexer na área correspondent
 **Causa:** PocketBase tem `_superusers` e o projeto tem `dk_users` (JWT 15 min). O middleware trata os dois.
 **Correção:** verifique `IsSuperuser()` antes de assumir a coleção; não presuma que todo auth é `dk_users`.
 
+## Discovery para após falha de report
+
+**Sintoma:** containers e imagens ficam com dados antigos no manager, enquanto redes e volumes continuam atualizando.
+**Causa:** `changed()` grava o hash do payload antes do RPC; se o primeiro report falha (manager fora do ar, por exemplo), o payload estável nunca é reenviado.
+**Correção:** `handleRPCError` apaga o hash do recurso para forçar o retry no próximo ciclo.
+
 ## Versão divergente
 
 **Sintoma:** usuário, changelog e binário discordam da versão.

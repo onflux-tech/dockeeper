@@ -175,6 +175,7 @@ func (d *DiscoveryCollector) reportVolumes(ctx context.Context) {
 // an mTLS/certificate failure (e.g. the manager CA was rotated or the DB was
 // recreated). In both cases the agent clears its enrollment and re-enrolls.
 func (d *DiscoveryCollector) handleRPCError(resource string, err error) {
+	delete(d.hashes, resource)
 	if status.Code(err) == codes.NotFound && d.onServerGone != nil {
 		d.logger.Warn("discovery: server not found on manager, triggering re-enrollment",
 			"resource", resource)

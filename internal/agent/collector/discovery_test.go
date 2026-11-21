@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,4 +48,18 @@ func TestChangedDifferentKeys(t *testing.T) {
 
 	// Different key should be independent.
 	assert.True(t, d.changed("images", req))
+}
+
+func TestHandleRPCErrorAllowsRetry(t *testing.T) {
+	d := &DiscoveryCollector{
+		hashes: make(map[string][32]byte),
+		logger: slog.Default(),
+	}
+
+	req := &agentpb.ReportContainersRequest{ServerId: "srv1"}
+	assert.True(t, d.changed("containers", req))
+
+	d.handleRPCError("containers", errors.New("transport closed"))
+
+	assert.True(t, d.changed("containers", req))
 }

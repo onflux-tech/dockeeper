@@ -10,6 +10,12 @@ export const changelog: ChangelogEntry[] = [
 		changes: [
 			{
 				type: "fix",
+				area: "agent",
+				description:
+					"Fixed discovery so containers and images are resent after a failed report instead of staying stale.",
+			},
+			{
+				type: "fix",
 				area: "web",
 				description: "Fixed the dashboard tests and the frontend lint/format issues.",
 			},
