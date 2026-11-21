@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
@@ -39,6 +41,10 @@ jobs:
         run: |
           make harness-check
           make harness-test
+          make changelog-check
+
+      - name: Build frontend
+        run: make build-web
 
       - name: Lint Go
         uses: golangci/golangci-lint-action@v8
@@ -48,7 +54,6 @@ jobs:
 
       - name: Build and test
         run: |
-          make build-web
           mkdir -p bin
           make build
           make test
@@ -57,6 +62,7 @@ jobs:
 
   docker:
     if: github.event_name == 'push'
+    needs: quality
     uses: ./.github/workflows/docker-build.yml
     with:
       version: ${{ github.ref_name == 'production' && 'latest' || 'develop' }}
