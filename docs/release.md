@@ -46,7 +46,7 @@ Receita real do projeto. A receita histórica fica em configuração local.
 - No push em `production` pós-merge, `quality` e `docker` publicam `:latest`; a tag dispara `release.yml`.
 - O release não roda `make verify` sozinho. O gate é o CI/pre-push; não crie tag com o CI vermelho.
 - O hook `pre-push` executa `make pre-push` (`verify`).
-- `make changelog-check` valida a estrutura do changelog contra as tags; ele roda no `make verify` e no CI.
+- `make changelog-check` valida a estrutura do changelog contra as tags; a próxima versão sem tag é permitida para o ciclo de release, as demais exigem tag. Ele roda no `make verify` e no CI.
 
 ## Checklist de release
 
