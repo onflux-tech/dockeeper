@@ -26,7 +26,8 @@ import { EditServerDialog } from "@/components/server/edit-server-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { TagSelector } from "@/components/tag-selector";
 import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
-import { useAgentUpdate } from "@/hooks/use-settings";
+import { useAgentUpdate, useLatestRelease } from "@/hooks/use-settings";
+import { isVersionNewer } from "@/lib/version";
 
 const timeRangeLabels: Record<TimeRange, string> = {
 	"1h": "Last 1 hour",
@@ -45,6 +46,7 @@ export default function ServerDetailPage() {
 	const [containerStatus, setContainerStatus] = useState("all");
 	const [editOpen, setEditOpen] = useState(false);
 	const agentUpdate = useAgentUpdate();
+	const { data: releaseInfo } = useLatestRelease();
 
 	const { data: server, isLoading: loadingServer } = useRecord("servers", id);
 	const { data: metricsData, isLoading: loadingMetrics } = useServerMetrics(id, range);
@@ -84,6 +86,10 @@ export default function ServerDetailPage() {
 				? "destructive"
 				: "secondary";
 
+	const agentNeedsUpdate = releaseInfo?.latest
+		? isVersionNewer(server?.agent_version ?? "", releaseInfo.latest)
+		: false;
+
 	return (
 		<div className="flex flex-col gap-6">
 			{/* Header */}
@@ -111,7 +117,7 @@ export default function ServerDetailPage() {
 								Edit
 							</Button>
 						)}
-						{server?.status === "online" && (
+						{server?.status === "online" && agentNeedsUpdate && (
 							<Button
 								variant="outline"
 								size="sm"

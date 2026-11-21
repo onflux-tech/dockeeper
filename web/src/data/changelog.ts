@@ -13,6 +13,12 @@ export const changelog: ChangelogEntry[] = [
 				description:
 					"Fixed the dashboard container count to include every reported container instead of only the first page.",
 			},
+			{
+				type: "fix",
+				area: "web",
+				description:
+					"Show the agent update button only when the latest release is newer than the version reported by the server.",
+			},
 		],
 	},
 	{
