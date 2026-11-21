@@ -10,10 +10,7 @@ import (
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
-const (
-	systemMetricsInterval    = 10 * time.Second
-	containerMetricsInterval = 30 * time.Second
-)
+const metricsInterval = 10 * time.Second
 
 // MetricsCollector periodically collects system and container metrics and
 // streams them to the manager via gRPC client-streaming.
@@ -57,20 +54,17 @@ func (m *MetricsCollector) SetServerGoneCallback(fn func()) {
 func (m *MetricsCollector) Run(ctx context.Context) {
 	// First collection to prime CPU/net deltas (results will have zero deltas).
 	m.collectSystem(ctx)
+	m.collectContainers(ctx)
 
-	systemTicker := time.NewTicker(systemMetricsInterval)
-	defer systemTicker.Stop()
-
-	containerTicker := time.NewTicker(containerMetricsInterval)
-	defer containerTicker.Stop()
+	ticker := time.NewTicker(metricsInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-systemTicker.C:
+		case <-ticker.C:
 			m.collectSystem(ctx)
-		case <-containerTicker.C:
 			m.collectContainers(ctx)
 		}
 	}

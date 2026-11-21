@@ -61,6 +61,7 @@ type OrchestratorClient interface {
 // DockerClient implements OrchestratorClient using the Docker SDK.
 type DockerClient struct {
 	cli     *dockerclient.Client
+	statsMu sync.Mutex
 	lastCPU map[string]container.CPUStats
 }
 
@@ -367,6 +368,9 @@ func (d *DockerClient) ContainerLogs(ctx context.Context, containerID string, fo
 const containerStatsConcurrency = 8
 
 func (d *DockerClient) ListContainerStats(ctx context.Context) ([]ContainerMetrics, error) {
+	d.statsMu.Lock()
+	defer d.statsMu.Unlock()
+
 	containers, err := d.cli.ContainerList(ctx, container.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("docker container list for stats: %w", err)
@@ -377,11 +381,13 @@ func (d *DockerClient) ListContainerStats(ctx context.Context) ([]ContainerMetri
 	sem := make(chan struct{}, containerStatsConcurrency)
 	var wg sync.WaitGroup
 
+schedule:
 	for i := range containers {
-		if ctx.Err() != nil {
-			break
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			break schedule
 		}
-		sem <- struct{}{}
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -413,6 +419,10 @@ func (d *DockerClient) ListContainerStats(ctx context.Context) ([]ContainerMetri
 		}(i)
 	}
 	wg.Wait()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	seen := make(map[string]struct{}, len(containers))
 	for _, c := range containers {

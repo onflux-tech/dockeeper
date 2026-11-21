@@ -23,6 +23,8 @@ import (
 type statsServer struct {
 	mu        sync.Mutex
 	ids       []string
+	failID    string
+	block     chan struct{}
 	calls     map[string]int
 	oneShot   atomic.Int64
 	active    atomic.Int64
@@ -54,6 +56,17 @@ func newStatsServer(t *testing.T, ids []string) *statsServer {
 			if r.URL.Query().Get("one-shot") == "1" {
 				s.oneShot.Add(1)
 			}
+			id := path.Base(path.Dir(r.URL.Path))
+
+			s.mu.Lock()
+			fail := id == s.failID
+			block := s.block
+			s.mu.Unlock()
+			if fail {
+				http.Error(w, "boom", http.StatusInternalServerError)
+				return
+			}
+
 			active := s.active.Add(1)
 			defer s.active.Add(-1)
 			for {
@@ -62,9 +75,15 @@ func newStatsServer(t *testing.T, ids []string) *statsServer {
 					break
 				}
 			}
+			if block != nil {
+				select {
+				case <-r.Context().Done():
+					return
+				case <-block:
+				}
+			}
 			time.Sleep(10 * time.Millisecond)
 
-			id := path.Base(path.Dir(r.URL.Path))
 			s.mu.Lock()
 			s.calls[id]++
 			n := s.calls[id]
@@ -89,6 +108,12 @@ func (s *statsServer) setIDs(ids []string) {
 	s.mu.Unlock()
 }
 
+func (s *statsServer) setFail(id string) {
+	s.mu.Lock()
+	s.failID = id
+	s.mu.Unlock()
+}
+
 func newTestDockerClient(t *testing.T, srv *statsServer) *DockerClient {
 	t.Helper()
 
@@ -105,7 +130,7 @@ func newTestDockerClient(t *testing.T, srv *statsServer) *DockerClient {
 func testContainerIDs(n int) []string {
 	ids := make([]string, n)
 	for i := range ids {
-		ids[i] = fmt.Sprintf("%064x", (i*7+3)%n)
+		ids[i] = fmt.Sprintf("%012x%052x", (i*7+3)%n, i)
 	}
 	return ids
 }
@@ -168,4 +193,65 @@ func TestListContainerStatsPrunesStaleCPUHistory(t *testing.T) {
 	_, err = d.ListContainerStats(context.Background())
 	require.NoError(t, err)
 	assert.Len(t, d.lastCPU, 1)
+}
+
+func TestListContainerStatsSkipsFailedContainers(t *testing.T) {
+	ids := testContainerIDs(4)
+	srv := newStatsServer(t, ids)
+	d := newTestDockerClient(t, srv)
+
+	_, err := d.ListContainerStats(context.Background())
+	require.NoError(t, err)
+	require.Len(t, d.lastCPU, len(ids))
+
+	failed := ids[1]
+	srv.setFail(failed)
+
+	got, err := d.ListContainerStats(context.Background())
+	require.NoError(t, err)
+	require.Len(t, got, len(ids)-1)
+
+	gotIDs := make([]string, len(got))
+	for i, m := range got {
+		gotIDs[i] = m.ContainerID
+	}
+	assert.NotContains(t, gotIDs, failed[:12])
+	assert.Contains(t, d.lastCPU, failed)
+}
+
+func TestListContainerStatsReturnsOnCancel(t *testing.T) {
+	ids := testContainerIDs(16)
+	srv := newStatsServer(t, ids)
+	release := make(chan struct{})
+	srv.mu.Lock()
+	srv.block = release
+	srv.mu.Unlock()
+	t.Cleanup(func() { close(release) })
+
+	d := newTestDockerClient(t, srv)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	var got []ContainerMetrics
+	go func() {
+		var err error
+		got, err = d.ListContainerStats(ctx)
+		done <- err
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for srv.active.Load() == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	require.Greater(t, srv.active.Load(), int64(0))
+
+	cancel()
+
+	select {
+	case err := <-done:
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.Nil(t, got)
+	case <-time.After(2 * time.Second):
+		t.Fatal("ListContainerStats did not return after cancellation")
+	}
 }
