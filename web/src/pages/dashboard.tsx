@@ -121,7 +121,9 @@ export default function DashboardPage() {
 		sort: "name",
 		perPage: 50,
 	});
-	const { data: containersResult, isLoading: loadingContainers } = useCollection("containers");
+	const { data: containersResult, isLoading: loadingContainers } = useCollection("containers", {
+		perPage: 1,
+	});
 	const { data: metricsResult } = useCollection("server_metrics_raw", {
 		filter: `timestamp >= "${fiveMinAgo}"`,
 		sort: "timestamp",
@@ -144,7 +146,7 @@ export default function DashboardPage() {
 	}
 
 	const servers = serversResult?.items ?? [];
-	const containers = containersResult?.items ?? [];
+	const totalContainers = containersResult?.totalItems ?? 0;
 	const metrics = metricsResult?.items ?? [];
 	const isLoading = loadingServers || loadingContainers;
 
@@ -257,7 +259,11 @@ export default function DashboardPage() {
 					</div>
 
 					{/* Fixed stats — flat cards, no wrapper */}
-					<StatsOverview servers={servers} containers={containers as never} isLoading={isLoading} />
+					<StatsOverview
+						servers={servers}
+						totalContainers={totalContainers}
+						isLoading={isLoading}
+					/>
 
 					{/* Server cards — borderless, 3-col grid, scroll, drag to reorder */}
 					<ServerCardGrid
