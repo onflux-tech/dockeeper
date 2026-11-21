@@ -138,6 +138,8 @@ test("subagent-guard nega mutação, suíte, pipe de teste e destrutivo", () => 
 	assert.match(evaluateSubagentShell("gh api -f title=x repos/o/r/issues"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api -f 'title=x' repos/o/r/issues"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api -F 'title=x' repos/o/r/issues"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh api -ftitle=x repos/o/r/issues"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh api -Ftitle=x repos/o/r/issues"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api --field title=x repos/o/r/issues"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api --input body.json repos/o/r/issues"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh repo clone owner/repo"), /gh de mutação/);

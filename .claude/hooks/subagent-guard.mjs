@@ -63,7 +63,7 @@ const GH_MUTATION = [
 	/\bgh\s+auth\s+(?:login|logout|refresh|switch|setup-git|token)\b/i,
 	/\bgh\s+gist\s+(?:create|delete|edit|rename)\b/i,
 	/\bgh\s+api\b[^\n]*(?:-X\s*|--method[=\s]+)(?:POST|PUT|PATCH|DELETE)\b/i,
-	/\bgh\s+api\b[^\n]*(?:-f\b|-F\b|--field\b|--raw-field\b|--input\b)/i,
+	/\bgh\s+api\b[^\n]*(?:\s-f|\s-F|--field\b|--raw-field\b|--input\b)/i,
 ];
 
 const SCRIPTING = [
