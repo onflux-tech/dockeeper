@@ -96,7 +96,6 @@ func collectServerInfo() (*agentpb.ServerInfo, error) {
 		Os:           runtime.GOOS,
 		Arch:         runtime.GOARCH,
 		AgentVersion: Version,
-		Orchestrator: "docker",
 	}
 
 	// Detect outbound IP by dialing a public address (no actual traffic is sent).
@@ -110,11 +109,15 @@ func collectServerInfo() (*agentpb.ServerInfo, error) {
 	// Get Docker version from the daemon.
 	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
 	if err == nil {
-		if sv, verErr := cli.ServerVersion(context.Background()); verErr == nil {
-			info.DockerVersion = sv.Version
+		if _, pingErr := cli.Ping(context.Background()); pingErr == nil {
+			info.Orchestrator = "docker"
+			if sv, verErr := cli.ServerVersion(context.Background()); verErr == nil {
+				info.DockerVersion = sv.Version
+			}
 		}
 		_ = cli.Close()
 	}
+	info.Orchestrator = normalizeOrchestrator(info.Orchestrator)
 
 	// CPU model and core count.
 	if infos, cpuErr := cpu.Info(); cpuErr == nil && len(infos) > 0 {
@@ -130,4 +133,11 @@ func collectServerInfo() (*agentpb.ServerInfo, error) {
 	}
 
 	return info, nil
+}
+
+func normalizeOrchestrator(label string) string {
+	if label == "" {
+		return "none"
+	}
+	return label
 }

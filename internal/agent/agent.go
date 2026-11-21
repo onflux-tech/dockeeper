@@ -91,10 +91,32 @@ func (a *Agent) Run(ctx context.Context) error {
 	// Background cert renewal.
 	go a.certRenewalLoop(ctx)
 
-	// Detect container runtime and start discovery.
-	orchType, orch, err := DetectOrchestrator(ctx)
-	if err != nil {
-		a.logger.Warn("no container runtime detected, discovery disabled", "error", err)
+	// Shared callback: clears enrollment and cancels context so Run()
+	// returns ErrServerGone → main.go re-enrollment loop kicks in.
+	triggerReEnrollment := func() {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		if a.serverGone {
+			return // already handling
+		}
+		a.serverGone = true
+		a.logger.Warn("authentication failed or server deleted, clearing enrollment for re-enrollment")
+		if clearErr := a.cfg.ClearEnrollment(); clearErr != nil {
+			a.logger.Error("failed to clear enrollment data", "error", clearErr)
+		}
+		cancel()
+	}
+
+	// Detect container runtime. Without one, the agent keeps the control plane
+	// and reports host inventory instead of containers.
+	orchType, orch, orchErr := DetectOrchestrator(ctx)
+	if orchErr != nil || orch == nil {
+		orch = nil
+		if orchErr != nil {
+			a.logger.Info("host-only mode", "reason", orchErr)
+		} else {
+			a.logger.Info("host-only mode")
+		}
 	} else {
 		a.orch = orch
 		a.logger.Info("orchestrator detected", "type", orchType)
@@ -103,61 +125,52 @@ func (a *Agent) Run(ctx context.Context) error {
 				a.logger.Error("error closing orchestrator client", "error", closeErr)
 			}
 		}()
+	}
 
-		// Shared callback: clears enrollment and cancels context so Run()
-		// returns ErrServerGone → main.go re-enrollment loop kicks in.
-		triggerReEnrollment := func() {
-			a.mu.Lock()
-			defer a.mu.Unlock()
-			if a.serverGone {
-				return // already handling
-			}
-			a.serverGone = true
-			a.logger.Warn("authentication failed or server deleted, clearing enrollment for re-enrollment")
-			if clearErr := a.cfg.ClearEnrollment(); clearErr != nil {
-				a.logger.Error("failed to clear enrollment data", "error", clearErr)
-			}
-			cancel()
-		}
+	gate := collector.NewConnectionGate(a.client.Conn())
 
-		gate := collector.NewConnectionGate(a.client.Conn())
+	metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, gate, a.logger)
+	metrics.SetServerGoneCallback(triggerReEnrollment)
+	go metrics.Run(ctx)
 
+	if orch != nil {
 		discovery := collector.NewDiscoveryCollector(orch, a.client.Discovery(), a.cfg.ServerID, gate, a.logger)
 		discovery.SetServerGoneCallback(triggerReEnrollment)
 		go discovery.Run(ctx)
-
-		metrics := collector.NewMetricsCollector(orch, a.client.Metrics(), a.cfg.ServerID, gate, a.logger)
-		metrics.SetServerGoneCallback(triggerReEnrollment)
-		go metrics.Run(ctx)
 
 		// Traefik route collector (60s cycle, graceful skip if not installed).
 		traefikColl := collector.NewTraefikCollector(orch, a.client.Traefik(), a.cfg.ServerID, gate, a.logger)
 		traefikColl.SetServerGoneCallback(triggerReEnrollment)
 		go traefikColl.Run(ctx)
-
-		// Start reverse tunnel client — replaces the old agent gRPC server.
-		// The tunnel client opens a persistent CommandChannel to the manager
-		// and spawns on-demand DataStream/ExecStream sessions when signalled.
-		exec, execErr := executor.NewDockerExecutor()
-		if execErr != nil {
-			a.logger.Warn("failed to create docker executor, commands disabled", "error", execErr)
-		} else {
-			tc := tunnel.NewClient(
-				a.cfg.ServerID,
-				a.client.Conn(),
-				exec,
-				orch,
-				a.logger,
-				cancel,
-				a.cfg.DataDir,
-			)
-			go func() {
-				if tunnelErr := tc.Run(ctx); tunnelErr != nil && ctx.Err() == nil {
-					a.logger.Error("tunnel client exited", "error", tunnelErr)
-				}
-			}()
-		}
 	}
+
+	// Start reverse tunnel client — replaces the old agent gRPC server.
+	// The tunnel client opens a persistent CommandChannel to the manager
+	// and spawns on-demand DataStream/ExecStream sessions when signalled.
+	var commandExecutor executor.Executor
+	if dockerExec, execErr := executor.NewDockerExecutor(); orch != nil && execErr == nil {
+		commandExecutor = dockerExec
+	} else {
+		if execErr != nil {
+			a.logger.Warn("failed to create docker executor, using host-only executor", "error", execErr)
+		}
+		commandExecutor = executor.NewNoopExecutor()
+	}
+
+	tc := tunnel.NewClient(
+		a.cfg.ServerID,
+		a.client.Conn(),
+		commandExecutor,
+		orch,
+		a.logger,
+		cancel,
+		a.cfg.DataDir,
+	)
+	go func() {
+		if tunnelErr := tc.Run(ctx); tunnelErr != nil && ctx.Err() == nil {
+			a.logger.Error("tunnel client exited", "error", tunnelErr)
+		}
+	}()
 
 	// Block until shutdown signal.
 	<-ctx.Done()

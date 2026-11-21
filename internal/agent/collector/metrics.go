@@ -146,6 +146,10 @@ func (m *MetricsCollector) collectSystem(ctx context.Context) {
 }
 
 func (m *MetricsCollector) collectContainers(ctx context.Context) {
+	if m.orch == nil {
+		return
+	}
+
 	if !m.gate.Allow() {
 		return
 	}
