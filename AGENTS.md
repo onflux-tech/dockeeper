@@ -105,8 +105,15 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 ## Ferramentas
 
 - `context7` (MCP) para documentação atual das bibliotecas; configurado em `.opencode/opencode.json` e `.mcp.json`.
-- Skills locais em `.opencode/skills/` e `.claude/skills/`: `dockeeper-migration`, `dockeeper-e2e` e `dockeeper-release`.
+- Skills locais em `.opencode/skills/` e `.claude/skills/`: `dockeeper-migration`, `dockeeper-e2e`, `dockeeper-release` e `dockeeper-implement`.
+- Review: `dockeeper-reviewer` em `.claude/agents/` e `.opencode/agents/`; `/verify` e `/review` em `.claude/commands/` e `.opencode/commands/`.
 - Memória entre sessões, browser e busca web ficam na configuração global de cada harness, não no repositório.
+
+## Review
+
+- `/verify` roda o gate (`make verify` ou `make verify-fast`) e cola a saída real.
+- `/review` despacha `dockeeper-reviewer` no diff atual; o agente não edita e não re-roda a suíte.
+- Contrato, eixos, evidência e formato: `docs/review.md`.
 
 ## Notas internas
 
@@ -114,12 +121,17 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 
 ## Ponteiros
 
-- `docs/architecture.md` — visão detalhada de manager/agent, streams, RBAC, EventBus, pastas e collections.
-- `docs/gotchas.md` — falhas silenciosas e como evitá-las.
-- `docs/migrations.md` — checklist de collection, campo, índice e migration.
-- `docs/release.md` — release, CI, GHCR e deploy futuro.
-- `docs/e2e.md` — validação local e staging.
-- `CLAUDE.md` — específico do Claude Code; importa este arquivo.
+Leia só o documento que o gatilho pedir; não abra `docs/` inteiro.
+
+| Arquivo | Leia quando | O que tem |
+|---|---|---|
+| `docs/architecture.md` | antes de mexer em manager/agent, streams, auth, EventBus, pastas ou collections | visão detalhada da topologia |
+| `docs/gotchas.md` | antes de tocar migration, proto, RBAC, embed, TLS, self-update, Docker socket ou EventBus | falhas silenciosas e como evitá-las |
+| `docs/migrations.md` | antes de criar ou alterar collection, campo, índice ou relação | checklist de migration |
+| `docs/review.md` | antes de review, push ou correção de achado | eixos, evidência, formato e veredito |
+| `docs/e2e.md` | antes de validar localmente ou em staging | runbook e formato de evidência |
+| `docs/release.md` | antes de tag, release ou deploy | GoReleaser, GHCR, versão e CI |
+| `CLAUDE.md` | ao usar Claude Code | importa este arquivo e detalhes do CLI |
 
 ## Manutenção
 

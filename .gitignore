@@ -48,8 +48,16 @@ release/
 # Claude
 .claude/*
 !.claude/settings.json
+!.claude/agents/
+.claude/agents/*
+!.claude/agents/dockeeper-reviewer.md
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/verify.md
+!.claude/commands/review.md
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/dockeeper-migration/
 !.claude/skills/dockeeper-e2e/
 !.claude/skills/dockeeper-release/
+!.claude/skills/dockeeper-implement/
