@@ -165,7 +165,13 @@ export default function ServerDetailPage() {
 						</Select>
 					</div>
 
-					<MetricsCharts data={metrics} range={range} isLoading={loadingMetrics} />
+					<MetricsCharts
+						key={id}
+						data={metrics}
+						range={range}
+						isLoading={loadingMetrics}
+						serverId={id ?? ""}
+					/>
 				</TabsContent>
 
 				{/* Containers Tab */}

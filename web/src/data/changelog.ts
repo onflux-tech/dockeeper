@@ -19,6 +19,12 @@ export const changelog: ChangelogEntry[] = [
 				description:
 					"Show the agent update button only when the latest release is newer than the version reported by the server.",
 			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Let each server's disk chart switch between all disks summed and a single mountpoint, remembering the choice per server.",
+			},
 		],
 	},
 	{
