@@ -3,9 +3,55 @@ name: CI
 on:
   push:
     branches: [production, develop]
+  pull_request:
+    branches: [production, develop]
+
+permissions:
+  contents: read
 
 jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd web && npm ci --prefer-offline
+
+      - name: Check formatting
+        run: |
+          make format-check
+          make format-web
+
+      - name: Lint Go
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.12.2
+          args: ./cmd/... ./internal/... ./migrations/...
+
+      - name: Build and test
+        run: |
+          make build-web
+          mkdir -p bin
+          make build
+          make test
+          make lint-web
+          make test-web
+
   docker:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/docker-build.yml
     with:
       version: ${{ github.ref_name == 'production' && 'latest' || 'develop' }}

@@ -35,7 +35,7 @@ Receita real do projeto. A receita histórica fica em configuração local.
 - `ci.yml`: em push para `develop`/`production`, apenas chama o build Docker e publica `:develop`/`:latest`.
 - `release.yml`: em tag `v*.*.*`, roda GoReleaser.
 - Nenhum dos dois roda `go test`, `golangci-lint`, `npm run lint`, `npm test`, `buf lint` ou smoke test. O CI verde não prova qualidade.
-- Rode `make verify-fast` antes de commitar e `make verify` antes de release. Hoje o baseline completo é vermelho (49 lint issues e 4 testes de dashboard); a correção do baseline fica para uma mudança separada.
+- Rode `make verify-fast` antes de commitar e `make verify` antes de release. O hook `pre-push` executa `make pre-push` (`verify`); o CI roda os mesmos gates em push e pull request.
 
 ## Versão
 

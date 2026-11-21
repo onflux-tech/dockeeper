@@ -26,6 +26,7 @@ issues:
   exclude-dirs:
     - proto/gen
     - web
+    - web/node_modules
     - vendor
   max-issues-per-linter: 0
   max-same-issues: 0

@@ -86,11 +86,9 @@ Falhas que não aparecem no CI atual. Leia antes de mexer na área correspondent
 **Causa:** há um pacote Go dentro de `node_modules` e o `exclude-dirs: web` do golangci-lint não o cobre em todos os casos.
 **Correção:** rode `go test ./internal/... ./cmd/...` quando quiser o escopo do projeto; ou ajuste o exclude para `web/node_modules`.
 
-## Baseline vermelho atual
+## Gates atuais
 
-**Sintoma:** `make verify` falha mesmo sem mudança sua.
-**Causa:** 49 issues de `golangci-lint` e 4 falhas de `npm test` no dashboard (`useDashboardLayout` não mockado).
-**Correção:** não declare “pronto” sem baseline; a correção do baseline fica para uma mudança separada. Antes disso, uma falha pré-existente precisa de prova (`git stash`, rodar, restaurar).
+`make verify` roda `format-check`, `build-web`, `lint`, `test`, `lint-web`, `format-web` e `test-web`. O hook `pre-push` chama `make pre-push`, que roda `verify`; não há push remoto sem esses gates. O CI roda o job `quality` em push e pull request.
 
 ## Arquivos locais que não são versionados
 

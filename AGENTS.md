@@ -15,6 +15,7 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 - **Commit local:** sempre autorizado ao fim de uma task, sem pedir.
 - **Push remoto:** nunca automático. Peça com a tool de ask/question e espere um sim explícito. Autorização anterior não vale para o próximo push.
 - **Merge e tag de release:** pedido explícito do usuário.
+- O hook `.githooks/pre-push` roda `make pre-push`; nenhum push remoto passa sem format, lint e testes. Não use `--no-verify`.
 - `--no-verify` e force-push em branch compartilhada são proibidos.
 - **SSH de staging:** o host/alias fica em configuração local, não versionada. Só acesse quando o usuário pedir na mensagem atual, para depurar deploy ou aplicação. Comece por leitura; mutação só com confirmação. Não inicie SSH por conta própria.
 - Arquivos locais untracked não fazem parte deste guia e não devem ser commitados.
@@ -46,28 +47,36 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 
 | Comando | O que faz |
 |---|---|
+| `make dev-all` / `make run` | manager + agent + web em paralelo |
 | `make dev-manager` | air do manager em 8090/50051 com `dk_data` |
 | `make dev-agent` | air do agent em `localhost:50051` com `dk-agent-data` |
 | `make dev-web` | Vite em 5173 com proxy para 8090 |
 | `make build-all` | `build-web` → `build-manager` → `build-agent` |
 | `make proto-gen` | `buf generate` em `proto/` |
-| `make test` | `go test -count=1 ./...` |
-| `make lint` | `golangci-lint run ./...` |
+| `make test` | `go test` em `cmd`, `internal` e `migrations` |
+| `make lint` | `golangci-lint` em `cmd`, `internal` e `migrations` |
 | `make test-web` | `vitest run` em `web/` |
 | `make lint-web` | `eslint .` em `web/` |
-| `make verify` | gate completo: build-web, lint, test, lint-web, test-web |
-| `make verify-fast` | `test` + `lint-web` |
+| `make format` | `gofmt` + `goimports` no Go |
+| `make format-check` | falha se `gofmt` precisar mudar algo |
+| `make format-web` | `prettier --check` em `web/` |
+| `make tools` | instala `goimports` |
+| `make hooks` | instala o hook `pre-push` |
+| `make pre-push` | `verify`, chamado pelo hook |
+| `make verify` | format-check, build-web, lint, test, lint-web, format-web, test-web |
+| `make verify-fast` | format-check, test, lint-web |
 | `make release` | `goreleaser release --clean` |
 
 ## Baseline
 
 Medido em 20/11/2026:
 
-- `go test ./...` passa.
+- `go test` passa.
+- `golangci-lint` em `cmd`, `internal` e `migrations`: **0 issues**.
 - `npm run lint` passa.
-- `golangci-lint run ./...` falha com **49 issues** (33 errcheck, 12 staticcheck, 1 ineffassign, 1 unused, 2 govet em `web/node_modules`).
-- `npm test` falha em **4 testes** do dashboard (`useDashboardLayout` não mockado; a página fica no skeleton).
-- O CI (`ci.yml`) só constrói imagens Docker; não roda lint, teste nem build do binário.
+- `npm run format:check` passa.
+- `npm test` passa: 18 testes.
+- O CI roda `quality` em push e pull request (format, lint, build, test) e o build Docker apenas em push.
 
 Não declare “pronto” sem colar a saída real. Uma falha só é pré-existente com prova de baseline (`git stash`, rodar, restaurar).
 

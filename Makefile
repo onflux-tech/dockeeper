@@ -5,10 +5,11 @@ LDFLAGS  = -ldflags "-s -w -X main.Version=$(VERSION) -X main.Commit=$(COMMIT)"
 GO       = go
 GOFLAGS  = -trimpath
 BIN_DIR  = bin
+GO_PACKAGES = ./cmd/... ./internal/... ./migrations/...
 
-.PHONY: all build-manager build-agent build lint format test clean dev dev-manager dev-agent proto-gen \
+.PHONY: all build-manager build-agent build lint format test clean dev dev-manager dev-agent dev-all run proto-gen \
         dev-web build-web lint-web format-web test-web \
-        build-all build-agent-dist docker-build docker-push release verify verify-fast
+        build-all build-agent-dist docker-build docker-push release verify verify-fast pre-push hooks tools
 
 all: build
 
@@ -31,14 +32,20 @@ build-agent-dist:
 build-all: build-web build-manager build-agent
 
 lint:
-	golangci-lint run ./...
+	golangci-lint run $(GO_PACKAGES)
 
 format:
-	gofmt -s -w .
-	goimports -w -local github.com/onflux-tech/dockeeper .
+	gofmt -s -w cmd internal migrations
+	goimports -w -local github.com/onflux-tech/dockeeper cmd internal migrations
+
+tools:
+	$(GO) install golang.org/x/tools/cmd/goimports@v0.42.0
+
+format-check:
+	@files="$$(gofmt -l cmd internal migrations)"; if [ -n "$$files" ]; then echo "gofmt needed:"; echo "$$files"; exit 1; fi
 
 test:
-	$(GO) test -count=1 ./...
+	$(GO) test -count=1 $(GO_PACKAGES)
 
 clean:
 	rm -rf $(BIN_DIR) tmp web/dist
@@ -51,6 +58,11 @@ dev-manager:
 
 dev-agent:
 	air -c .air.agent.toml
+
+dev-all:
+	$(MAKE) -j3 dev-manager dev-agent dev-web
+
+run: dev-all
 
 ## ── Proto ────────────────────────────────────────────
 
@@ -77,9 +89,17 @@ test-web:
 
 ## ── Verificação ──────────────────────────────────────
 
-verify: build-web lint test lint-web test-web
+verify: format-check build-web lint test lint-web format-web test-web
 
-verify-fast: test lint-web
+verify-fast: format-check test lint-web
+
+pre-push: verify
+
+## ── Hooks ───────────────────────────────────────────
+
+hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-push
 
 ## ── Docker ──────────────────────────────────────────
 
