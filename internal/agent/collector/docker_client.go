@@ -37,6 +37,8 @@ type ContainerMetrics struct {
 // container runtime (Docker, Podman, Kubernetes).
 type OrchestratorClient interface {
 	ListContainers(ctx context.Context) ([]*agentpb.ContainerInfo, error)
+	ListContainerSummaries(ctx context.Context) ([]*agentpb.ContainerInfo, error)
+	InspectContainer(ctx context.Context, containerID string) (*agentpb.ContainerInfo, error)
 	ListImages(ctx context.Context) ([]*agentpb.ImageInfo, error)
 	ListNetworks(ctx context.Context) ([]*agentpb.NetworkInfo, error)
 	ListVolumes(ctx context.Context) ([]*agentpb.VolumeInfo, error)
@@ -88,6 +90,23 @@ func (d *DockerClient) ListContainers(ctx context.Context) ([]*agentpb.Container
 		result = append(result, info)
 	}
 	return result, nil
+}
+
+func (d *DockerClient) ListContainerSummaries(ctx context.Context) ([]*agentpb.ContainerInfo, error) {
+	containers, err := d.cli.ContainerList(ctx, container.ListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("docker container list: %w", err)
+	}
+
+	result := make([]*agentpb.ContainerInfo, 0, len(containers))
+	for _, c := range containers {
+		result = append(result, containerFromSummary(&c))
+	}
+	return result, nil
+}
+
+func (d *DockerClient) InspectContainer(ctx context.Context, containerID string) (*agentpb.ContainerInfo, error) {
+	return d.inspectContainer(ctx, containerID)
 }
 
 func (d *DockerClient) inspectContainer(ctx context.Context, id string) (*agentpb.ContainerInfo, error) {

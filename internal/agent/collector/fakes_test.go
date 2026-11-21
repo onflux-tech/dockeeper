@@ -17,11 +17,16 @@ func discardLogger() *slog.Logger {
 type fakeOrchestrator struct {
 	OrchestratorClient
 	listContainers int
+	listSummaries  int
 	listImages     int
 	listNetworks   int
 	listVolumes    int
 	listStats      int
 	containers     []*agentpb.ContainerInfo
+	summaries      []*agentpb.ContainerInfo
+	inspectCalls   []string
+	inspectResult  *agentpb.ContainerInfo
+	inspectErr     error
 	stats          []ContainerMetrics
 	statsErr       error
 	onStats        func()
@@ -30,6 +35,19 @@ type fakeOrchestrator struct {
 func (f *fakeOrchestrator) ListContainers(context.Context) ([]*agentpb.ContainerInfo, error) {
 	f.listContainers++
 	return f.containers, nil
+}
+
+func (f *fakeOrchestrator) ListContainerSummaries(context.Context) ([]*agentpb.ContainerInfo, error) {
+	f.listSummaries++
+	return f.summaries, nil
+}
+
+func (f *fakeOrchestrator) InspectContainer(_ context.Context, containerID string) (*agentpb.ContainerInfo, error) {
+	f.inspectCalls = append(f.inspectCalls, containerID)
+	if f.inspectErr != nil {
+		return nil, f.inspectErr
+	}
+	return f.inspectResult, nil
 }
 
 func (f *fakeOrchestrator) ListImages(context.Context) ([]*agentpb.ImageInfo, error) {
