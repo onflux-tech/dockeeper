@@ -4,13 +4,15 @@ Contrato de review pós-implementação. Vale para o agente principal, para o `d
 
 ## Quando
 
-- Antes de push ou release, depois de `make verify`.
+- Antes de abrir ou atualizar o PR, depois de `make verify`.
 - Em mudança de código; docs, config e harness puros não pedem review completo.
 - Em issue, feature ou refactor amplo, o review acontece antes de declarar pronto.
 
 ## Base do diff
 
 - Working tree por padrão: `git status --short`, `git diff`, `git diff --cached` e untracked relevantes.
+- PR de feature: `git merge-base origin/develop HEAD` e `git diff <merge-base>...HEAD`.
+- PR de promoção: `git diff origin/production...origin/develop`.
 - Range de commits: base explícita no despacho. Use `git merge-base <base> HEAD` e `git diff <merge-base>...HEAD`; nunca `HEAD~1`.
 - O revisor busca o diff sozinho. Não cole o diff no prompt.
 
@@ -42,7 +44,7 @@ O diff segue `AGENTS.md` e `docs/gotchas.md`? Confira:
 
 Toda afirmação sobre gate precisa de comando, saída e exit code. Sem isso, é alegação.
 
-- `make verify` é o gate completo; `make verify-fast` é o de commit.
+- `make verify` é o gate completo; `make verify-fast` é o de commit. No PR, o gate é o `quality` do CI.
 - Não canalize teste para `tail`/`head`/`grep`; redirecione para arquivo e leia.
 - Uma suíte por vez.
 - Warning em saída de teste ou build é achado.
@@ -78,3 +80,4 @@ GO ou NO-GO, com a razão em uma linha.
 - Recheck só quando a correção toca concorrência, autorização, migration, proto ou contrato que a prova não alcança.
 - Recheck é por achado: `ADDRESSED` ou `NOT ADDRESSED`, com a prova de cada um.
 - Relatório e commit trazem o delta do que foi corrigido e a prova; não reaproveite o veredito anterior sem ele.
+- Atualize o PR com commits novos; force-push em branch de PR é proibido.

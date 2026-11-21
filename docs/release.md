@@ -12,25 +12,20 @@ Receita real do projeto. A receita histórica fica em configuração local.
 
 ## Fluxo atual
 
-1. Rode `make changelog-draft` e cure o `Unreleased` em `web/src/data/changelog.ts`.
-2. Rode `make verify` e registre a saída; aqui o `changelog-check` valida o estado com o `Unreleased`.
+1. Rode `make changelog-draft` e cure o `Unreleased` em `web/src/data/changelog.ts`; as entradas entram nos PRs de feature ao longo do ciclo.
+2. Em `develop`, rode `make verify` e registre a saída.
 3. Escolha `x.y.z` pela política acima.
-4. Promova `Unreleased` para `x.y.z` com a data do release.
-5. Commite o changelog: `chore(release): x.y.z`.
-6. Rode `make release-check VERSION=x.y.z`; ele exige árvore limpa, tag ainda inexistente e entrada para a versão.
-7. Promova para `production`:
+4. Crie `chore/release-x.y.z` a partir de `develop`, promova `Unreleased` para `x.y.z` com a data e commite.
+5. Abra PR para `develop`, espere o `quality` e faça squash merge.
+6. Em `develop`, rode `make release-check VERSION=x.y.z`; ele exige árvore limpa, tag ainda inexistente e entrada para a versão.
+7. Abra o PR de promoção `develop -> production`, título `chore(release): x.y.z`, body com resumo, `Closes #N` das issues entregues e o checklist abaixo.
+8. Espere o `quality` do PR e faça merge com **merge commit**; squash e rebase não valem para a promoção.
+9. Atualize `production`, crie a tag anotada no merge commit e peça autorização para o push:
    ```bash
    git checkout production
-   git merge develop
-   ```
-   O histórico é linear; como `develop` e `production` nunca divergiram, o merge é fast-forward.
-8. Crie a tag anotada:
-   ```bash
+   git pull --ff-only
    git tag -a vX.Y.Z -m "Dockeeper vX.Y.Z"
-   ```
-9. Peça autorização e faça o push do branch e da tag juntos:
-   ```bash
-   git push origin production vX.Y.Z
+   git push origin vX.Y.Z
    ```
    O hook `pre-push` roda `make verify` com a tag já presente, então o `changelog-check` passa.
 10. Acompanhe o workflow de release e confira assets e imagens GHCR.
@@ -46,28 +41,31 @@ Receita real do projeto. A receita histórica fica em configuração local.
 
 ## O que o CI faz e não faz
 
-- `.github/workflows/ci.yml`: `quality` em push e pull request; `docker` só em push e depende de `quality`.
-- `.github/workflows/release.yml`: em tag `v*.*.*`, roda GoReleaser.
+- `.github/workflows/ci.yml`: `quality` em PR e push para `develop`/`production`; `docker` só em push e depende de `quality`.
+- O PR de feature roda `quality` sem Docker; o PR de promoção também.
+- No push em `production` pós-merge, `quality` e `docker` publicam `:latest`; a tag dispara `release.yml`.
 - O release não roda `make verify` sozinho. O gate é o CI/pre-push; não crie tag com o CI vermelho.
-- O hook `pre-push` executa `make pre-push` (`verify`); o CI roda os mesmos gates em push e pull request.
+- O hook `pre-push` executa `make pre-push` (`verify`).
 - `make changelog-check` valida a estrutura do changelog contra as tags; ele roda no `make verify` e no CI.
 
 ## Checklist de release
 
 - [ ] `make changelog-draft` executado e `Unreleased` curado.
-- [ ] `make verify` verde e saída registrada antes da promoção.
-- [ ] `Unreleased` promovido para `x.y.z` com a data.
-- [ ] Commit do changelog feito.
+- [ ] `make verify` verde em `develop` e saída registrada.
+- [ ] `Unreleased` promovido para `x.y.z` com a data via PR squash em `develop`.
 - [ ] `make release-check VERSION=x.y.z` verde.
-- [ ] `production` promovida.
-- [ ] Tag anotada `vX.Y.Z` criada.
-- [ ] Push de `production` e da tag autorizado pelo usuário.
+- [ ] PR de promoção `develop -> production` aberto com `Closes #...` e checklist.
+- [ ] `quality` do PR de promoção verde.
+- [ ] Merge commit do PR de promoção feito.
+- [ ] Tag anotada `vX.Y.Z` criada no merge commit.
+- [ ] Push da tag autorizado pelo usuário.
 - [ ] Workflow de release verde.
 - [ ] Assets e imagens GHCR conferidos (`manager` e `agent`, amd64/arm64).
 - [ ] Release notes revisadas no GitHub.
 
 ## Quando o release falha
 
+- Se o PR de promoção falhar, corrija em `develop` com outro PR e atualize o PR de promoção.
 - Não reutilize uma tag publicada. Crie outra versão ou peça decisão ao usuário.
 - Não force push em tag ou branch compartilhada.
 - Se a falha for no GoReleaser, confira o log do workflow e rode o release local com `GITHUB_TOKEN` e login no GHCR apenas se o usuário pedir.

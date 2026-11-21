@@ -86,6 +86,12 @@ Falhas que não aparecem no CI atual. Leia antes de mexer na área correspondent
 **Causa:** a partir da 0.39, `TextField` com `Max: 0` passa a valer 5000.
 **Correção:** a migration 15 sobe os campos existentes para 1.000.000; campo novo de texto longo precisa de `Max` explícito.
 
+## `Closes` em PR para develop não fecha a issue
+
+**Sintoma:** PR com `Closes #3` é mergeado em `develop` e a issue continua aberta.
+**Causa:** o auto-close do GitHub só dispara no merge para o default branch, que é `production`.
+**Correção:** mantenha o `Closes #N` no body do PR de promoção; o PR de feature só referencia a issue.
+
 ## Versão divergente
 
 **Sintoma:** usuário, changelog e binário discordam da versão.
