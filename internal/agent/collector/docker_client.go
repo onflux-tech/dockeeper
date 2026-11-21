@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -58,7 +60,9 @@ type OrchestratorClient interface {
 
 // DockerClient implements OrchestratorClient using the Docker SDK.
 type DockerClient struct {
-	cli *dockerclient.Client
+	cli     *dockerclient.Client
+	statsMu sync.Mutex
+	lastCPU map[string]container.CPUStats
 }
 
 // NewDockerClient creates a Docker client from environment settings.
@@ -70,7 +74,7 @@ func NewDockerClient() (*DockerClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create docker client: %w", err)
 	}
-	return &DockerClient{cli: cli}, nil
+	return &DockerClient{cli: cli, lastCPU: make(map[string]container.CPUStats)}, nil
 }
 
 func (d *DockerClient) Ping(ctx context.Context) error {
@@ -361,45 +365,100 @@ func (d *DockerClient) ContainerLogs(ctx context.Context, containerID string, fo
 	return reader, tty, nil
 }
 
+const containerStatsConcurrency = 8
+
 func (d *DockerClient) ListContainerStats(ctx context.Context) ([]ContainerMetrics, error) {
+	d.statsMu.Lock()
+	defer d.statsMu.Unlock()
+
 	containers, err := d.cli.ContainerList(ctx, container.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("docker container list for stats: %w", err)
 	}
 
-	result := make([]ContainerMetrics, 0, len(containers))
+	samples := make([]container.StatsResponse, len(containers))
+	collected := make([]bool, len(containers))
+	sem := make(chan struct{}, containerStatsConcurrency)
+	var wg sync.WaitGroup
+
+schedule:
+	for i := range containers {
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			break schedule
+		}
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			id := containers[i].ID
+			shortID := id
+			if len(shortID) > 12 {
+				shortID = shortID[:12]
+			}
+
+			statsResp, err := d.cli.ContainerStatsOneShot(ctx, id)
+			if err != nil {
+				slog.Warn("failed to get container stats", "id", shortID, "error", err)
+				return
+			}
+
+			if decErr := json.NewDecoder(statsResp.Body).Decode(&samples[i]); decErr != nil {
+				if closeErr := statsResp.Body.Close(); closeErr != nil {
+					slog.Warn("failed to close stats body", "id", shortID, "error", closeErr)
+				}
+				slog.Warn("failed to decode container stats", "id", shortID, "error", decErr)
+				return
+			}
+			if closeErr := statsResp.Body.Close(); closeErr != nil {
+				slog.Warn("failed to close stats body", "id", shortID, "error", closeErr)
+			}
+			collected[i] = true
+		}(i)
+	}
+	wg.Wait()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]struct{}, len(containers))
 	for _, c := range containers {
-		id := c.ID
+		seen[c.ID] = struct{}{}
+	}
+	for id := range d.lastCPU {
+		if _, ok := seen[id]; !ok {
+			delete(d.lastCPU, id)
+		}
+	}
+
+	result := make([]ContainerMetrics, 0, len(containers))
+	for i := range containers {
+		if !collected[i] {
+			continue
+		}
+
+		id := containers[i].ID
 		shortID := id
 		if len(shortID) > 12 {
 			shortID = shortID[:12]
 		}
 
-		statsResp, err := d.cli.ContainerStats(ctx, id, false)
-		if err != nil {
-			slog.Warn("failed to get container stats", "id", shortID, "error", err)
-			continue
-		}
-
-		var stats container.StatsResponse
-		if decErr := json.NewDecoder(statsResp.Body).Decode(&stats); decErr != nil {
-			if closeErr := statsResp.Body.Close(); closeErr != nil {
-				slog.Warn("failed to close stats body", "id", shortID, "error", closeErr)
-			}
-			slog.Warn("failed to decode container stats", "id", shortID, "error", decErr)
-			continue
-		}
-		if closeErr := statsResp.Body.Close(); closeErr != nil {
-			slog.Warn("failed to close stats body", "id", shortID, "error", closeErr)
-		}
-
+		stats := &samples[i]
 		m := ContainerMetrics{
 			ContainerID: shortID,
-			CPUPercent:  calculateCPUPercent(&stats),
 			MemUsed:     stats.MemoryStats.Usage,
 			MemLimit:    stats.MemoryStats.Limit,
 			PIDs:        uint32(stats.PidsStats.Current),
 		}
+
+		if prev, ok := d.lastCPU[id]; ok {
+			stats.PreCPUStats = prev
+			m.CPUPercent = calculateCPUPercent(stats)
+		}
+		d.lastCPU[id] = stats.CPUStats
 
 		for _, ns := range stats.Networks {
 			m.NetRx += ns.RxBytes
@@ -417,6 +476,10 @@ func (d *DockerClient) ListContainerStats(ctx context.Context) ([]ContainerMetri
 
 		result = append(result, m)
 	}
+
+	slices.SortFunc(result, func(a, b ContainerMetrics) int {
+		return strings.Compare(a.ContainerID, b.ContainerID)
+	})
 	return result, nil
 }
 

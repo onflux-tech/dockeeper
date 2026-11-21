@@ -54,6 +54,7 @@ func (m *MetricsCollector) SetServerGoneCallback(fn func()) {
 func (m *MetricsCollector) Run(ctx context.Context) {
 	// First collection to prime CPU/net deltas (results will have zero deltas).
 	m.collectSystem(ctx)
+	m.collectContainers(ctx)
 
 	ticker := time.NewTicker(metricsInterval)
 	defer ticker.Stop()
