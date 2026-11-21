@@ -49,6 +49,7 @@ const REF_ALLOW = new Set([
 	".claude/settings.local.json",
 ]);
 const REF_ALLOW_PREFIXES = ["web/dist", "web/node_modules", "bin/", "dk_data/", "dk-agent-data/", "tmp/", "dist/"];
+const DOC_EXCLUDED_PREFIXES = ["docs/superpowers/"];
 const PORT_DIRS = [
 	".claude/skills",
 	".claude/commands",
@@ -81,6 +82,9 @@ function walk(dir) {
 	}
 	return files;
 }
+
+const walkDocs = () =>
+	walk(join(ROOT, "docs")).filter((file) => !DOC_EXCLUDED_PREFIXES.some((prefix) => rel(file).startsWith(prefix)));
 
 export function parseFrontmatter(text) {
 	const normalized = normalize(text);
@@ -336,7 +340,7 @@ function checkMakeRefs() {
 	const files = [
 		join(ROOT, "AGENTS.md"),
 		join(ROOT, "CLAUDE.md"),
-		...walk(join(ROOT, "docs")).filter((file) => file.endsWith(".md")),
+		...walkDocs().filter((file) => file.endsWith(".md")),
 		...walk(join(ROOT, "harness")).filter((file) => file.endsWith(".md")),
 	];
 	return files.flatMap((file) => makeRefErrors(read(file), targets, rel(file)));
@@ -370,7 +374,7 @@ function checkFileRefs() {
 	const files = [
 		join(ROOT, "AGENTS.md"),
 		join(ROOT, "CLAUDE.md"),
-		...walk(join(ROOT, "docs")).filter((file) => file.endsWith(".md")),
+		...walkDocs().filter((file) => file.endsWith(".md")),
 		...walk(join(ROOT, "harness")).filter((file) => file.endsWith(".md")),
 	];
 	return files.flatMap((file) => fileRefErrors(read(file), rel(file)));
@@ -400,7 +404,7 @@ function checkSensitive() {
 		join(ROOT, ".mcp.json"),
 		join(ROOT, ".claude/settings.json"),
 		join(ROOT, ".opencode/opencode.json"),
-		...walk(join(ROOT, "docs")),
+		...walkDocs(),
 		...walk(join(ROOT, "harness")),
 	].filter((file) => file.endsWith(".md") || file.endsWith(".json"));
 	const errors = [];
