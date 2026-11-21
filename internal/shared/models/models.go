@@ -333,6 +333,65 @@ type TraefikRoute struct {
 	Updated     types.DateTime `json:"updated"`
 }
 
+type HostApp struct {
+	ID             string         `json:"id"`
+	Server         string         `json:"server"`
+	Source         string         `json:"source"`
+	Name           string         `json:"name"`
+	Unit           string         `json:"unit"`
+	PMID           string         `json:"pm_id"`
+	Status         string         `json:"status"`
+	PIDs           types.JSONRaw  `json:"pids"`
+	Ports          types.JSONRaw  `json:"ports"`
+	CPUPercent     float64        `json:"cpu_percent"`
+	MemBytes       float64        `json:"mem_bytes"`
+	DiskReadBytes  float64        `json:"disk_read_bytes"`
+	DiskWriteBytes float64        `json:"disk_write_bytes"`
+	Restarts       int            `json:"restarts"`
+	UptimeSeconds  float64        `json:"uptime_seconds"`
+	User           string         `json:"user"`
+	Cwd            string         `json:"cwd"`
+	ExecPath       string         `json:"exec_path"`
+	LogPath        string         `json:"log_path"`
+	LastSeen       types.DateTime `json:"last_seen"`
+	Created        types.DateTime `json:"created"`
+	Updated        types.DateTime `json:"updated"`
+}
+
+type HostProcess struct {
+	ID         string         `json:"id"`
+	Server     string         `json:"server"`
+	PID        int            `json:"pid"`
+	Name       string         `json:"name"`
+	App        string         `json:"app"`
+	CPUPercent float64        `json:"cpu_percent"`
+	MemBytes   float64        `json:"mem_bytes"`
+	Threads    int            `json:"threads"`
+	LastSeen   types.DateTime `json:"last_seen"`
+	Created    types.DateTime `json:"created"`
+	Updated    types.DateTime `json:"updated"`
+}
+
+type HostPort struct {
+	Port     int    `json:"port"`
+	Protocol string `json:"protocol"`
+	Address  string `json:"address"`
+	PID      int    `json:"pid"`
+	App      string `json:"app"`
+}
+
+type HostAppMetric struct {
+	ID         string         `json:"id"`
+	Server     string         `json:"server"`
+	App        string         `json:"app"`
+	Source     string         `json:"source"`
+	Timestamp  types.DateTime `json:"timestamp"`
+	CPUPercent float64        `json:"cpu_percent"`
+	MemBytes   float64        `json:"mem_bytes"`
+	Restarts   int            `json:"restarts"`
+	Created    types.DateTime `json:"created"`
+}
+
 // BatchJob represents a batch operation across multiple containers/servers.
 type BatchJob struct {
 	ID          string         `json:"id"`
