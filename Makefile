@@ -8,7 +8,7 @@ BIN_DIR  = bin
 
 .PHONY: all build-manager build-agent build lint format test clean dev dev-manager dev-agent proto-gen \
         dev-web build-web lint-web format-web test-web \
-        build-all build-agent-dist docker-build docker-push release
+        build-all build-agent-dist docker-build docker-push release verify verify-fast
 
 all: build
 
@@ -74,6 +74,12 @@ format-web:
 
 test-web:
 	cd web && npm test
+
+## ── Verificação ──────────────────────────────────────
+
+verify: build-web lint test lint-web test-web
+
+verify-fast: test lint-web
 
 ## ── Docker ──────────────────────────────────────────
 
