@@ -135,6 +135,7 @@ test("subagent-guard nega mutação, suíte, pipe de teste e destrutivo", () => 
 	assert.match(evaluateSubagentShell("gh issue close 1"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh release create v1"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api -X PUT /repos/x"), /gh de mutação/);
+	assert.match(evaluateSubagentShell("gh api -X=POST /repos/x"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api -f title=x repos/o/r/issues"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api -f 'title=x' repos/o/r/issues"), /gh de mutação/);
 	assert.match(evaluateSubagentShell("gh api -F 'title=x' repos/o/r/issues"), /gh de mutação/);
