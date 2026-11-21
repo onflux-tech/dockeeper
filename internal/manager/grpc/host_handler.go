@@ -53,16 +53,6 @@ func (h *HostHandler) ReportHostInventory(ctx context.Context, req *agentpb.Repo
 		return nil, status.Error(codes.NotFound, "server not found")
 	}
 
-	if h.bus != nil {
-		h.bus.Publish(events.Event{
-			Type:      events.ServerHostInventory,
-			Severity:  events.SeverityFor(events.ServerHostInventory),
-			ServerID:  serverID,
-			Details:   map[string]any{"apps": count, "processes": len(req.GetProcesses())},
-			Timestamp: time.Now().UTC(),
-		})
-	}
-
 	return &agentpb.ReportHostInventoryResponse{
 		ReceivedApps:      int32(count),
 		ReceivedProcesses: int32(len(req.GetProcesses())),
