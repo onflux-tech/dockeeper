@@ -7,6 +7,14 @@
     },
     "buffer": 550000
   },
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp"
+      }
+    }
+  },
   "permissions": [
     { "action": "shell", "resource": "*", "effect": "allow" },
     { "action": "shell", "resource": "git push*", "effect": "ask" },

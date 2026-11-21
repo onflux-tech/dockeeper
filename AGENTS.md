@@ -12,8 +12,8 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 
 ## Execução
 
-- Antes de implementar uma mudança aprovada que envolva código, pergunte via ask/question como executar: **Nativo (Recomendado)** na sessão principal ou **Subagent-driven** (superpowers).
-- O padrão é nativo. Subagents entram quando a mudança for paralelizável ou isolável por arquivo.
+- Quando houver um plano de implementação aprovado para uma issue, feature ou refactor amplo, pergunte via ask/question como executar: **Nativo (Recomendado)** na sessão principal ou **Subagent-driven** (superpowers).
+- Mudanças pontuais de config, docs, dependências ou harness não passam por essa pergunta; execute nativo.
 - A escolha não altera os gates: `make verify-fast` antes de commitar e `make verify` antes de push ou release.
 
 ## Autorizações
@@ -102,6 +102,12 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 - Staging futuro em um host definido em configuração local; SSH só quando o usuário pedir.
 - Runbook e formato de evidência: `docs/e2e.md`.
 
+## Ferramentas
+
+- `context7` (MCP) para documentação atual das bibliotecas; configurado em `.opencode/opencode.json` e `.mcp.json`.
+- Skills locais em `.opencode/skills/` e `.claude/skills/`: `dockeeper-migration`, `dockeeper-e2e` e `dockeeper-release`.
+- Memória entre sessões, browser e busca web ficam na configuração global de cada harness, não no repositório.
+
 ## Notas internas
 
 - Notas locais ficam em `tmp/` (ignorado) e não são versionadas. O código vence qualquer nota.
@@ -110,6 +116,7 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 
 - `docs/architecture.md` — visão detalhada de manager/agent, streams, RBAC, EventBus, pastas e collections.
 - `docs/gotchas.md` — falhas silenciosas e como evitá-las.
+- `docs/migrations.md` — checklist de collection, campo, índice e migration.
 - `docs/release.md` — release, CI, GHCR e deploy futuro.
 - `docs/e2e.md` — validação local e staging.
 - `CLAUDE.md` — específico do Claude Code; importa este arquivo.

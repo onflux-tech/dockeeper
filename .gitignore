@@ -46,4 +46,10 @@ release/
 .specs/
 
 # Claude
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/dockeeper-migration/
+!.claude/skills/dockeeper-e2e/
+!.claude/skills/dockeeper-release/
