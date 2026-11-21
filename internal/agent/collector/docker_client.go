@@ -16,6 +16,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
@@ -169,8 +170,8 @@ func (d *DockerClient) ListImages(ctx context.Context) ([]*agentpb.ImageInfo, er
 	result := make([]*agentpb.ImageInfo, 0, len(images))
 	for _, img := range images {
 		imgID := strings.TrimPrefix(img.ID, "sha256:")
-		if len(imgID) > 12 {
-			imgID = imgID[:12]
+		if len(imgID) > constants.ImageShortIDLength {
+			imgID = imgID[:constants.ImageShortIDLength]
 		}
 		tags := img.RepoTags
 		if len(tags) == 0 {

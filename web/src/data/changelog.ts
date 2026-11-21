@@ -12,6 +12,17 @@ export const changelog: ChangelogEntry[] = [
 				type: "fix",
 				area: "manager",
 				description:
+					"Removed pruned images from the store immediately so the listing refreshes after a prune.",
+			},
+			{
+				type: "fix",
+				area: "web",
+				description: "Fixed container column sorting on the server detail page.",
+			},
+			{
+				type: "fix",
+				area: "manager",
+				description:
 					"Reused existing server records on re-enrollment so agents no longer appear twice after rejoining.",
 			},
 			{
