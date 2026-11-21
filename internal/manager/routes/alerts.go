@@ -87,7 +87,8 @@ func handleCreateAlertRule(e *core.RequestEvent, alertStore *store.AlertStore) e
 		body.RuleType = "metric"
 	}
 
-	if body.RuleType == "metric" {
+	switch body.RuleType {
+	case "metric":
 		if body.Metric == "" {
 			return e.JSON(http.StatusBadRequest, map[string]string{"error": "metric is required for metric rules"})
 		}
@@ -98,7 +99,7 @@ func handleCreateAlertRule(e *core.RequestEvent, alertStore *store.AlertStore) e
 		if body.Duration <= 0 {
 			body.Duration = 60
 		}
-	} else if body.RuleType == "event" {
+	case "event":
 		if body.EventType == "" {
 			return e.JSON(http.StatusBadRequest, map[string]string{"error": "event_type is required for event rules"})
 		}
@@ -124,14 +125,15 @@ func handleCreateAlertRule(e *core.RequestEvent, alertStore *store.AlertStore) e
 		"state":                   "ok",
 	}
 
-	if body.RuleType == "metric" {
+	switch body.RuleType {
+	case "metric":
 		data["metric"] = body.Metric
 		data["operator"] = body.Operator
 		data["threshold"] = body.Threshold
 		data["duration"] = body.Duration
 		data["target_type"] = body.TargetType
 		data["target_id"] = body.TargetID
-	} else {
+	default:
 		data["event_type"] = body.EventType
 		data["scope"] = body.Scope
 	}

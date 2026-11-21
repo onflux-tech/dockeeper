@@ -97,7 +97,7 @@ func (h *UpdateHandler) ExecuteContainerUpdate(req *agentpb.ExecuteContainerUpda
 			break
 		}
 		if evt.Error != "" {
-			reader.Close()
+			_ = reader.Close()
 			send("failed", "Pull error: "+evt.Error, 0)
 			return nil
 		}
@@ -107,7 +107,7 @@ func (h *UpdateHandler) ExecuteContainerUpdate(req *agentpb.ExecuteContainerUpda
 		}
 		send("pulling", msg, 0.3)
 	}
-	reader.Close()
+	_ = reader.Close()
 
 	// Step 3: Replace container
 	send("replacing", "Stopping old container and creating new one...", 0.5)
@@ -159,7 +159,7 @@ func (h *UpdateHandler) UpdateAgentBinary(stream agentpb.AgentUpdateService_Upda
 		})
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	hasher := sha256.New()
 	var expectedChecksum, targetVersion string
@@ -171,7 +171,7 @@ func (h *UpdateHandler) UpdateAgentBinary(stream agentpb.AgentUpdateService_Upda
 			break
 		}
 		if recvErr != nil {
-			tmpFile.Close()
+			_ = tmpFile.Close()
 			return recvErr
 		}
 
@@ -186,7 +186,7 @@ func (h *UpdateHandler) UpdateAgentBinary(stream agentpb.AgentUpdateService_Upda
 		if len(data) > 0 {
 			n, writeErr := tmpFile.Write(data)
 			if writeErr != nil {
-				tmpFile.Close()
+				_ = tmpFile.Close()
 				return stream.SendAndClose(&agentpb.UpdateBinaryResponse{
 					Success: false,
 					Error:   "write error: " + writeErr.Error(),
@@ -200,7 +200,7 @@ func (h *UpdateHandler) UpdateAgentBinary(stream agentpb.AgentUpdateService_Upda
 			break
 		}
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	h.logger.Info("binary received", "bytes", totalBytes, "version", targetVersion)
 
@@ -265,13 +265,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, in)
 	return err

@@ -84,7 +84,7 @@ func (h *HealthHandler) ExecuteHealthCheck(ctx context.Context, req *agentpb.Exe
 			Error:          errMsg,
 		}, nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	expectedStatus := int(req.GetExpectedStatus())
 	if expectedStatus == 0 {
@@ -111,7 +111,7 @@ func resolveContainerIP(ctx context.Context, containerID string) (string, error)
 	if err != nil {
 		return "", fmt.Errorf("docker client: %w", err)
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	info, err := cli.ContainerInspect(ctx, containerID)
 	if err != nil {
@@ -127,10 +127,6 @@ func resolveContainerIP(ctx context.Context, containerID string) (string, error)
 			if net.IPAddress != "" {
 				return net.IPAddress, nil
 			}
-		}
-		// Fallback to global IP if no network-specific IP found.
-		if info.NetworkSettings.IPAddress != "" {
-			return info.NetworkSettings.IPAddress, nil
 		}
 	}
 

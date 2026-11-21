@@ -81,10 +81,10 @@ func NewClient(
 		healthHandler:  grpchandlers.NewHealthHandler(logger),
 		updateHandler:  grpchandlers.NewUpdateHandler(exec, logger, dataDir),
 
-		exec:   exec,
-		orch:   orch,
+		exec:       exec,
+		orch:       orch,
 		onShutdown: onShutdown,
-		logger: logger,
+		logger:     logger,
 	}
 
 	return c

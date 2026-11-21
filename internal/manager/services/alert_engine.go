@@ -176,9 +176,7 @@ func (e *AlertEngine) evaluateMetricRule(ctx context.Context, rule *core.Record)
 	switch {
 	case conditionMet && (currentState == "ok" || currentState == "resolved"):
 		// Track breach start for active_delay.
-		if _, loaded := e.firstBreachAt.LoadOrStore(rule.Id, now); loaded {
-			// Already tracking.
-		}
+		_, _ = e.firstBreachAt.LoadOrStore(rule.Id, now)
 		e.firstClearAt.Delete(rule.Id)
 
 		// Check active_delay.
@@ -218,9 +216,7 @@ func (e *AlertEngine) evaluateMetricRule(ctx context.Context, rule *core.Record)
 
 	case !conditionMet && currentState == "firing":
 		// Track clear start for clear_delay.
-		if _, loaded := e.firstClearAt.LoadOrStore(rule.Id, now); loaded {
-			// Already tracking.
-		}
+		_, _ = e.firstClearAt.LoadOrStore(rule.Id, now)
 		e.firstBreachAt.Delete(rule.Id)
 
 		// Check clear_delay.

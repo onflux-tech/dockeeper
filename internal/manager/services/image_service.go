@@ -175,4 +175,3 @@ func (s *ImageService) PruneImages(ctx context.Context, serverID string, all boo
 	s.audit.Log("image.prune", userID, "image", "", ip, details)
 	return resp, nil
 }
-

@@ -68,7 +68,7 @@ func handleRemoveVolume(e *core.RequestEvent, svc *services.VolumeService, casca
 	volumeID := e.Request.PathValue("id")
 
 	var body struct {
-		Force          bool                          `json:"force"`
+		Force          bool                           `json:"force"`
 		CascadeOptions *services.VolumeCascadeOptions `json:"cascade_options"`
 	}
 	_ = e.BindBody(&body)

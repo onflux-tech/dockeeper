@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	"google.golang.org/protobuf/proto"
 
@@ -23,14 +23,14 @@ const traefikInterval = 60 * time.Second
 
 // traefikRouter represents a router from the Traefik API v2.
 type traefikRouter struct {
-	Name        string   `json:"name"`
-	Rule        string   `json:"rule"`
-	Service     string   `json:"service"`
-	EntryPoints []string `json:"entryPoints"`
+	Name        string    `json:"name"`
+	Rule        string    `json:"rule"`
+	Service     string    `json:"service"`
+	EntryPoints []string  `json:"entryPoints"`
 	TLS         *struct{} `json:"tls,omitempty"`
-	Middlewares []string `json:"middlewares"`
-	Provider    string   `json:"provider"`
-	Status      string   `json:"status"`
+	Middlewares []string  `json:"middlewares"`
+	Provider    string    `json:"provider"`
+	Status      string    `json:"status"`
 }
 
 // TraefikCollector periodically reads Traefik routes and reports them to the
@@ -187,7 +187,7 @@ func (t *TraefikCollector) resolveContainerIP(containerID string) string {
 	if err != nil {
 		return ""
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -229,7 +229,7 @@ func (t *TraefikCollector) fetchFromAPI(ctx context.Context) ([]*agentpb.Traefik
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("traefik API returned %d", resp.StatusCode)
@@ -347,9 +347,9 @@ func (t *TraefikCollector) parseSwarmServiceLabels(ctx context.Context, routeMap
 	if err != nil {
 		return
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
-	services, err := cli.ServiceList(ctx, types.ServiceListOptions{
+	services, err := cli.ServiceList(ctx, swarm.ServiceListOptions{
 		Filters: filters.NewArgs(filters.Arg("label", "traefik.enable=true")),
 	})
 	if err != nil {

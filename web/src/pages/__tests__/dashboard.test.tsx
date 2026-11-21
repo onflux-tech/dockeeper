@@ -12,6 +12,12 @@ vi.mock("@/hooks/use-realtime", () => ({
 	useRealtime: () => {},
 }));
 
+vi.mock("@/hooks/use-dashboard", () => ({
+	useDashboardLayout: () => ({ data: { widgets: [] }, isLoading: false }),
+	useSaveDashboardLayout: () => ({ mutate: vi.fn(), isPending: false }),
+	useResetDashboardLayout: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
 import DashboardPage from "../dashboard";
 
 function renderDashboard() {
@@ -33,9 +39,9 @@ describe("DashboardPage", () => {
 		expect(screen.getByText("Dashboard")).toBeInTheDocument();
 	});
 
-	it("renders the Servers section", () => {
+	it("renders the servers summary", () => {
 		renderDashboard();
-		expect(screen.getByText("Servers")).toBeInTheDocument();
+		expect(screen.getByText("Total Servers")).toBeInTheDocument();
 	});
 
 	it("shows empty state when no servers", () => {
@@ -43,8 +49,8 @@ describe("DashboardPage", () => {
 		expect(screen.getByText("No servers registered yet.")).toBeInTheDocument();
 	});
 
-	it("shows enrollment prompt in empty state", () => {
+	it("shows the dashboard customization control", () => {
 		renderDashboard();
-		expect(screen.getByText(/enroll an agent/i)).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /customize/i })).toBeInTheDocument();
 	});
 });

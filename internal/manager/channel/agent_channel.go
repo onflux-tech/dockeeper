@@ -14,11 +14,11 @@ import (
 
 // Default rate limits per agent.
 const (
-	commandRateLimit = 30  // commands per minute
+	commandRateLimit = 30 // commands per minute
 	commandBurst     = 10
-	dataRateLimit    = 10  // data stream opens per minute
+	dataRateLimit    = 10 // data stream opens per minute
 	dataBurst        = 5
-	execRateLimit    = 5   // exec stream opens per minute
+	execRateLimit    = 5 // exec stream opens per minute
 	execBurst        = 3
 
 	// DefaultCommandTimeout is the max time to wait for a command response.
@@ -60,8 +60,7 @@ type AgentChannel struct {
 	execLimiter *rate.Limiter
 
 	// Priority queue for outbound commands.
-	queue   *PriorityQueue
-	queueMu sync.Mutex
+	queue *PriorityQueue
 
 	// Heartbeat tracking.
 	lastHeartbeat   time.Time

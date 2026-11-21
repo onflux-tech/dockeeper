@@ -10,11 +10,12 @@ import (
 	"runtime"
 
 	dockerclient "github.com/docker/docker/client"
-	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // Enroll performs first-time enrollment with the manager.
@@ -103,7 +104,7 @@ func collectServerInfo() (*agentpb.ServerInfo, error) {
 		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
 			info.IpAddress = addr.IP.String()
 		}
-		conn.Close()
+		_ = conn.Close()
 	}
 
 	// Get Docker version from the daemon.
@@ -112,7 +113,7 @@ func collectServerInfo() (*agentpb.ServerInfo, error) {
 		if sv, verErr := cli.ServerVersion(context.Background()); verErr == nil {
 			info.DockerVersion = sv.Version
 		}
-		cli.Close()
+		_ = cli.Close()
 	}
 
 	// CPU model and core count.

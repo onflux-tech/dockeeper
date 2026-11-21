@@ -37,7 +37,7 @@ type Container struct {
 	ContainerID        string         `json:"container_id"`
 	Name               string         `json:"name"`
 	Image              string         `json:"image"`
-	Status             string         `json:"status"` // running | stopped | paused | restarting | removing | created | exited | dead
+	Status             string         `json:"status"`        // running | stopped | paused | restarting | removing | created | exited | dead
 	DesiredState       string         `json:"desired_state"` // none | running | stopped
 	Ports              types.JSONRaw  `json:"ports"`
 	Labels             types.JSONRaw  `json:"labels"`
@@ -364,7 +364,7 @@ type Tag struct {
 type ActionToken struct {
 	ID        string         `json:"id"`
 	Token     string         `json:"token"`
-	Action    string         `json:"action"`    // restart_container, approve_update, ack_alert, silence_alert
+	Action    string         `json:"action"` // restart_container, approve_update, ack_alert, silence_alert
 	Params    types.JSONRaw  `json:"params"`
 	ExpiresAt types.DateTime `json:"expires_at"`
 	Used      bool           `json:"used"`

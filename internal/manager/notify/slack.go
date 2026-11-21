@@ -78,7 +78,7 @@ func (c *SlackChannel) Send(ctx context.Context, msg AlertMessage) error {
 	if err != nil {
 		return fmt.Errorf("slack send: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 256))

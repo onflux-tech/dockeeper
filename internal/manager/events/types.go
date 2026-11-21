@@ -30,8 +30,8 @@ const (
 	BackupFailed    EventType = "backup.failed"
 
 	// Image events.
-	ImagePulled         EventType = "image.pulled"
-	ImageRemoved        EventType = "image.removed"
+	ImagePulled          EventType = "image.pulled"
+	ImageRemoved         EventType = "image.removed"
 	ImageUpdateAvailable EventType = "image.update.available"
 
 	// Update events.

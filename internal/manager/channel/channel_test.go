@@ -19,12 +19,12 @@ import (
 
 // mockCommandStream implements agentpb.AgentCommandChannelService_OpenChannelServer.
 type mockCommandStream struct {
-	ctx      context.Context
-	sent     []*agentpb.OpenChannelResponse
-	sentMu   sync.Mutex
-	sendErr  error
-	recvCh   chan *agentpb.OpenChannelRequest
-	recvErr  error
+	ctx     context.Context
+	sent    []*agentpb.OpenChannelResponse
+	sentMu  sync.Mutex
+	sendErr error
+	recvCh  chan *agentpb.OpenChannelRequest
+	recvErr error
 }
 
 func newMockCommandStream(ctx context.Context) *mockCommandStream {
@@ -58,9 +58,9 @@ func (m *mockCommandStream) Recv() (*agentpb.OpenChannelRequest, error) {
 func (m *mockCommandStream) SetHeader(metadata.MD) error  { return nil }
 func (m *mockCommandStream) SendHeader(metadata.MD) error { return nil }
 func (m *mockCommandStream) SetTrailer(metadata.MD)       {}
-func (m *mockCommandStream) Context() context.Context      { return m.ctx }
-func (m *mockCommandStream) SendMsg(any) error             { return nil }
-func (m *mockCommandStream) RecvMsg(any) error             { return nil }
+func (m *mockCommandStream) Context() context.Context     { return m.ctx }
+func (m *mockCommandStream) SendMsg(any) error            { return nil }
+func (m *mockCommandStream) RecvMsg(any) error            { return nil }
 
 func (m *mockCommandStream) sentMessages() []*agentpb.OpenChannelResponse {
 	m.sentMu.Lock()
@@ -83,9 +83,9 @@ func (m *mockDataStream) Recv() (*agentpb.OpenDataStreamRequest, error) {
 func (m *mockDataStream) SetHeader(metadata.MD) error  { return nil }
 func (m *mockDataStream) SendHeader(metadata.MD) error { return nil }
 func (m *mockDataStream) SetTrailer(metadata.MD)       {}
-func (m *mockDataStream) Context() context.Context      { return m.ctx }
-func (m *mockDataStream) SendMsg(any) error             { return nil }
-func (m *mockDataStream) RecvMsg(any) error             { return nil }
+func (m *mockDataStream) Context() context.Context     { return m.ctx }
+func (m *mockDataStream) SendMsg(any) error            { return nil }
+func (m *mockDataStream) RecvMsg(any) error            { return nil }
 
 // mockExecStream implements agentpb.AgentExecStreamService_OpenExecStreamServer.
 type mockExecStream struct {
@@ -100,9 +100,9 @@ func (m *mockExecStream) Recv() (*agentpb.OpenExecStreamRequest, error) {
 func (m *mockExecStream) SetHeader(metadata.MD) error  { return nil }
 func (m *mockExecStream) SendHeader(metadata.MD) error { return nil }
 func (m *mockExecStream) SetTrailer(metadata.MD)       {}
-func (m *mockExecStream) Context() context.Context      { return m.ctx }
-func (m *mockExecStream) SendMsg(any) error             { return nil }
-func (m *mockExecStream) RecvMsg(any) error             { return nil }
+func (m *mockExecStream) Context() context.Context     { return m.ctx }
+func (m *mockExecStream) SendMsg(any) error            { return nil }
+func (m *mockExecStream) RecvMsg(any) error            { return nil }
 
 // ---------------------------------------------------------------------------
 // helpers_test.go — NewRequestID

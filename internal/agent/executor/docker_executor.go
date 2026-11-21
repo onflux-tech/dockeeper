@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/docker/docker/errdefs"
 )
 
 const defaultTimeout = 30 * time.Second

@@ -66,7 +66,7 @@ func (s *TerminalService) OpenSession(containerID, userID, command, ip string) (
 		"session_id":     sessionID,
 		"container_name": container.GetString("name"),
 		"server_id":      serverID,
-		"command":         command,
+		"command":        command,
 	})
 
 	return &SessionInfo{

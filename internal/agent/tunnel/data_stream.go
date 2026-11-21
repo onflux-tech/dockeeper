@@ -14,9 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/onflux-tech/dockeeper/internal/agent/executor"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // handleDataStreamSignal opens a DataStream to the manager in response to an
@@ -136,7 +137,7 @@ func (c *Client) streamLogs(ctx context.Context, req *agentpb.StreamLogsRequest,
 	if err != nil {
 		return fmt.Errorf("open container logs: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	if tty {
 		return c.forwardTTYLogs(reader, stream, streamID)
@@ -243,7 +244,7 @@ func (c *Client) streamImagePull(ctx context.Context, req *agentpb.ImagePullRequ
 	if err != nil {
 		return fmt.Errorf("pull image: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	decoder := json.NewDecoder(reader)
 	for {
@@ -458,7 +459,7 @@ func (c *Client) streamContainerUpdate(ctx context.Context, req *agentpb.Execute
 			break
 		}
 		if evt.Error != "" {
-			reader.Close()
+			_ = reader.Close()
 			send("failed", "Pull error: "+evt.Error, 0)
 			return nil
 		}
@@ -468,7 +469,7 @@ func (c *Client) streamContainerUpdate(ctx context.Context, req *agentpb.Execute
 		}
 		send("pulling", msg, 0.3)
 	}
-	reader.Close()
+	_ = reader.Close()
 
 	// Step 3: Replace
 	send("replacing", "Stopping old container and creating new one...", 0.5)
@@ -519,7 +520,7 @@ func (c *Client) streamAgentUpdate(ctx context.Context, params *agentpb.DataStre
 		return fmt.Errorf("create temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	hasher := sha256.New()
 	var totalBytes int64
@@ -528,7 +529,7 @@ func (c *Client) streamAgentUpdate(ctx context.Context, params *agentpb.DataStre
 	for {
 		msg, recvErr := stream.Recv()
 		if recvErr != nil {
-			tmpFile.Close()
+			_ = tmpFile.Close()
 			if recvErr == io.EOF {
 				break
 			}
@@ -536,7 +537,7 @@ func (c *Client) streamAgentUpdate(ctx context.Context, params *agentpb.DataStre
 		}
 
 		if msg.GetCancel() != nil {
-			tmpFile.Close()
+			_ = tmpFile.Close()
 			return fmt.Errorf("update cancelled by manager")
 		}
 
@@ -548,13 +549,13 @@ func (c *Client) streamAgentUpdate(ctx context.Context, params *agentpb.DataStre
 
 		n, writeErr := tmpFile.Write(data)
 		if writeErr != nil {
-			tmpFile.Close()
+			_ = tmpFile.Close()
 			return fmt.Errorf("write chunk: %w", writeErr)
 		}
 		hasher.Write(data)
 		totalBytes += int64(n)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	c.logger.Info("agent binary received", "bytes", totalBytes)
 
@@ -621,13 +622,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, in)
 	return err

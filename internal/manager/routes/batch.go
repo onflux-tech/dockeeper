@@ -176,7 +176,7 @@ func handleBatchProgress(runner *services.BatchJobRunner, batchStore *store.Batc
 			w.Header().Set("Connection", "keep-alive")
 			w.Header().Set("X-Accel-Buffering", "no")
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintf(w, "event: complete\ndata: %s\n\n", data)
+			_, _ = fmt.Fprintf(w, "event: complete\ndata: %s\n\n", data)
 			if f, ok := w.(http.Flusher); ok {
 				f.Flush()
 			}
@@ -201,7 +201,7 @@ func handleBatchProgress(runner *services.BatchJobRunner, batchStore *store.Batc
 		_ = rc.SetWriteDeadline(time.Time{})
 
 		// Send initial connected event.
-		fmt.Fprintf(w, "event: connected\ndata: {\"job_id\":\"%s\"}\n\n", id)
+		_, _ = fmt.Fprintf(w, "event: connected\ndata: {\"job_id\":\"%s\"}\n\n", id)
 		flusher.Flush()
 
 		ctx := e.Request.Context()
@@ -217,7 +217,7 @@ func handleBatchProgress(runner *services.BatchJobRunner, batchStore *store.Batc
 			case <-ctx.Done():
 				return nil
 			case <-keepalive.C:
-				fmt.Fprint(w, ": ping\n\n")
+				_, _ = fmt.Fprint(w, ": ping\n\n")
 				flusher.Flush()
 			case progress, open := <-ch:
 				if !open {
@@ -229,7 +229,7 @@ func handleBatchProgress(runner *services.BatchJobRunner, batchStore *store.Batc
 				if progress.JobStatus == "completed" || progress.JobStatus == "cancelled" {
 					eventName = "complete"
 				}
-				fmt.Fprintf(w, "id: %d\nevent: %s\ndata: %s\n\n", eventID, eventName, data)
+				_, _ = fmt.Fprintf(w, "id: %d\nevent: %s\ndata: %s\n\n", eventID, eventName, data)
 				flusher.Flush()
 
 				if eventName == "complete" {

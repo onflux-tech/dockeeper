@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"log/slog"
 
-	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // GRPCClient wraps a gRPC connection to the manager and exposes typed service
@@ -65,11 +66,11 @@ func (c *GRPCClient) Close() error {
 	return nil
 }
 
-func (c *GRPCClient) Enrollment() agentpb.AgentEnrollmentServiceClient  { return c.enrollment }
-func (c *GRPCClient) Metrics() agentpb.AgentMetricsServiceClient        { return c.metrics }
-func (c *GRPCClient) Discovery() agentpb.AgentDiscoveryServiceClient    { return c.discovery }
-func (c *GRPCClient) Commands() agentpb.AgentCommandsServiceClient      { return c.commands }
-func (c *GRPCClient) Exec() agentpb.AgentExecServiceClient              { return c.exec }
-func (c *GRPCClient) Logs() agentpb.AgentLogsServiceClient              { return c.logs }
-func (c *GRPCClient) Traefik() agentpb.AgentTraefikServiceClient        { return c.traefik }
-func (c *GRPCClient) Conn() *grpc.ClientConn                            { return c.conn }
+func (c *GRPCClient) Enrollment() agentpb.AgentEnrollmentServiceClient { return c.enrollment }
+func (c *GRPCClient) Metrics() agentpb.AgentMetricsServiceClient       { return c.metrics }
+func (c *GRPCClient) Discovery() agentpb.AgentDiscoveryServiceClient   { return c.discovery }
+func (c *GRPCClient) Commands() agentpb.AgentCommandsServiceClient     { return c.commands }
+func (c *GRPCClient) Exec() agentpb.AgentExecServiceClient             { return c.exec }
+func (c *GRPCClient) Logs() agentpb.AgentLogsServiceClient             { return c.logs }
+func (c *GRPCClient) Traefik() agentpb.AgentTraefikServiceClient       { return c.traefik }
+func (c *GRPCClient) Conn() *grpc.ClientConn                           { return c.conn }

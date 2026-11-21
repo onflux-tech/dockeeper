@@ -80,7 +80,7 @@ func (c *DiscordChannel) Send(ctx context.Context, msg AlertMessage) error {
 	if err != nil {
 		return fmt.Errorf("discord send: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
 		return fmt.Errorf("discord: rate limited (429), retry later")

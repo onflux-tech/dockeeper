@@ -96,11 +96,11 @@ func init() {
 		}
 
 		retentionDefaults := map[string]string{
-			"retention_raw_hours":             "168",  // 7 days
-			"retention_hourly_days":           "30",
-			"retention_daily_days":            "365",
-			"retention_events_days":           "30",
-			"retention_audit_logs_days":       "90",
+			"retention_raw_hours":              "168", // 7 days
+			"retention_hourly_days":            "30",
+			"retention_daily_days":             "365",
+			"retention_events_days":            "30",
+			"retention_audit_logs_days":        "90",
 			"retention_notification_logs_days": "30",
 		}
 

@@ -103,7 +103,7 @@ func (s *SelfUpdateService) CheckForUpdate() (*Release, bool, error) {
 	if err != nil {
 		return nil, false, fmt.Errorf("github api: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 304 Not Modified — return cached
 	if resp.StatusCode == http.StatusNotModified {
@@ -160,9 +160,9 @@ func (s *SelfUpdateService) ExecuteManagerUpdate(release *Release) error {
 	}
 
 	s.bus.Publish(events.Event{
-		Type:     events.SystemUpdateStarted,
-		Severity: events.SeverityInfo,
-		Details:  map[string]any{"version": release.TagName},
+		Type:      events.SystemUpdateStarted,
+		Severity:  events.SeverityInfo,
+		Details:   map[string]any{"version": release.TagName},
 		Timestamp: time.Now(),
 	})
 
@@ -180,13 +180,13 @@ func (s *SelfUpdateService) ExecuteManagerUpdate(release *Release) error {
 		return fmt.Errorf("create temp: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	if _, err := tmpFile.Write(binaryData); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("write temp: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Atomic binary replacement
 	currentBinary, err := os.Executable()
@@ -213,9 +213,9 @@ func (s *SelfUpdateService) ExecuteManagerUpdate(release *Release) error {
 	}
 
 	s.bus.Publish(events.Event{
-		Type:     events.SystemUpdateCompleted,
-		Severity: events.SeverityInfo,
-		Details:  map[string]any{"version": release.TagName},
+		Type:      events.SystemUpdateCompleted,
+		Severity:  events.SeverityInfo,
+		Details:   map[string]any{"version": release.TagName},
 		Timestamp: time.Now(),
 	})
 
@@ -321,7 +321,7 @@ func (s *SelfUpdateService) DownloadAsset(release *Release, component, goos, goa
 	if err != nil {
 		return nil, "", fmt.Errorf("download: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, "", fmt.Errorf("download returned %d", resp.StatusCode)
@@ -364,7 +364,7 @@ func extractFromTarGz(archive []byte, targetName string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gzip open: %w", err)
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 
 	tr := tar.NewReader(gr)
 	for {
@@ -445,7 +445,7 @@ func (s *SelfUpdateService) verifyChecksum(checksumAsset *ReleaseAsset, binaryNa
 		slog.Warn("could not download checksum file, skipping verification", "error", err)
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -494,10 +494,10 @@ func isNewerVersion(current, latest string) bool {
 	for i := 0; i < 3; i++ {
 		var c, l int
 		if i < len(cParts) {
-			fmt.Sscanf(cParts[i], "%d", &c)
+			_, _ = fmt.Sscanf(cParts[i], "%d", &c)
 		}
 		if i < len(lParts) {
-			fmt.Sscanf(lParts[i], "%d", &l)
+			_, _ = fmt.Sscanf(lParts[i], "%d", &l)
 		}
 		if l > c {
 			return true

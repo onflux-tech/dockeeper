@@ -17,9 +17,9 @@ import (
 // ResourceStore handles upsert and sync operations for containers, images,
 // networks and volumes in PocketBase.
 type ResourceStore struct {
-	app       core.App
-	bus       *events.Bus
-	debounce  sync.Map // key: serverID+containerID → time.Time
+	app         core.App
+	bus         *events.Bus
+	debounce    sync.Map // key: serverID+containerID → time.Time
 	debounceTTL time.Duration
 }
 
@@ -202,8 +202,8 @@ func (s *ResourceStore) checkDesiredStateDrift(rec *core.Record, actualState, se
 	}
 
 	s.publishContainerEvent(events.ContainerStateDrift, serverID, serverName, rec.Id, rec.GetString("name"), map[string]any{
-		"desired_state":  desired,
-		"actual_state":   actualState,
+		"desired_state":   desired,
+		"actual_state":    actualState,
 		"compose_project": rec.GetString("compose_project"),
 	})
 }

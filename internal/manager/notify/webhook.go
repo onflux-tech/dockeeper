@@ -80,7 +80,7 @@ func (c *WebhookChannel) Send(ctx context.Context, msg AlertMessage) error {
 	if err != nil {
 		return fmt.Errorf("webhook send: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("webhook: status %d", resp.StatusCode)

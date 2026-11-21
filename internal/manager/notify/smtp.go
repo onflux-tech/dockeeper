@@ -97,7 +97,7 @@ func (c *SMTPChannel) sendImplicitTLS(addr string, auth smtp.Auth, message strin
 	if err != nil {
 		return fmt.Errorf("smtp new client: %w", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	if auth != nil {
 		if err := client.Auth(auth); err != nil {

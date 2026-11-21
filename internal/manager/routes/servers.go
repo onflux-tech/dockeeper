@@ -263,7 +263,7 @@ func downloadAgentFromGitHub(arch, cacheDir, filename string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("github api: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("github api returned %d", resp.StatusCode)
@@ -300,7 +300,7 @@ func downloadAgentFromGitHub(arch, cacheDir, filename string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("download: %w", err)
 	}
-	defer dlResp.Body.Close()
+	defer func() { _ = dlResp.Body.Close() }()
 
 	if dlResp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("download returned %d", dlResp.StatusCode)
@@ -317,13 +317,13 @@ func downloadAgentFromGitHub(arch, cacheDir, filename string) (string, error) {
 		return "", fmt.Errorf("create temp: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	if _, err := io.Copy(tmpFile, dlResp.Body); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return "", fmt.Errorf("write download: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Extract the binary from the tar.gz archive.
 	extractedPath, err := extractAgentBinary(tmpPath, cacheDir, filename)
@@ -341,7 +341,7 @@ func extractAgentBinary(archivePath, destDir, destFilename string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Use tar command for simplicity (available on Alpine/Linux).
 	destPath := filepath.Join(destDir, destFilename)
@@ -349,7 +349,7 @@ func extractAgentBinary(archivePath, destDir, destFilename string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("create extract dir: %w", err)
 	}
-	defer os.RemoveAll(tmpExtractDir)
+	defer func() { _ = os.RemoveAll(tmpExtractDir) }()
 
 	// Extract using command line tar (handles both gzip and tar).
 	cmd := exec.Command("tar", "-xzf", archivePath, "-C", tmpExtractDir)

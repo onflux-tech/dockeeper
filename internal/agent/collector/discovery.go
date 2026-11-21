@@ -19,12 +19,12 @@ const discoveryInterval = 30 * time.Second
 // data from the orchestrator and sends it to the manager via gRPC. It uses
 // hash-based diff detection to avoid sending unchanged data.
 type DiscoveryCollector struct {
-	orch          OrchestratorClient
-	client        agentpb.AgentDiscoveryServiceClient
-	serverID      string
-	logger        *slog.Logger
-	hashes        map[string][32]byte
-	onServerGone  func() // called when the manager reports the server was deleted
+	orch         OrchestratorClient
+	client       agentpb.AgentDiscoveryServiceClient
+	serverID     string
+	logger       *slog.Logger
+	hashes       map[string][32]byte
+	onServerGone func() // called when the manager reports the server was deleted
 }
 
 // NewDiscoveryCollector creates a new discovery collector.

@@ -27,11 +27,23 @@ type scheduledCheck struct {
 
 type checkHeap []*scheduledCheck
 
-func (h checkHeap) Len() int            { return len(h) }
-func (h checkHeap) Less(i, j int) bool   { return h[i].nextCheck.Before(h[j].nextCheck) }
-func (h checkHeap) Swap(i, j int)        { h[i], h[j] = h[j], h[i]; h[i].index = i; h[j].index = j }
-func (h *checkHeap) Push(x any)          { item := x.(*scheduledCheck); item.index = len(*h); *h = append(*h, item) }
-func (h *checkHeap) Pop() any            { old := *h; n := len(old); item := old[n-1]; old[n-1] = nil; item.index = -1; *h = old[:n-1]; return item }
+func (h checkHeap) Len() int           { return len(h) }
+func (h checkHeap) Less(i, j int) bool { return h[i].nextCheck.Before(h[j].nextCheck) }
+func (h checkHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i]; h[i].index = i; h[j].index = j }
+func (h *checkHeap) Push(x any) {
+	item := x.(*scheduledCheck)
+	item.index = len(*h)
+	*h = append(*h, item)
+}
+func (h *checkHeap) Pop() any {
+	old := *h
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil
+	item.index = -1
+	*h = old[:n-1]
+	return item
+}
 
 // ── HealthScheduler ─────────────────────────────────────
 
@@ -290,10 +302,6 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 
 func (s *HealthScheduler) handleSuccess(rec *core.Record, checkID string) {
 	consecutiveFailures := rec.GetInt("consecutive_failures")
-	successThreshold := rec.GetInt("success_threshold")
-	if successThreshold <= 0 {
-		successThreshold = 1
-	}
 	currentStatus := rec.GetString("status")
 
 	now := time.Now().UTC()
@@ -482,4 +490,3 @@ func (s *HealthScheduler) reschedule(checkID string, intervalSeconds int) {
 		nextCheck: nextCheck,
 	})
 }
-

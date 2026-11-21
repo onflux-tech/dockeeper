@@ -371,8 +371,8 @@ func (s *CascadeService) ExecuteServerCascade(serverID, userID, ip string) (*Cas
 
 	// 10. Create audit log entry.
 	s.audit.Log("server.cascade_delete", userID, "server", serverID, ip, map[string]any{
-		"server_name":        serverName,
-		"deleted_resources":  result.DeletedResources,
+		"server_name":       serverName,
+		"deleted_resources": result.DeletedResources,
 	})
 
 	return result, nil
@@ -561,10 +561,10 @@ func (s *CascadeService) ExecuteContainerCascade(
 
 	// 8. Create audit log entry.
 	s.audit.Log("container.cascade_delete", userID, "container", containerID, ip, map[string]any{
-		"container_name":     containerName,
-		"server_id":          serverID,
-		"options":            result.Options,
-		"deleted_resources":  result.DeletedResources,
+		"container_name":      containerName,
+		"server_id":           serverID,
+		"options":             result.Options,
+		"deleted_resources":   result.DeletedResources,
 		"protected_resources": result.ProtectedResources,
 	})
 

@@ -27,8 +27,8 @@ type PortMapping struct {
 
 // VolumeMount defines a volume or bind mount for the container.
 type VolumeMount struct {
-	Source   string `json:"source"`    // host path or volume name
-	Target   string `json:"target"`    // container path
+	Source   string `json:"source"` // host path or volume name
+	Target   string `json:"target"` // container path
 	ReadOnly bool   `json:"read_only"`
 }
 
@@ -42,8 +42,8 @@ type ContainerSpec struct {
 	Volumes       []VolumeMount     `json:"volumes"`
 	Labels        map[string]string `json:"labels"`
 	Network       string            `json:"network"`
-	CPULimit      float64           `json:"cpu_limit"`       // in CPU cores (e.g. 0.5 = half a core)
-	MemLimit      int64             `json:"mem_limit"`        // in bytes
+	CPULimit      float64           `json:"cpu_limit"` // in CPU cores (e.g. 0.5 = half a core)
+	MemLimit      int64             `json:"mem_limit"` // in bytes
 	PidsLimit     int64             `json:"pids_limit"`
 	RestartPolicy string            `json:"restart_policy"`
 	Command       []string          `json:"command"`

@@ -202,7 +202,7 @@ func BuildRegistryAuth(username, password string) string {
 
 // LogProgress is a helper that reads Docker pull progress and reports back.
 func LogProgress(reader io.ReadCloser, report func(msg string, progress float32)) {
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	dec := json.NewDecoder(reader)
 	for {
 		var evt struct {

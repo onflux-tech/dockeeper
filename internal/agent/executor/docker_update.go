@@ -14,8 +14,8 @@ import (
 
 // ResourceUpdate holds the resource limits to apply via Docker ContainerUpdate.
 type ResourceUpdate struct {
-	CPULimit  float64 `json:"cpu_limit"`  // CPU cores (e.g. 0.5)
-	MemLimit  int64   `json:"mem_limit"`  // bytes
+	CPULimit  float64 `json:"cpu_limit"` // CPU cores (e.g. 0.5)
+	MemLimit  int64   `json:"mem_limit"` // bytes
 	PidsLimit int64   `json:"pids_limit"`
 }
 
@@ -236,11 +236,11 @@ func (e *DockerExecutor) RecreateWithEnv(ctx context.Context, containerID string
 		endpoints := make(map[string]*network.EndpointSettings)
 		for name, ep := range inspect.NetworkSettings.Networks {
 			endpoints[name] = &network.EndpointSettings{
-				IPAMConfig:  ep.IPAMConfig,
-				Aliases:     ep.Aliases,
-				NetworkID:   ep.NetworkID,
-				IPAddress:   ep.IPAddress,
-				MacAddress:  ep.MacAddress,
+				IPAMConfig: ep.IPAMConfig,
+				Aliases:    ep.Aliases,
+				NetworkID:  ep.NetworkID,
+				IPAddress:  ep.IPAddress,
+				MacAddress: ep.MacAddress,
 			}
 		}
 		networkConfig = &network.NetworkingConfig{EndpointsConfig: endpoints}

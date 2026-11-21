@@ -161,7 +161,7 @@ func (r *RegistryAdapter) getDockerHubToken(ctx context.Context, repository stri
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("auth failed: %s", resp.Status)
@@ -190,7 +190,7 @@ func (r *RegistryAdapter) getChallengeToken(ctx context.Context, ref ImageRef, h
 	if err != nil {
 		return "", err
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		return "", nil // no auth needed
@@ -225,7 +225,7 @@ func (r *RegistryAdapter) getChallengeToken(ctx context.Context, ref ImageRef, h
 	if err != nil {
 		return "", err
 	}
-	defer tokenResp.Body.Close()
+	defer func() { _ = tokenResp.Body.Close() }()
 
 	if tokenResp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("token request failed: %s", tokenResp.Status)
@@ -265,8 +265,8 @@ func (r *RegistryAdapter) headManifest(ctx context.Context, ref ImageRef, token 
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
+	defer func() { _ = resp.Body.Close() }()
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	if resp.StatusCode == http.StatusNotFound {
 		return "", fmt.Errorf("image not found")

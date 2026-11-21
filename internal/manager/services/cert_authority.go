@@ -27,16 +27,16 @@ const (
 
 	caValidity     = 10 * 365 * 24 * time.Hour // 10 years
 	serverValidity = 5 * 365 * 24 * time.Hour  // 5 years
-	agentValidity  = 365 * 24 * time.Hour       // 1 year
+	agentValidity  = 365 * 24 * time.Hour      // 1 year
 )
 
 // CertAuthority manages an internal PKI for mTLS between manager and agents.
 type CertAuthority struct {
-	caCert       *x509.Certificate
-	caKey        crypto.PrivateKey
-	caCertPEM    []byte
-	dir          string
-	extraSANs    []string // additional DNS names / IPs for the server cert
+	caCert    *x509.Certificate
+	caKey     crypto.PrivateKey
+	caCertPEM []byte
+	dir       string
+	extraSANs []string // additional DNS names / IPs for the server cert
 }
 
 // NewCertAuthority loads or creates the internal CA inside dataDir/certs/.
@@ -243,8 +243,8 @@ func (ca *CertAuthority) ensureServerCert() error {
 			return nil
 		}
 		// SANs changed — remove old cert to regenerate.
-		os.Remove(certPath)
-		os.Remove(keyPath)
+		_ = os.Remove(certPath)
+		_ = os.Remove(keyPath)
 	}
 
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

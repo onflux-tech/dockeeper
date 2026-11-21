@@ -124,20 +124,20 @@ func (d *DockerClient) inspectContainer(ctx context.Context, id string) (*agentp
 	name := strings.TrimPrefix(inspect.Name, "/")
 
 	return &agentpb.ContainerInfo{
-		ContainerId:   inspect.ID[:12],
-		Name:          name,
-		Image:         inspect.Config.Image,
-		Status:        inspect.State.Status,
-		PortsJson:     portsJSON,
-		LabelsJson:    labelsJSON,
-		VolumesJson:   mountsJSON,
-		NetworksJson:  networksJSON,
+		ContainerId:    inspect.ID[:12],
+		Name:           name,
+		Image:          inspect.Config.Image,
+		Status:         inspect.State.Status,
+		PortsJson:      portsJSON,
+		LabelsJson:     labelsJSON,
+		VolumesJson:    mountsJSON,
+		NetworksJson:   networksJSON,
 		ResourceLimits: limits,
-		RestartPolicy: restartPolicy,
-		Command:       strings.Join(inspect.Config.Cmd, " "),
-		Entrypoint:    strings.Join(inspect.Config.Entrypoint, " "),
-		CreatedAt:     createdAt,
-		StartedAt:     startedAt,
+		RestartPolicy:  restartPolicy,
+		Command:        strings.Join(inspect.Config.Cmd, " "),
+		Entrypoint:     strings.Join(inspect.Config.Entrypoint, " "),
+		CreatedAt:      createdAt,
+		StartedAt:      startedAt,
 	}, nil
 }
 

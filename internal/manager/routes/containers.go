@@ -111,7 +111,7 @@ func handleRemove(svc *services.ContainerService, cascadeSvc *services.CascadeSe
 		}
 
 		var body struct {
-			Params         map[string]string                `json:"params"`
+			Params         map[string]string                 `json:"params"`
 			CascadeOptions *services.ContainerCascadeOptions `json:"cascade_options"`
 		}
 		_ = e.BindBody(&body)
@@ -169,7 +169,7 @@ func handleRemove(svc *services.ContainerService, cascadeSvc *services.CascadeSe
 		}
 		if cascadeResult != nil {
 			resp["cascade"] = map[string]any{
-				"deleted_resources":  cascadeResult.DeletedResources,
+				"deleted_resources":   cascadeResult.DeletedResources,
 				"protected_resources": cascadeResult.ProtectedResources,
 			}
 		}

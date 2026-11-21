@@ -360,8 +360,8 @@ func now() string {
 
 // Sentinel errors for batch operations.
 var (
-	ErrBatchTooLarge     = &BatchError{"batch exceeds maximum size of 500 items"}
-	ErrBatchEmpty        = &BatchError{"no valid containers found for batch"}
+	ErrBatchTooLarge      = &BatchError{"batch exceeds maximum size of 500 items"}
+	ErrBatchEmpty         = &BatchError{"no valid containers found for batch"}
 	ErrBatchInvalidAction = &BatchError{"invalid batch action"}
 )
 

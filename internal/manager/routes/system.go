@@ -92,7 +92,7 @@ func handleManagerUpdate(svc *services.SelfUpdateService) func(e *core.RequestEv
 
 		sendSSE := func(event string, data any) {
 			raw, _ := json.Marshal(data)
-			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, raw)
+			_, _ = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, raw)
 			flusher.Flush()
 		}
 
@@ -164,7 +164,7 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 
 		sendSSE := func(event string, data any) {
 			raw, _ := json.Marshal(data)
-			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, raw)
+			_, _ = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, raw)
 			flusher.Flush()
 		}
 

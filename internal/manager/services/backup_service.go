@@ -381,4 +381,3 @@ func (s *BackupService) deleteS3Object(ctx context.Context, s3Cfg *s3Settings, b
 
 	return client.RemoveObject(ctx, bucket, key, minio.RemoveObjectOptions{})
 }
-

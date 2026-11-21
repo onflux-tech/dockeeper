@@ -62,7 +62,7 @@ func (c *WhatsAppChannel) Send(ctx context.Context, msg AlertMessage) error {
 	if err != nil {
 		return fmt.Errorf("whatsapp send: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("whatsapp: status %d", resp.StatusCode)

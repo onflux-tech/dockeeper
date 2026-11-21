@@ -50,7 +50,7 @@ func (c *Client) handleExecStreamSignal(ctx context.Context, signal *agentpb.Ope
 		c.sendExecExit(stream, sessionID, -1)
 		return
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	// Create Docker exec session with timeout.
 	execCtx, cancel := context.WithTimeout(ctx, execTimeout)

@@ -66,7 +66,7 @@ func (c *NtfyChannel) Send(ctx context.Context, msg AlertMessage) error {
 	if err != nil {
 		return fmt.Errorf("ntfy send: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("ntfy: status %d", resp.StatusCode)

@@ -203,10 +203,10 @@ func handleTriggerRestore(e *core.RequestEvent, backupSvc *services.BackupServic
 	}
 
 	if err := backupSvc.TriggerRestore(e.Request.Context(), recordID, userID, e.RealIP()); err != nil {
-		switch {
-		case err == services.ErrServerNotFound:
+		switch err {
+		case services.ErrServerNotFound:
 			return e.JSON(http.StatusNotFound, map[string]string{"error": "server not found"})
-		case err == services.ErrServerOffline:
+		case services.ErrServerOffline:
 			return e.JSON(http.StatusServiceUnavailable, map[string]string{"error": "server offline"})
 		default:
 			return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

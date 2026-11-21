@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	updateSagaTimeout       = 5 * time.Minute
-	healthVerifyTimeout     = 60 * time.Second
-	maxConcurrentPerHost    = 2
-	defaultCheckSchedule    = "0 */6 * * *"
+	updateSagaTimeout    = 5 * time.Minute
+	healthVerifyTimeout  = 60 * time.Second
+	maxConcurrentPerHost = 2
+	defaultCheckSchedule = "0 */6 * * *"
 )
 
 // UpdateOrchestrator coordinates container image update checks and saga execution.

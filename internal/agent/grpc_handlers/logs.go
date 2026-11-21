@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/onflux-tech/dockeeper/internal/agent/collector"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // LogsHandler implements AgentLogsServiceServer on the agent side.

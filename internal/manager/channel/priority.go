@@ -15,9 +15,9 @@ const (
 )
 
 type queueItem struct {
-	cmd      *agentpb.ChannelCommand
-	index    int
-	seqNo    uint64 // insertion order for FIFO within same priority
+	cmd   *agentpb.ChannelCommand
+	index int
+	seqNo uint64 // insertion order for FIFO within same priority
 }
 
 type priorityHeap []*queueItem
