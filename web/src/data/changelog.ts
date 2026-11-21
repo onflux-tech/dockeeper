@@ -66,6 +66,12 @@ export const changelog: ChangelogEntry[] = [
 				description:
 					"Published a bilingual README with configuration, security and network requirements, under the MIT license.",
 			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Replaced the raster logo with the vector Hull D mark, favicon and README banner.",
+			},
 		],
 	},
 	{
