@@ -6,7 +6,8 @@ import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
-import { ContainerTable, type SortKey, type SortDir } from "@/components/server/container-table";
+import { ContainerTable } from "@/components/server/container-table";
+import { CONTAINER_SORT_FIELDS, type SortDir, type SortKey } from "@/lib/container-constants";
 import { statusOptions } from "@/lib/container-constants";
 import { ServerFilterSelect } from "@/components/server-filter-select";
 import { TagFilterSelect } from "@/components/tag-filter-select";
@@ -21,16 +22,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { containsFilter, andFilters } from "@/lib/pocketbase-filters";
-
-const SORT_MAP: Record<SortKey, string> = {
-	name: "name",
-	status: "status",
-	image: "image",
-	created: "container_created_at",
-	uptime: "started_at",
-	cpu: "current_cpu",
-	ram: "current_ram",
-};
 
 export default function ContainersPage() {
 	const { filters, setSearch, setPage, setPerPage, setSort, setCustom, pbOptions } = useListFilters(
@@ -76,12 +67,12 @@ export default function ContainersPage() {
 	const rawSort = filters.sort;
 	const isDesc = rawSort.startsWith("-");
 	const sortField = isDesc ? rawSort.slice(1) : rawSort;
-	const sortKey = (Object.entries(SORT_MAP).find(([, v]) => v === sortField)?.[0] ??
+	const sortKey = (Object.entries(CONTAINER_SORT_FIELDS).find(([, v]) => v === sortField)?.[0] ??
 		"created") as SortKey;
 	const sortDir: SortDir = isDesc ? "desc" : "asc";
 
 	const handleSortChange = (key: SortKey) => {
-		const pbField = SORT_MAP[key];
+		const pbField = CONTAINER_SORT_FIELDS[key];
 		if (sortKey === key) {
 			setSort(sortDir === "asc" ? `-${pbField}` : pbField);
 		} else {
