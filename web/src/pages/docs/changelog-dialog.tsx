@@ -7,7 +7,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { changelog } from "@/data/changelog";
+import { changelog, sortChangelog } from "@/data/changelog";
 import type { ChangeArea, ChangeType, ChangelogChange } from "@/types/docs";
 
 // ── Type badge config (pill style, no emojis) ──────────────────────────────
@@ -86,13 +86,7 @@ function formatDate(dateStr: string) {
 // ── Component ───────────────────────────────────────────────────────────────
 
 export function ChangelogDialog({ open, onOpenChange }: ChangelogDialogProps) {
-	const sorted = useMemo(
-		() =>
-			[...changelog].sort((a, b) =>
-				b.version.localeCompare(a.version, undefined, { numeric: true }),
-			),
-		[],
-	);
+	const sorted = useMemo(() => sortChangelog(changelog), []);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,7 +119,7 @@ export function ChangelogDialog({ open, onOpenChange }: ChangelogDialogProps) {
 										{/* Left column — version meta */}
 										<div className="sm:sticky sm:top-0 sm:self-start">
 											<span className="inline-block rounded-md border border-border bg-muted/50 px-2.5 py-1 font-mono text-sm font-semibold">
-												v{entry.version}
+												{entry.version === "Unreleased" ? "Unreleased" : `v${entry.version}`}
 											</span>
 											<time className="mt-1.5 block text-xs text-muted-foreground">
 												{formatDate(entry.date)}

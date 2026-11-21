@@ -2,24 +2,38 @@
 
 Receita real do projeto. A receita histórica fica em configuração local.
 
+## Versão
+
+- A tag git é a fonte única: `vX.Y.Z`.
+- O changelog tem `Unreleased` no topo e as versões lançadas abaixo.
+- Antes de 1.0.0: breaking ou feature → minor; correção → patch. `1.0.0` só com decisão explícita de estabilidade.
+- O rascunho do 1.0.0 fica em `docs/releases/1.0.0.md`; ele só entra em `web/src/data/changelog.ts` quando a tag `v1.0.0` for criada.
+- O código usa `dev` como default; `make` injeta o `git describe` e o GoReleaser injeta a versão da tag via ldflags.
+
 ## Fluxo atual
 
-1. Trabalhe e commite em `develop`. Commit local é autorizado; push remoto exige ask/question e sim explícito.
-2. Promova para `production`:
+1. Rode `make changelog-draft` e cure o `Unreleased` em `web/src/data/changelog.ts`.
+2. Rode `make verify` e registre a saída; aqui o `changelog-check` valida o estado com o `Unreleased`.
+3. Escolha `x.y.z` pela política acima.
+4. Promova `Unreleased` para `x.y.z` com a data do release.
+5. Commite o changelog: `chore(release): x.y.z`.
+6. Rode `make release-check VERSION=x.y.z`; ele exige árvore limpa, tag ainda inexistente e entrada para a versão.
+7. Promova para `production`:
    ```bash
    git checkout production
    git merge develop
-   git push origin production
    ```
    O histórico é linear; como `develop` e `production` nunca divergiram, o merge é fast-forward.
-3. Crie a tag anotada:
+8. Crie a tag anotada:
    ```bash
    git tag -a vX.Y.Z -m "Dockeeper vX.Y.Z"
-   git push origin vX.Y.Z
    ```
-   O push da tag é remoto: peça permissão antes.
-4. O push da tag dispara `.github/workflows/release.yml` e o GoReleaser.
-5. Atualize `web/src/data/changelog.ts` no mesmo ciclo do release.
+9. Peça autorização e faça o push do branch e da tag juntos:
+   ```bash
+   git push origin production vX.Y.Z
+   ```
+   O hook `pre-push` roda `make verify` com a tag já presente, então o `changelog-check` passa.
+10. Acompanhe o workflow de release e confira assets e imagens GHCR.
 
 ## O que o GoReleaser faz
 
@@ -32,29 +46,22 @@ Receita real do projeto. A receita histórica fica em configuração local.
 
 ## O que o CI faz e não faz
 
-- `ci.yml`: em push para `develop`/`production`, apenas chama o build Docker e publica `:develop`/`:latest`.
-- `release.yml`: em tag `v*.*.*`, roda GoReleaser.
-- Nenhum dos dois roda `go test`, `golangci-lint`, `npm run lint`, `npm test`, `buf lint` ou smoke test. O CI verde não prova qualidade.
-- Rode `make verify-fast` antes de commitar e `make verify` antes de release. O hook `pre-push` executa `make pre-push` (`verify`); o CI roda os mesmos gates em push e pull request.
-
-## Versão
-
-Há três fontes concorrentes:
-
-- Tag: `v0.8.0` (última).
-- Changelog do produto: `web/src/data/changelog.ts` em `1.0.0`.
-- Código/Makefile: `0.1.0`; `web/package.json` em `0.0.0`.
-
-A tag é a fonte de verdade até decisão contrária. O release deve atualizar o changelog para a mesma versão; os defaults `0.1.0`/`0.0.0` são placeholders e não devem ser citados como versão do produto.
+- `.github/workflows/ci.yml`: `quality` em push e pull request; `docker` só em push e depende de `quality`.
+- `.github/workflows/release.yml`: em tag `v*.*.*`, roda GoReleaser.
+- O release não roda `make verify` sozinho. O gate é o CI/pre-push; não crie tag com o CI vermelho.
+- O hook `pre-push` executa `make pre-push` (`verify`); o CI roda os mesmos gates em push e pull request.
+- `make changelog-check` valida a estrutura do changelog contra as tags; ele roda no `make verify` e no CI.
 
 ## Checklist de release
 
-- [ ] `make verify` executado e saída registrada (ou baseline conhecido documentado).
-- [ ] `web/src/data/changelog.ts` atualizado com a versão e a data.
-- [ ] `develop` limpo e commits revisados.
-- [ ] Promoção para `production` feita.
+- [ ] `make changelog-draft` executado e `Unreleased` curado.
+- [ ] `make verify` verde e saída registrada antes da promoção.
+- [ ] `Unreleased` promovido para `x.y.z` com a data.
+- [ ] Commit do changelog feito.
+- [ ] `make release-check VERSION=x.y.z` verde.
+- [ ] `production` promovida.
 - [ ] Tag anotada `vX.Y.Z` criada.
-- [ ] Push da tag autorizado pelo usuário.
+- [ ] Push de `production` e da tag autorizado pelo usuário.
 - [ ] Workflow de release verde.
 - [ ] Assets e imagens GHCR conferidos (`manager` e `agent`, amd64/arm64).
 - [ ] Release notes revisadas no GitHub.

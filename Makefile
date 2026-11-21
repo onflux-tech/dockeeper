@@ -1,4 +1,4 @@
-VERSION ?= 0.1.0
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LDFLAGS  = -ldflags "-s -w -X main.Version=$(VERSION) -X main.Commit=$(COMMIT)"
 
@@ -10,7 +10,7 @@ GO_PACKAGES = ./cmd/... ./internal/... ./migrations/...
 .PHONY: all build-manager build-agent build lint format test clean dev dev-manager dev-agent dev-all run proto-gen \
         dev-web build-web lint-web format-web test-web \
         build-all build-agent-dist docker-build docker-push release verify verify-fast pre-push hooks tools \
-        harness-sync harness-check harness-test
+        harness-sync harness-check harness-test changelog-draft changelog-check release-check
 
 all: build
 
@@ -49,7 +49,16 @@ harness-check:
 	node scripts/harness.mjs check
 
 harness-test:
-	node --test scripts/harness.test.mjs
+	node --test scripts/harness.test.mjs scripts/changelog.test.mjs
+
+changelog-draft:
+	node scripts/changelog.mjs draft
+
+changelog-check:
+	node scripts/changelog.mjs check
+
+release-check:
+	node scripts/changelog.mjs check --version "$(VERSION)"
 
 format-check:
 	@files="$$(gofmt -l cmd internal migrations)"; if [ -n "$$files" ]; then echo "gofmt needed:"; echo "$$files"; exit 1; fi
@@ -99,9 +108,9 @@ test-web:
 
 ## ── Verificação ──────────────────────────────────────
 
-verify: format-check harness-check harness-test build-web lint test lint-web format-web test-web
+verify: format-check harness-check harness-test changelog-check build-web lint test lint-web format-web test-web
 
-verify-fast: format-check harness-check test lint-web
+verify-fast: format-check harness-check changelog-check build-web test lint-web
 
 pre-push: verify
 

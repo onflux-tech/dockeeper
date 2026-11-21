@@ -8,7 +8,7 @@ Fonte única, portas geradas e checagem de drift para Claude Code e OpenCode.
 | Portas | `.claude/{skills,commands,agents}/` e `.opencode/{skills,commands,agents}/` |
 | Gerador | `make harness-sync` (`scripts/harness.mjs sync`) |
 | Checagem | `make harness-check` (`scripts/harness.mjs check`) |
-| Testes do gerador | `make harness-test` (`node --test scripts/harness.test.mjs`) |
+| Testes do gerador e do changelog | `make harness-test` (`node --test scripts/harness.test.mjs scripts/changelog.test.mjs`) |
 
 ## Regra de ouro
 
@@ -52,6 +52,7 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | Data | Mudança |
 |---|---|
 | 2026-11-20 | Fonte única em `harness/`, `make harness-sync`/`harness-check` e skill `dockeeper-close`. |
+| 2026-11-20 | Changelog com `Unreleased` e versões tagueadas, `changelog-draft`/`changelog-check`/`release-check` e gate de changelog no `verify` e no CI. |
 
 ## Cadência
 

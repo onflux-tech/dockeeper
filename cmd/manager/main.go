@@ -16,7 +16,7 @@ import (
 
 // Version and Commit are set via LDFLAGS at build time.
 var (
-	Version = "0.1.0"
+	Version = "dev"
 	Commit  = "unknown"
 )
 

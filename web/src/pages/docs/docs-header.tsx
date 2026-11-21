@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { DockeeperLogo } from "@/components/dockeeper-logo";
 import { useAuthStore } from "@/stores/auth-store";
-import { changelog } from "@/data/changelog";
+import { latestRelease } from "@/data/changelog";
 import { AuthorizeBadge, AuthorizeDialog } from "./playground-auth";
 
 interface DocsHeaderProps {
@@ -15,7 +15,7 @@ interface DocsHeaderProps {
 	historySlot?: React.ReactNode;
 }
 
-const latestVersion = changelog.length > 0 ? changelog[0].version : "0.0.0";
+const latestVersion = latestRelease?.version ?? "0.0.0";
 
 export function DocsHeader({ onMobileToggle, onChangelogOpen, historySlot }: DocsHeaderProps) {
 	const [authOpen, setAuthOpen] = useState(false);

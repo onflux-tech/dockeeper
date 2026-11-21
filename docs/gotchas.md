@@ -74,11 +74,11 @@ Falhas que não aparecem no CI atual. Leia antes de mexer na área correspondent
 **Causa:** PocketBase tem `_superusers` e o projeto tem `dk_users` (JWT 15 min). O middleware trata os dois.
 **Correção:** verifique `IsSuperuser()` antes de assumir a coleção; não presuma que todo auth é `dk_users`.
 
-## Versão tripla
+## Versão divergente
 
 **Sintoma:** usuário, changelog e binário discordam da versão.
-**Causa:** tag `v0.8.0`, `web/src/data/changelog.ts` em `1.0.0`, `Makefile`/`cmd/*` em `0.1.0`.
-**Correção:** a tag é a fonte de verdade; atualize o changelog no release e não confie nos defaults `0.1.0`/`0.0.0`.
+**Causa:** já houve tag `v0.8.0`, changelog `1.0.0` e `Makefile`/`cmd/*` em `0.1.0`.
+**Correção:** a tag é a fonte única; o changelog só lista versões tagueadas e o `Unreleased`. O código usa `dev` e recebe a versão por ldflags. Rode `make changelog-check` antes do commit.
 
 ## `go test ./...` pegando `web/node_modules`
 
@@ -88,7 +88,7 @@ Falhas que não aparecem no CI atual. Leia antes de mexer na área correspondent
 
 ## Gates atuais
 
-`make verify` roda `format-check`, `build-web`, `lint`, `test`, `lint-web`, `format-web` e `test-web`. O hook `pre-push` chama `make pre-push`, que roda `verify`; não há push remoto sem esses gates. O CI roda o job `quality` em push e pull request.
+`make verify` roda `format-check`, `harness-check`, `harness-test`, `changelog-check`, `build-web`, `lint`, `test`, `lint-web`, `format-web` e `test-web`. O hook `pre-push` chama `make pre-push`, que roda `verify`; não há push remoto sem esses gates. O CI roda o job `quality` em push e pull request; `docker` só em push e depende de `quality`.
 
 ## Arquivos locais que não são versionados
 

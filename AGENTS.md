@@ -68,12 +68,15 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 | `make format-web` | `prettier --check` em `web/` |
 | `make harness-sync` | fonte de `harness/` → portas em `.claude/` e `.opencode/` |
 | `make harness-check` | falha em drift, referência quebrada, doc fora do índice ou migration fora de sequência |
-| `make harness-test` | testa o gerador e o check |
+| `make harness-test` | testa o gerador, o check e o changelog |
+| `make changelog-draft` | rascunho de `git log` desde a última tag para curar o `Unreleased` |
+| `make changelog-check` | falha em versão fantasma, duplicada ou data inválida |
+| `make release-check VERSION=x.y.z` | falha se a tag existe, falta entrada no changelog ou a árvore está suja |
 | `make tools` | instala `goimports` |
 | `make hooks` | instala o hook `pre-push` |
 | `make pre-push` | `verify`, chamado pelo hook |
-| `make verify` | format-check, build-web, lint, test, lint-web, format-web, test-web |
-| `make verify-fast` | format-check, test, lint-web |
+| `make verify` | format-check, harness-check, harness-test, changelog-check, build-web, lint, test, lint-web, format-web, test-web |
+| `make verify-fast` | format-check, harness-check, changelog-check, build-web, test, lint-web |
 | `make release` | `goreleaser release --clean` |
 
 ## Baseline
@@ -84,7 +87,7 @@ Medido em 20/11/2026:
 - `golangci-lint` em `cmd`, `internal` e `migrations`: **0 issues**.
 - `npm run lint` passa.
 - `npm run format:check` passa.
-- `npm test` passa: 18 testes.
+- `npm test` passa: 21 testes.
 - O CI roda `quality` em push e pull request (format, lint, build, test) e o build Docker apenas em push.
 
 Não declare “pronto” sem colar a saída real. Uma falha só é pré-existente com prova de baseline (`git stash`, rodar, restaurar).
@@ -94,8 +97,8 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 - Branches `develop` e `production`; histórico linear, sem merge commit e sem PR no histórico. O fluxo é commit em `develop`, promoção para `production` e tag anotada `vX.Y.Z`.
 - Commits em inglês, conventional commits, tipo minúsculo, escopo por área e imperativo. Sem co-autoria.
 - Release: push da tag dispara GoReleaser, que builda linux/darwin amd64/arm64, archives, checksums, changelog e imagens GHCR multi-arch.
-- O changelog do produto fica em `web/src/data/changelog.ts`.
-- Versão tripla: tag `v0.8.0`, changelog `1.0.0`, código `0.1.0`. A tag é a fonte de verdade até decisão contrária.
+- O changelog do produto fica em `web/src/data/changelog.ts`, com `Unreleased` no topo e só versões já tagueadas abaixo.
+- A tag é a fonte única de versão. O código usa `dev` como default e o GoReleaser injeta a tag via ldflags. Antes de 1.0.0: breaking ou feature → minor; correção → patch.
 - Receita completa, o que o CI não faz e o deploy futuro: `docs/release.md`.
 
 ## E2E
