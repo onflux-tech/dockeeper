@@ -8,6 +8,7 @@ const AppLayout = lazy(() => import("@/components/layout/app-layout"));
 const LoginPage = lazy(() => import("@/pages/login"));
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 const ServersPage = lazy(() => import("@/pages/servers"));
+const AppsPage = lazy(() => import("@/pages/apps"));
 const ServerDetailPage = lazy(() => import("@/pages/server-detail"));
 const ContainersPage = lazy(() => import("@/pages/containers"));
 const ContainerCreatePage = lazy(() => import("@/pages/container-create"));
@@ -73,6 +74,14 @@ function App() {
 								element={
 									<Cap cap="servers.view">
 										<ServerDetailPage />
+									</Cap>
+								}
+							/>
+							<Route
+								path="apps"
+								element={
+									<Cap cap="host.apps.view">
+										<AppsPage />
 									</Cap>
 								}
 							/>
