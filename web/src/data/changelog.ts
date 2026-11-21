@@ -12,6 +12,18 @@ export const changelog: ChangelogEntry[] = [
 				type: "fix",
 				area: "manager",
 				description:
+					"Raised text field limits so long compose YAML keeps saving after the PocketBase upgrade.",
+			},
+			{
+				type: "fix",
+				area: "infra",
+				description:
+					"Updated Go and npm dependencies to patched versions, clearing the open Dependabot alerts.",
+			},
+			{
+				type: "fix",
+				area: "manager",
+				description:
 					"Removed images, networks and volumes that disappear from the host so stale records no longer linger.",
 			},
 			{

@@ -80,6 +80,12 @@ Falhas que não aparecem no CI atual. Leia antes de mexer na área correspondent
 **Causa:** `changed()` grava o hash do payload antes do RPC; se o primeiro report falha (manager fora do ar, por exemplo), o payload estável nunca é reenviado.
 **Correção:** `handleRPCError` apaga o hash do recurso para forçar o retry no próximo ciclo.
 
+## PocketBase 0.39 limita texto a 5000 por padrão
+
+**Sintoma:** import de compose falha com `Must be no more than 5000 character(s)` depois do upgrade do PocketBase.
+**Causa:** a partir da 0.39, `TextField` com `Max: 0` passa a valer 5000.
+**Correção:** a migration 15 sobe os campos existentes para 1.000.000; campo novo de texto longo precisa de `Max` explícito.
+
 ## Versão divergente
 
 **Sintoma:** usuário, changelog e binário discordam da versão.
