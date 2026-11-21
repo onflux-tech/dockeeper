@@ -10,7 +10,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { formatBytes } from "@/lib/format";
+import { formatCpuMem } from "@/lib/format";
 import type { HostAppRecord } from "@/types/pocketbase";
 
 interface HostAppsTableProps {
@@ -90,8 +90,7 @@ export function HostAppsTable({ apps, isLoading }: HostAppsTableProps) {
 									{app.ports?.length ? app.ports.join(", ") : "—"}
 								</TableCell>
 								<TableCell className="text-xs tabular-nums text-muted-foreground">
-									{app.cpu_percent > 0 ? `${app.cpu_percent.toFixed(1)}%` : "—"}
-									{app.mem_bytes > 0 ? ` · ${formatBytes(app.mem_bytes)}` : ""}
+									{formatCpuMem(app.cpu_percent, app.mem_bytes)}
 								</TableCell>
 								<TableCell className="text-xs text-muted-foreground">—</TableCell>
 								<TableCell>

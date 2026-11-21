@@ -25,7 +25,7 @@ import { PerPageSelector } from "@/components/ui/per-page-selector";
 import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
-import { formatBytes, formatUptime } from "@/lib/format";
+import { formatCpuMem, formatUptime } from "@/lib/format";
 import type { HostAppRecord } from "@/types/pocketbase";
 
 const sourceOptions = ["all", "systemd", "pm2", "process"];
@@ -186,8 +186,7 @@ export default function AppsPage() {
 										{app.ports?.length ? app.ports.join(", ") : "—"}
 									</TableCell>
 									<TableCell className="text-xs tabular-nums text-muted-foreground">
-										{app.cpu_percent > 0 ? `${app.cpu_percent.toFixed(1)}%` : "—"}
-										{app.mem_bytes > 0 ? ` · ${formatBytes(app.mem_bytes)}` : ""}
+										{formatCpuMem(app.cpu_percent, app.mem_bytes)}
 									</TableCell>
 									<TableCell className="text-xs text-muted-foreground">—</TableCell>
 									<TableCell className="text-xs tabular-nums text-muted-foreground">

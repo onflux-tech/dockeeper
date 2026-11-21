@@ -13,6 +13,13 @@ export function formatBytes(bytes: number, decimals = 1): string {
 	return `${val.toFixed(decimals)} ${units[i]}`;
 }
 
+export function formatCpuMem(cpuPercent: number, memBytes: number): string {
+	const cpu = cpuPercent > 0 ? `${cpuPercent.toFixed(1)}%` : "";
+	const mem = memBytes > 0 ? formatBytes(memBytes) : "";
+	if (cpu && mem) return `${cpu} · ${mem}`;
+	return cpu || mem || "—";
+}
+
 /**
  * Format seconds into human-readable uptime (e.g. "108d 12h" or "3h 45m").
  */
