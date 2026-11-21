@@ -64,7 +64,7 @@ func TestTraefikDetectsOnFirstCycle(t *testing.T) {
 			ContainerId: "traefik-id",
 			Image:       "traefik:v3",
 			Name:        "traefik",
-			PortsJson:   `[{"container_port":8080,"host_port":8088}]`,
+			PortsJson:   `[{"IP":"0.0.0.0","PrivatePort":8080,"PublicPort":8088,"Type":"tcp"}]`,
 		},
 	}}
 	client := &fakeTraefikClient{}
@@ -76,6 +76,25 @@ func TestTraefikDetectsOnFirstCycle(t *testing.T) {
 	assert.Equal(t, 1, orch.listSummaries)
 	assert.Equal(t, 0, orch.listContainers)
 	assert.Empty(t, orch.inspectCalls)
+	assert.Equal(t, "http://127.0.0.1:8088", tc.apiURL)
+}
+
+func TestTraefikDetectsImageCaseInsensitive(t *testing.T) {
+	gate := &ConnectionGate{conn: &fakeGRPCConn{state: connectivity.Idle}}
+
+	orch := &fakeOrchestrator{summaries: []*agentpb.ContainerInfo{
+		{
+			ContainerId: "traefik-id",
+			Image:       "ghcr.io/acme/TRAEFIK:v3",
+			Name:        "traefik",
+			PortsJson:   `[{"IP":"0.0.0.0","PrivatePort":8080,"PublicPort":8088,"Type":"tcp"}]`,
+		},
+	}}
+	tc := NewTraefikCollector(orch, &fakeTraefikClient{}, "srv1", gate, discardLogger())
+
+	tc.detectTraefik(context.Background())
+
+	assert.True(t, tc.detected)
 	assert.Equal(t, "http://127.0.0.1:8088", tc.apiURL)
 }
 

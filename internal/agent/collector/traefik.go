@@ -175,10 +175,10 @@ func (t *TraefikCollector) resolveAPIURL(ctx context.Context, c *agentpb.Contain
 		var ports []map[string]any
 		if err := json.Unmarshal([]byte(portsJSON), &ports); err == nil {
 			for _, p := range ports {
-				cp, _ := p["container_port"].(float64)
-				hp, _ := p["host_port"].(float64)
-				if int(cp) == 8080 && int(hp) != 0 {
-					return fmt.Sprintf("http://127.0.0.1:%d", int(hp))
+				privatePort, _ := p["PrivatePort"].(float64)
+				publicPort, _ := p["PublicPort"].(float64)
+				if int(privatePort) == 8080 && int(publicPort) != 0 {
+					return fmt.Sprintf("http://127.0.0.1:%d", int(publicPort))
 				}
 			}
 		}
@@ -204,6 +204,7 @@ func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID s
 
 	info, err := t.orch.InspectContainer(ctx, containerID)
 	if err != nil {
+		t.logger.Debug("traefik: inspect container failed", "container", containerID, "error", err)
 		return ""
 	}
 
@@ -211,6 +212,7 @@ func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID s
 		IPAddress string `json:"IPAddress"`
 	}
 	if err := json.Unmarshal([]byte(info.GetNetworksJson()), &networks); err != nil {
+		t.logger.Debug("traefik: parse container networks failed", "container", containerID, "error", err)
 		return ""
 	}
 
