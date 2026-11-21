@@ -10,6 +10,12 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 - Comunicação em pt-BR. Código, commits, nomes de arquivo e mensagens de ferramenta ficam em inglês.
 - Comece pelo resultado; não narre ação rotineira.
 
+## Execução
+
+- Antes de implementar uma mudança aprovada que envolva código, pergunte via ask/question como executar: **Nativo (Recomendado)** na sessão principal ou **Subagent-driven** (superpowers).
+- O padrão é nativo. Subagents entram quando a mudança for paralelizável ou isolável por arquivo.
+- A escolha não altera os gates: `make verify-fast` antes de commitar e `make verify` antes de push ou release.
+
 ## Autorizações
 
 - **Commit local:** sempre autorizado ao fim de uma task, sem pedir.
