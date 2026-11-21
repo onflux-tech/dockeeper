@@ -10,6 +10,12 @@ export const changelog: ChangelogEntry[] = [
 		changes: [
 			{
 				type: "fix",
+				area: "manager",
+				description:
+					"Removed images, networks and volumes that disappear from the host so stale records no longer linger.",
+			},
+			{
+				type: "fix",
 				area: "agent",
 				description:
 					"Fixed discovery so containers and images are resent after a failed report instead of staying stale.",

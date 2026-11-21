@@ -235,7 +235,9 @@ func (s *ResourceStore) UpsertImages(serverID string, images []*agentpb.ImageInf
 	}
 
 	count := 0
+	reported := make(map[string]bool, len(images))
 	for _, img := range images {
+		reported[img.GetImageId()] = true
 		rec, err := s.findByKey(constants.CollImages, serverID, "image_id", img.GetImageId())
 		if err != nil {
 			rec = core.NewRecord(col)
@@ -257,6 +259,7 @@ func (s *ResourceStore) UpsertImages(serverID string, images []*agentpb.ImageInf
 		}
 		count++
 	}
+	s.deleteStale(constants.CollImages, serverID, "image_id", reported)
 	return count, nil
 }
 
@@ -268,7 +271,9 @@ func (s *ResourceStore) UpsertNetworks(serverID string, networks []*agentpb.Netw
 	}
 
 	count := 0
+	reported := make(map[string]bool, len(networks))
 	for _, n := range networks {
+		reported[n.GetNetworkId()] = true
 		rec, err := s.findByKey(constants.CollNetworks, serverID, "network_id", n.GetNetworkId())
 		if err != nil {
 			rec = core.NewRecord(col)
@@ -290,6 +295,7 @@ func (s *ResourceStore) UpsertNetworks(serverID string, networks []*agentpb.Netw
 		}
 		count++
 	}
+	s.deleteStale(constants.CollNetworks, serverID, "network_id", reported)
 	return count, nil
 }
 
@@ -301,7 +307,9 @@ func (s *ResourceStore) UpsertVolumes(serverID string, volumes []*agentpb.Volume
 	}
 
 	count := 0
+	reported := make(map[string]bool, len(volumes))
 	for _, v := range volumes {
+		reported[v.GetName()] = true
 		rec, err := s.findByKey(constants.CollVolumes, serverID, "name", v.GetName())
 		if err != nil {
 			rec = core.NewRecord(col)
@@ -321,6 +329,7 @@ func (s *ResourceStore) UpsertVolumes(serverID string, volumes []*agentpb.Volume
 		}
 		count++
 	}
+	s.deleteStale(constants.CollVolumes, serverID, "name", reported)
 	return count, nil
 }
 
@@ -374,6 +383,32 @@ func (s *ResourceStore) markRemovedContainers(serverID, serverName string, repor
 				}
 			}
 		}
+	}
+}
+
+// deleteStale deletes records for a server whose key is absent from the report.
+func (s *ResourceStore) deleteStale(collection, serverID, keyField string, reported map[string]bool) {
+	records, err := s.app.FindRecordsByFilter(
+		collection,
+		"server = {:sid}",
+		"", 0, 0,
+		map[string]any{"sid": serverID},
+	)
+	if err != nil {
+		slog.Error("failed to list resources for removal check", "collection", collection, "server_id", serverID, "error", err)
+		return
+	}
+
+	for _, r := range records {
+		key := r.GetString(keyField)
+		if reported[key] {
+			continue
+		}
+		if err := s.app.Delete(r); err != nil {
+			slog.Error("failed to delete removed resource", "collection", collection, "server_id", serverID, "key", key, "error", err)
+			continue
+		}
+		slog.Info("resource deleted (no longer on host)", "collection", collection, "server_id", serverID, "key", key)
 	}
 }
 
