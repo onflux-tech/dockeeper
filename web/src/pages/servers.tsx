@@ -369,7 +369,7 @@ export default function ServersPage() {
 											{server.os && server.arch ? `${server.os}/${server.arch}` : "—"}
 											{server.agent_version && (
 												<span className="ml-1 text-muted-foreground/70">
-													v{server.agent_version}
+													{server.agent_version}
 												</span>
 											)}
 										</TableCell>

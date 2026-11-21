@@ -257,6 +257,18 @@ export function useUpdateCheck() {
 	});
 }
 
+export function useLatestRelease() {
+	return useQuery<UpdateCheckResult, Error>({
+		queryKey: ["latest-release"],
+		queryFn: () =>
+			fetchJson("/api/dk/system/update/check", {
+				headers: authHeaders(),
+			}),
+		staleTime: 5 * 60_000,
+		retry: false,
+	});
+}
+
 export function useSystemVersion() {
 	return useQuery<{ version: string }>({
 		queryKey: ["system-version"],
