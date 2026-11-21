@@ -73,5 +73,8 @@ func gateBackoff(attempt int) time.Duration {
 	}
 	jitter := d * gateJitterFrac * (2*rand.Float64() - 1)
 	d += jitter
+	if d > float64(gateBackoffMax) {
+		d = float64(gateBackoffMax)
+	}
 	return time.Duration(d)
 }

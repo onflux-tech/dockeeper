@@ -97,8 +97,9 @@ func (t *TraefikCollector) collect(ctx context.Context) {
 
 	// Re-check for Traefik every 5 minutes.
 	if time.Since(t.checkedAt) > 5*time.Minute {
-		t.detectTraefik(ctx)
-		t.checkedAt = time.Now()
+		if t.detectTraefik(ctx) {
+			t.checkedAt = time.Now()
+		}
 	}
 
 	if !t.detected {
@@ -138,15 +139,15 @@ func (t *TraefikCollector) collect(ctx context.Context) {
 }
 
 // detectTraefik checks if a Traefik container is running via Docker.
-func (t *TraefikCollector) detectTraefik(ctx context.Context) {
+func (t *TraefikCollector) detectTraefik(ctx context.Context) bool {
 	if !t.gate.Allow() {
-		return
+		return false
 	}
 
 	containers, err := t.orch.ListContainers(ctx)
 	if err != nil {
 		t.detected = false
-		return
+		return true
 	}
 
 	for _, c := range containers {
@@ -156,12 +157,13 @@ func (t *TraefikCollector) detectTraefik(ctx context.Context) {
 			// Try to find the API port from container info.
 			t.apiURL = t.resolveAPIURL(c)
 			t.logger.Info("traefik: detected", "container", c.GetName(), "api", t.apiURL)
-			return
+			return true
 		}
 	}
 
 	t.detected = false
 	t.apiURL = ""
+	return true
 }
 
 // resolveAPIURL attempts to determine the Traefik API URL from container ports.

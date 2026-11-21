@@ -40,6 +40,12 @@ func TestConnectionGateBacksOffExponentially(t *testing.T) {
 	assert.True(t, gate.retryAt.After(first))
 }
 
+func TestConnectionGateBackoffCap(t *testing.T) {
+	for attempt := 1; attempt <= 40; attempt++ {
+		assert.LessOrEqual(t, gateBackoff(attempt), gateBackoffMax)
+	}
+}
+
 func TestConnectionGateResetsOnSuccess(t *testing.T) {
 	gate := &ConnectionGate{conn: &fakeGRPCConn{state: connectivity.TransientFailure}}
 

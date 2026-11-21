@@ -52,6 +52,20 @@ func TestCollectContainersSkipsStatsWhenStreamFails(t *testing.T) {
 	assert.Equal(t, 1, gate.attempt)
 }
 
+func TestCollectContainersDoesNotFailGateOnDockerError(t *testing.T) {
+	gate := &ConnectionGate{conn: &fakeGRPCConn{state: connectivity.Ready}}
+	client := &fakeMetricsClient{stream: &fakeContainerMetricsStream{}}
+	orch := &fakeOrchestrator{statsErr: errors.New("docker unavailable")}
+	m := NewMetricsCollector(orch, client, "srv1", gate, discardLogger())
+
+	m.collectContainers(context.Background())
+
+	assert.Equal(t, 1, orch.listStats)
+	assert.Equal(t, 1, client.opens)
+	assert.Empty(t, client.stream.sent)
+	assert.Equal(t, 0, gate.attempt)
+}
+
 func TestCollectContainersResetsGateOnSuccess(t *testing.T) {
 	gate := &ConnectionGate{conn: &fakeGRPCConn{state: connectivity.Ready}}
 	gate.Failed()

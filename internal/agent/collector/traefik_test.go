@@ -2,7 +2,10 @@ package collector
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/connectivity"
@@ -22,6 +25,28 @@ func TestTraefikSkipsDockerWhenDisconnected(t *testing.T) {
 	assert.Equal(t, 0, orch.listContainers)
 
 	tc.collect(context.Background())
+	assert.Equal(t, 0, orch.listContainers)
+	assert.Equal(t, 0, client.reports)
+}
+
+func TestTraefikSkipsRoutesWhenDisconnected(t *testing.T) {
+	gate := &ConnectionGate{conn: &fakeGRPCConn{state: connectivity.TransientFailure}}
+	gate.Failed()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("[]"))
+	}))
+	defer srv.Close()
+
+	orch := &fakeOrchestrator{}
+	client := &fakeTraefikClient{}
+	tc := NewTraefikCollector(orch, client, "srv1", gate, discardLogger())
+	tc.detected = true
+	tc.checkedAt = time.Now()
+	tc.apiURL = srv.URL
+
+	tc.collect(context.Background())
+
 	assert.Equal(t, 0, orch.listContainers)
 	assert.Equal(t, 0, client.reports)
 }
