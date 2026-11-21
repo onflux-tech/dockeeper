@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
 	AreaChart,
 	Area,
@@ -15,6 +15,14 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { buildDiskOptions, diskUsage, latestPartitions } from "@/lib/disk-view";
 import type { MetricPoint } from "@/hooks/use-server-metrics";
 import type { TimeRange } from "@/hooks/use-server-metrics";
 import type { ValueType } from "recharts/types/component/DefaultTooltipContent";
@@ -23,6 +31,27 @@ interface MetricsChartsProps {
 	data: MetricPoint[];
 	range: TimeRange;
 	isLoading: boolean;
+	serverId: string;
+}
+
+const DISK_VIEW_KEY = "dockeeper.disk-view";
+
+function readDiskView(serverId: string): string {
+	if (!serverId) return "all";
+	try {
+		return localStorage.getItem(`${DISK_VIEW_KEY}.${serverId}`) ?? "all";
+	} catch {
+		return "all";
+	}
+}
+
+function writeDiskView(serverId: string, view: string) {
+	if (!serverId) return;
+	try {
+		localStorage.setItem(`${DISK_VIEW_KEY}.${serverId}`, view);
+	} catch {
+		return;
+	}
 }
 
 function formatTime(ts: string, range: TimeRange): string {
@@ -107,7 +136,9 @@ const TEMP_COLORS = [
 	"var(--color-destructive)",
 ];
 
-export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
+export function MetricsCharts({ data, range, isLoading, serverId }: MetricsChartsProps) {
+	const [diskView, setDiskView] = useState(() => readDiskView(serverId));
+
 	// Extract unique temperature sensor names and pick the most relevant ones.
 	// Group by hardware prefix (coretemp → max across cores, etc.) to avoid clutter.
 	const tempSensors = useMemo(() => {
@@ -174,9 +205,9 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 
 	// Build latest partitions data for bar chart.
 	const partitionData = useMemo(() => {
-		const last = data[data.length - 1];
-		if (!last?.partitions?.length) return [];
-		return last.partitions.map((p) => ({
+		const latest = latestPartitions(data);
+		if (!latest.length) return [];
+		return latest.map((p) => ({
 			name: p.mountpoint,
 			device: p.device,
 			used: p.percent,
@@ -185,6 +216,23 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 			available: p.available,
 		}));
 	}, [data]);
+
+	const diskOptions = useMemo(() => buildDiskOptions(latestPartitions(data)), [data]);
+
+	const activeDiskView = diskOptions.some((option) => option.value === diskView) ? diskView : "all";
+
+	function handleDiskViewChange(value: string) {
+		setDiskView(value);
+		writeDiskView(serverId, value);
+	}
+
+	const latestDisk = useMemo(() => {
+		for (let i = data.length - 1; i >= 0; i--) {
+			const usage = diskUsage(data[i], activeDiskView);
+			if (usage && usage.total > 0) return usage;
+		}
+		return null;
+	}, [data, activeDiskView]);
 
 	if (isLoading && data.length === 0) {
 		return (
@@ -196,10 +244,14 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 		);
 	}
 
-	const chartData = data.map((p) => ({
-		...p,
-		time: formatTime(p.timestamp, range),
-	}));
+	const chartData = data.map((p) => {
+		const usage = diskUsage(p, activeDiskView);
+		return {
+			...p,
+			time: formatTime(p.timestamp, range),
+			disk_used: usage?.used ?? null,
+		};
+	});
 
 	// Check if we have data for the new charts.
 	const hasDiskIO = data.some((p) => p.disk_io_read > 0 || p.disk_io_write > 0);
@@ -286,9 +338,33 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 			{/* Disk Usage */}
 			<Card>
 				<CardHeader className="pb-2">
-					<CardTitle className="text-sm">Disk Usage</CardTitle>
+					<div className="flex items-center justify-between gap-2">
+						<CardTitle className="text-sm">Disk Usage</CardTitle>
+						{diskOptions.length > 1 && (
+							<div className="w-[170px]">
+								<Select value={activeDiskView} onValueChange={handleDiskViewChange}>
+									<SelectTrigger className="text-xs" aria-label="Disk view">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{diskOptions.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												{option.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						)}
+					</div>
 				</CardHeader>
 				<CardContent>
+					{latestDisk && (
+						<p className="mb-2 text-xs text-muted-foreground">
+							{formatBytes(latestDisk.used)} / {formatBytes(latestDisk.total)} ·{" "}
+							{Math.round((latestDisk.used / latestDisk.total) * 100)}%
+						</p>
+					)}
 					<ResponsiveContainer width="100%" height={200}>
 						<AreaChart data={chartData}>
 							<CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -312,6 +388,7 @@ export function MetricsCharts({ data, range, isLoading }: MetricsChartsProps) {
 								fill="url(#fillDisk)"
 								strokeWidth={1.5}
 								isAnimationActive={false}
+								connectNulls
 								name="Disk Used"
 							/>
 						</AreaChart>
