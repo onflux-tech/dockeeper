@@ -15,6 +15,12 @@ describe("isVersionNewer", () => {
 		expect(isVersionNewer("v0.10.0", "v0.9.0")).toBe(false);
 	});
 
+	it("reads the numeric prefix of build suffixes like the backend", () => {
+		expect(isVersionNewer("v0.9.0-dirty", "v0.9.0")).toBe(false);
+		expect(isVersionNewer("v0.8.0-dirty", "v0.9.0")).toBe(true);
+		expect(isVersionNewer("v0.9.0-1-gabc123", "v0.9.0")).toBe(false);
+	});
+
 	it("does not offer a release when the latest version is empty", () => {
 		expect(isVersionNewer("v0.9.0", "")).toBe(false);
 	});

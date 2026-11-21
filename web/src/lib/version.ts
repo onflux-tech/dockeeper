@@ -23,5 +23,5 @@ export function isVersionNewer(current: string, latest: string): boolean {
 function isSemver(value: string): boolean {
 	const parts = value.split(".");
 	if (parts.length < 2 || parts.length > 3) return false;
-	return parts.every((part) => part !== "" && /^\d+$/.test(part));
+	return parts.every((part) => part !== "" && /^[+-]?\d/.test(part));
 }

@@ -86,11 +86,9 @@ export default function ServerDetailPage() {
 				? "destructive"
 				: "secondary";
 
-	const agentNeedsUpdate = Boolean(
-		server?.agent_version &&
-		releaseInfo?.latest &&
-		isVersionNewer(server.agent_version, releaseInfo.latest),
-	);
+	const agentNeedsUpdate = releaseInfo?.latest
+		? isVersionNewer(server?.agent_version ?? "", releaseInfo.latest)
+		: false;
 
 	return (
 		<div className="flex flex-col gap-6">
