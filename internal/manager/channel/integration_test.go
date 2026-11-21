@@ -251,7 +251,7 @@ func TestExecStreamDetachReattach(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// --- Phase 1: First connection ---
+	// --- First connection ---
 	stream1 := newMockCommandStream(ctx)
 	ch1 := NewAgentChannel("srv-exec", stream1)
 
@@ -285,7 +285,7 @@ func TestExecStreamDetachReattach(t *testing.T) {
 		t.Fatal("channel 1 should be done")
 	}
 
-	// --- Phase 2: Reconnection with new channel ---
+	// --- Reconnection with new channel ---
 	stream2 := newMockCommandStream(ctx)
 	ch2 := NewAgentChannel("srv-exec", stream2)
 	defer ch2.Close()
