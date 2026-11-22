@@ -98,6 +98,9 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		hostActionSvc := services.NewHostActionService(app, services.NewRegistryHostDispatcher(registry), eventBus, auditStore)
 		routes.RegisterHostAppRoutes(se, hostActionSvc, rbac)
 
+		// Proxy inventory.
+		routes.RegisterProxyRoutes(se, app, rbac)
+
 		// Subscribe EventBus handlers (now that stores are available).
 		eventBus.Subscribe(events.NewDBHandler(app))
 		eventBus.Subscribe(events.NewAuditHandler(auditStore))

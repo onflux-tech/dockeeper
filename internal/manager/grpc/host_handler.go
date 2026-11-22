@@ -21,6 +21,7 @@ type HostHandler struct {
 	app          core.App
 	store        *store.HostStore
 	connectivity *store.ConnectivityStore
+	proxies      *store.ProxyStore
 	bus          *events.Bus
 }
 
@@ -29,6 +30,7 @@ func NewHostHandler(app core.App, hostStore *store.HostStore, bus *events.Bus) *
 		app:          app,
 		store:        hostStore,
 		connectivity: store.NewConnectivityStore(app),
+		proxies:      store.NewProxyStore(app),
 		bus:          bus,
 	}
 }
