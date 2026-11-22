@@ -33,6 +33,7 @@ const EVENT_TYPES = [
 	{ value: "server.offline", label: "Server Offline" },
 	{ value: "server.enrolled", label: "Server Enrolled" },
 	{ value: "server.removed", label: "Server Removed" },
+	{ value: "server.host_inventory", label: "Server Host Inventory" },
 	{ value: "compose.deployed", label: "Compose Deployed" },
 	{ value: "compose.stopped", label: "Compose Stopped" },
 	{ value: "compose.failed", label: "Compose Failed" },

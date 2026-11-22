@@ -98,13 +98,13 @@ func TestHostStoreUpsertAndPrune(t *testing.T) {
 	app, serverID := newHostTestApp(t)
 	store := NewHostStore(app)
 
-	count, err := store.UpsertInventory(serverID, []*agentpb.HostApp{
+	count, _, err := store.UpsertInventory(serverID, []*agentpb.HostApp{
 		{Source: "systemd", Name: "nginx.service", Status: "running"},
 	}, nil, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, count)
 
-	_, err = store.UpsertInventory(serverID, []*agentpb.HostApp{
+	_, _, err = store.UpsertInventory(serverID, []*agentpb.HostApp{
 		{Source: "pm2", Name: "api", Status: "running"},
 	}, nil, nil)
 	require.NoError(t, err)
@@ -119,12 +119,12 @@ func TestHostStoreUpsertsProcesses(t *testing.T) {
 	app, serverID := newHostTestApp(t)
 	store := NewHostStore(app)
 
-	_, err := store.UpsertInventory(serverID, nil, []*agentpb.HostProcess{
+	_, _, err := store.UpsertInventory(serverID, nil, []*agentpb.HostProcess{
 		{Pid: 4122, Name: "node", CpuPercent: 8.2, MemBytes: 1024, Threads: 11},
 	}, nil)
 	require.NoError(t, err)
 
-	_, err = store.UpsertInventory(serverID, nil, []*agentpb.HostProcess{
+	_, _, err = store.UpsertInventory(serverID, nil, []*agentpb.HostProcess{
 		{Pid: 4122, Name: "node", CpuPercent: 12.5, MemBytes: 2048, Threads: 12},
 	}, nil)
 	require.NoError(t, err)
@@ -133,6 +133,13 @@ func TestHostStoreUpsertsProcesses(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
 	require.Equal(t, 12.5, rows[0].GetFloat("cpu_percent"))
+
+	_, _, err = store.UpsertInventory(serverID, nil, nil, nil)
+	require.NoError(t, err)
+
+	rows, err = app.FindRecordsByFilter("host_processes", "server = {:server}", "", 0, 0, map[string]any{"server": serverID})
+	require.NoError(t, err)
+	require.Empty(t, rows)
 }
 
 func TestHostStoreSaveAppMetrics(t *testing.T) {

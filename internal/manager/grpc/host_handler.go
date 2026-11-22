@@ -35,7 +35,7 @@ func (h *HostHandler) ReportHostInventory(ctx context.Context, req *agentpb.Repo
 		return nil, status.Error(codes.Unauthenticated, "mTLS identity required")
 	}
 
-	count, err := h.store.UpsertInventory(serverID, req.GetApps(), req.GetProcesses(), req.GetPorts())
+	count, changed, err := h.store.UpsertInventory(serverID, req.GetApps(), req.GetProcesses(), req.GetPorts())
 	if err != nil {
 		slog.Error("host inventory: persist failed", "server_id", serverID, "error", err)
 		return nil, status.Error(codes.Internal, "failed to persist host inventory")
@@ -51,6 +51,16 @@ func (h *HostHandler) ReportHostInventory(ctx context.Context, req *agentpb.Repo
 
 	if !hooks.UpdateHeartbeat(h.app, h.bus, serverID) {
 		return nil, status.Error(codes.NotFound, "server not found")
+	}
+
+	if changed && h.bus != nil {
+		h.bus.Publish(events.Event{
+			Type:      events.ServerHostInventory,
+			Severity:  events.SeverityFor(events.ServerHostInventory),
+			ServerID:  serverID,
+			Details:   map[string]any{"apps": count, "processes": len(req.GetProcesses())},
+			Timestamp: time.Now().UTC(),
+		})
 	}
 
 	return &agentpb.ReportHostInventoryResponse{

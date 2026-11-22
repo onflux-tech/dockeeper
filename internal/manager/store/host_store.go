@@ -20,17 +20,18 @@ func NewHostStore(app core.App) *HostStore {
 	return &HostStore{app: app}
 }
 
-func (s *HostStore) UpsertInventory(serverID string, apps []*agentpb.HostApp, processes []*agentpb.HostProcess, ports []*agentpb.HostPort) (int, error) {
+func (s *HostStore) UpsertInventory(serverID string, apps []*agentpb.HostApp, processes []*agentpb.HostProcess, ports []*agentpb.HostPort) (int, bool, error) {
 	var count int
+	var changed bool
 	err := s.app.RunInTransaction(func(txApp core.App) error {
 		var err error
-		count, err = upsertHostInventory(txApp, serverID, apps, processes, ports)
+		count, changed, err = upsertHostInventory(txApp, serverID, apps, processes, ports)
 		return err
 	})
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
-	return count, nil
+	return count, changed, nil
 }
 
 func (s *HostStore) SaveAppMetrics(serverID string, apps []*agentpb.HostApp, at time.Time) error {
@@ -64,14 +65,32 @@ func (s *HostStore) SaveAppMetrics(serverID string, apps []*agentpb.HostApp, at 
 	return nil
 }
 
-func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp, processes []*agentpb.HostProcess, ports []*agentpb.HostPort) (int, error) {
+func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp, processes []*agentpb.HostProcess, ports []*agentpb.HostPort) (int, bool, error) {
 	appsCol, err := app.FindCachedCollectionByNameOrId(constants.CollHostApps)
 	if err != nil {
-		return 0, fmt.Errorf("find collection %s: %w", constants.CollHostApps, err)
+		return 0, false, fmt.Errorf("find collection %s: %w", constants.CollHostApps, err)
 	}
 	processesCol, err := app.FindCachedCollectionByNameOrId(constants.CollHostProcesses)
 	if err != nil {
-		return 0, fmt.Errorf("find collection %s: %w", constants.CollHostProcesses, err)
+		return 0, false, fmt.Errorf("find collection %s: %w", constants.CollHostProcesses, err)
+	}
+
+	existingApps, err := app.FindRecordsByFilter(constants.CollHostApps, "server = {:server}", "", 0, 0, map[string]any{"server": serverID})
+	if err != nil {
+		return 0, false, fmt.Errorf("list existing host apps: %w", err)
+	}
+	appsByKey := make(map[string]*core.Record, len(existingApps))
+	for _, record := range existingApps {
+		appsByKey[hostAppKey(record.GetString("source"), record.GetString("name"))] = record
+	}
+
+	existingProcesses, err := app.FindRecordsByFilter(constants.CollHostProcesses, "server = {:server}", "", 0, 0, map[string]any{"server": serverID})
+	if err != nil {
+		return 0, false, fmt.Errorf("list existing host processes: %w", err)
+	}
+	processesByPID := make(map[string]*core.Record, len(existingProcesses))
+	for _, record := range existingProcesses {
+		processesByPID[strconv.Itoa(record.GetInt("pid"))] = record
 	}
 
 	portsByPID := make(map[uint32][]uint32, len(ports))
@@ -81,21 +100,25 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 
 	now := time.Now().UTC()
 	seenApps := make(map[string]bool, len(apps))
+	changed := false
 	count := 0
 
 	for _, hostApp := range apps {
-		key := hostApp.GetSource() + "\x00" + hostApp.GetName()
+		key := hostAppKey(hostApp.GetSource(), hostApp.GetName())
 		if seenApps[key] {
 			continue
 		}
 		seenApps[key] = true
 
-		record, err := findHostApp(app, serverID, hostApp.GetSource(), hostApp.GetName())
-		if err != nil {
+		record, exists := appsByKey[key]
+		if !exists {
 			record = core.NewRecord(appsCol)
 			record.Set("server", serverID)
 			record.Set("source", hostApp.GetSource())
 			record.Set("name", hostApp.GetName())
+			changed = true
+		} else if record.GetString("status") != hostApp.GetStatus() {
+			changed = true
 		}
 
 		record.Set("unit", hostApp.GetUnit())
@@ -123,18 +146,16 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 		count++
 	}
 
-	existingApps, err := app.FindRecordsByFilter(constants.CollHostApps, "server = {:server}", "", 0, 0, map[string]any{"server": serverID})
-	if err != nil {
-		return 0, fmt.Errorf("list existing host apps: %w", err)
-	}
 	for _, record := range existingApps {
-		key := record.GetString("source") + "\x00" + record.GetString("name")
+		key := hostAppKey(record.GetString("source"), record.GetString("name"))
 		if seenApps[key] {
 			continue
 		}
 		if err := app.Delete(record); err != nil {
 			slog.Error("prune host app failed", "server_id", serverID, "record_id", record.Id, "error", err)
+			continue
 		}
+		changed = true
 	}
 
 	seenPIDs := make(map[string]bool, len(processes))
@@ -145,11 +166,12 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 		}
 		seenPIDs[key] = true
 
-		record, err := findHostProcess(app, serverID, process.GetPid())
-		if err != nil {
+		record, exists := processesByPID[key]
+		if !exists {
 			record = core.NewRecord(processesCol)
 			record.Set("server", serverID)
 			record.Set("pid", process.GetPid())
+			changed = true
 		}
 
 		record.Set("name", process.GetName())
@@ -165,10 +187,6 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 		}
 	}
 
-	existingProcesses, err := app.FindRecordsByFilter(constants.CollHostProcesses, "server = {:server}", "", 0, 0, map[string]any{"server": serverID})
-	if err != nil {
-		return 0, fmt.Errorf("list existing host processes: %w", err)
-	}
 	for _, record := range existingProcesses {
 		key := strconv.Itoa(record.GetInt("pid"))
 		if seenPIDs[key] {
@@ -176,42 +194,16 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 		}
 		if err := app.Delete(record); err != nil {
 			slog.Error("prune host process failed", "server_id", serverID, "record_id", record.Id, "error", err)
+			continue
 		}
+		changed = true
 	}
 
-	return count, nil
+	return count, changed, nil
 }
 
-func findHostApp(app core.App, serverID, source, name string) (*core.Record, error) {
-	records, err := app.FindRecordsByFilter(
-		constants.CollHostApps,
-		"server = {:server} && source = {:source} && name = {:name}",
-		"", 1, 0,
-		map[string]any{"server": serverID, "source": source, "name": name},
-	)
-	if err != nil {
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, fmt.Errorf("host app not found")
-	}
-	return records[0], nil
-}
-
-func findHostProcess(app core.App, serverID string, pid uint32) (*core.Record, error) {
-	records, err := app.FindRecordsByFilter(
-		constants.CollHostProcesses,
-		"server = {:server} && pid = {:pid}",
-		"", 1, 0,
-		map[string]any{"server": serverID, "pid": pid},
-	)
-	if err != nil {
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, fmt.Errorf("host process not found")
-	}
-	return records[0], nil
+func hostAppKey(source, name string) string {
+	return source + "\x00" + name
 }
 
 func hostAppPorts(app *agentpb.HostApp, portsByPID map[uint32][]uint32) []uint32 {
