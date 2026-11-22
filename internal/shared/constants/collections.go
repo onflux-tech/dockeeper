@@ -39,6 +39,8 @@ const (
 	CollHostProcesses         = "host_processes"
 	CollHostAppMetricsRaw     = "host_app_metrics_raw"
 	CollServerConnectivityRaw = "server_connectivity_raw"
+	CollProxyInstances        = "proxy_instances"
+	CollProxyRoutes           = "proxy_routes"
 	CollBatchJobs             = "batch_jobs"
 	CollTags                  = "tags"
 	CollActionTokens          = "action_tokens"

@@ -217,10 +217,16 @@ type UpdatePolicy struct {
 	Updated            types.DateTime `json:"updated"`
 }
 
-// BackupPolicy defines scheduled backup rules for a volume.
+// BackupPolicy defines scheduled backup rules for a volume or a host app.
 type BackupPolicy struct {
 	ID            string         `json:"id"`
 	Volume        string         `json:"volume"`
+	TargetType    string         `json:"target_type"` // volume | host_app
+	AppSource     string         `json:"app_source"`
+	AppName       string         `json:"app_name"`
+	Paths         types.JSONRaw  `json:"paths"`
+	Exclude       types.JSONRaw  `json:"exclude"`
+	MaxBytes      int64          `json:"max_bytes"`
 	Server        string         `json:"server"`
 	Schedule      string         `json:"schedule"`
 	RetentionDays int            `json:"retention_days"`
@@ -236,6 +242,11 @@ type BackupRecord struct {
 	ID          string         `json:"id"`
 	Policy      string         `json:"policy"`
 	VolumeName  string         `json:"volume_name"`
+	TargetType  string         `json:"target_type"`
+	AppSource   string         `json:"app_source"`
+	AppName     string         `json:"app_name"`
+	TargetLabel string         `json:"target_label"`
+	Manifest    types.JSONRaw  `json:"manifest"`
 	Server      string         `json:"server"`
 	S3Key       string         `json:"s3_key"`
 	Size        float64        `json:"size"`
@@ -244,6 +255,39 @@ type BackupRecord struct {
 	CompletedAt types.DateTime `json:"completed_at"`
 	Error       string         `json:"error"`
 	Created     types.DateTime `json:"created"`
+}
+
+// ProxyInstance represents a detected proxy server on a host.
+type ProxyInstance struct {
+	ID         string         `json:"id"`
+	Server     string         `json:"server"`
+	Kind       string         `json:"kind"`   // traefik | nginx | caddy | haproxy | envoy
+	Source     string         `json:"source"` // systemd | docker | process
+	App        string         `json:"app"`
+	Version    string         `json:"version"`
+	ConfigPath string         `json:"config_path"`
+	AdminURL   string         `json:"admin_url"`
+	Status     string         `json:"status"`
+	LastSeen   types.DateTime `json:"last_seen"`
+	Created    types.DateTime `json:"created"`
+	Updated    types.DateTime `json:"updated"`
+}
+
+// ProxyRoute represents a normalized route exposed by a proxy instance.
+type ProxyRoute struct {
+	ID          string         `json:"id"`
+	Instance    string         `json:"instance"`
+	Server      string         `json:"server"`
+	Name        string         `json:"name"`
+	Hosts       types.JSONRaw  `json:"hosts"`
+	Paths       types.JSONRaw  `json:"paths"`
+	Upstreams   types.JSONRaw  `json:"upstreams"`
+	TLS         bool           `json:"tls"`
+	Middlewares types.JSONRaw  `json:"middlewares"`
+	Status      string         `json:"status"`
+	Provider    string         `json:"provider"`
+	Created     types.DateTime `json:"created"`
+	Updated     types.DateTime `json:"updated"`
 }
 
 // AlertRule defines a condition that triggers a notification.
