@@ -2446,6 +2446,7 @@ var AgentExecStreamService_ServiceDesc = grpc.ServiceDesc{
 
 const (
 	AgentHostService_ReportHostInventory_FullMethodName = "/dockeeper.agent.v1.AgentHostService/ReportHostInventory"
+	AgentHostService_ReportConnectivity_FullMethodName  = "/dockeeper.agent.v1.AgentHostService/ReportConnectivity"
 )
 
 // AgentHostServiceClient is the client API for AgentHostService service.
@@ -2453,6 +2454,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentHostServiceClient interface {
 	ReportHostInventory(ctx context.Context, in *ReportHostInventoryRequest, opts ...grpc.CallOption) (*ReportHostInventoryResponse, error)
+	ReportConnectivity(ctx context.Context, in *ReportConnectivityRequest, opts ...grpc.CallOption) (*ReportConnectivityResponse, error)
 }
 
 type agentHostServiceClient struct {
@@ -2473,11 +2475,22 @@ func (c *agentHostServiceClient) ReportHostInventory(ctx context.Context, in *Re
 	return out, nil
 }
 
+func (c *agentHostServiceClient) ReportConnectivity(ctx context.Context, in *ReportConnectivityRequest, opts ...grpc.CallOption) (*ReportConnectivityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportConnectivityResponse)
+	err := c.cc.Invoke(ctx, AgentHostService_ReportConnectivity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentHostServiceServer is the server API for AgentHostService service.
 // All implementations must embed UnimplementedAgentHostServiceServer
 // for forward compatibility.
 type AgentHostServiceServer interface {
 	ReportHostInventory(context.Context, *ReportHostInventoryRequest) (*ReportHostInventoryResponse, error)
+	ReportConnectivity(context.Context, *ReportConnectivityRequest) (*ReportConnectivityResponse, error)
 	mustEmbedUnimplementedAgentHostServiceServer()
 }
 
@@ -2490,6 +2503,9 @@ type UnimplementedAgentHostServiceServer struct{}
 
 func (UnimplementedAgentHostServiceServer) ReportHostInventory(context.Context, *ReportHostInventoryRequest) (*ReportHostInventoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportHostInventory not implemented")
+}
+func (UnimplementedAgentHostServiceServer) ReportConnectivity(context.Context, *ReportConnectivityRequest) (*ReportConnectivityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportConnectivity not implemented")
 }
 func (UnimplementedAgentHostServiceServer) mustEmbedUnimplementedAgentHostServiceServer() {}
 func (UnimplementedAgentHostServiceServer) testEmbeddedByValue()                          {}
@@ -2530,6 +2546,24 @@ func _AgentHostService_ReportHostInventory_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentHostService_ReportConnectivity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportConnectivityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentHostServiceServer).ReportConnectivity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentHostService_ReportConnectivity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentHostServiceServer).ReportConnectivity(ctx, req.(*ReportConnectivityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentHostService_ServiceDesc is the grpc.ServiceDesc for AgentHostService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2540,6 +2574,10 @@ var AgentHostService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReportHostInventory",
 			Handler:    _AgentHostService_ReportHostInventory_Handler,
+		},
+		{
+			MethodName: "ReportConnectivity",
+			Handler:    _AgentHostService_ReportConnectivity_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

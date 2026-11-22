@@ -683,9 +683,13 @@ message ChannelCommand {
 
     // Health check
     ExecuteHealthCheckRequest health_check = 60;
+    HostHealthCheckCommand host_health_check = 61;
 
     // Update check (unary)
     CheckImageDigestRequest check_image_digest = 70;
+
+    // Host app actions
+    HostAppActionCommand host_app_action = 80;
   }
 }
 
@@ -706,7 +710,9 @@ message ChannelCommandResult {
     RemoveVolumeResponse remove_volume = 51;
     InspectVolumeResponse inspect_volume = 52;
     ExecuteHealthCheckResponse health_check = 60;
+    HostHealthCheckResult host_health_check = 61;
     CheckImageDigestResponse check_image_digest = 70;
+    HostAppActionResult host_app_action = 80;
     ChannelCommandError error = 99;
   }
 }
@@ -715,6 +721,42 @@ message ChannelCommandResult {
 message ChannelCommandError {
   int32 code = 1;
   string message = 2;
+}
+
+message HostAppActionCommand {
+  string source = 1;   // systemd | pm2
+  string name = 2;
+  string action = 3;   // start | stop | restart
+}
+
+message HostAppActionResult {
+  bool success = 1;
+  int32 exit_code = 2;
+  string output = 3;
+  string error = 4;
+}
+
+message HostHealthCheckCommand {
+  string source = 1;        // systemd | pm2 | process
+  string name = 2;
+  string check_type = 3;    // http | tcp | process
+  string host = 4;          // empty means 127.0.0.1
+  uint32 port = 5;
+  string scheme = 6;        // http | https
+  string method = 7;        // GET, HEAD, POST
+  string path = 8;
+  uint32 timeout_ms = 9;
+  int32 expected_status = 10;
+  string expected_body = 11;
+  map<string, string> headers = 12;
+  bool tls_skip_verify = 13;
+}
+
+message HostHealthCheckResult {
+  bool success = 1;
+  int32 status_code = 2;
+  uint32 response_time_ms = 3;
+  string error = 4;
 }
 
 // Signal the agent to open a DataStream for a streaming operation.
@@ -872,6 +914,7 @@ message ExecStreamExit {
 
 service AgentHostService {
   rpc ReportHostInventory(ReportHostInventoryRequest) returns (ReportHostInventoryResponse);
+  rpc ReportConnectivity(ReportConnectivityRequest) returns (ReportConnectivityResponse);
 }
 
 message HostApp {
@@ -924,3 +967,18 @@ message ReportHostInventoryResponse {
   int32 received_apps = 1;
   int32 received_processes = 2;
 }
+
+message ReportConnectivityRequest {
+  string server_id = 1;
+  bool internet_ok = 2;
+  uint32 internet_ms = 3;
+  bool dns_ok = 4;
+  uint32 dns_ms = 5;
+  bool gateway_ok = 6;
+  uint32 gateway_ms = 7;
+  string gateway_method = 8;  // icmp | tcp | none
+  string error = 9;
+  google.protobuf.Timestamp collected_at = 10;
+}
+
+message ReportConnectivityResponse {}
