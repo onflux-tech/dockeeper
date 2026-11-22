@@ -165,6 +165,25 @@ func TestHostStoreIgnoresProcessChurnForChanges(t *testing.T) {
 	require.True(t, changed)
 }
 
+func TestHostStoreUpdateAppStatus(t *testing.T) {
+	app, serverID := newHostTestApp(t)
+	store := NewHostStore(app)
+
+	_, _, err := store.UpsertInventory(serverID, []*agentpb.HostApp{
+		{Source: "systemd", Name: "nginx.service", Status: "stopped"},
+	}, nil, nil)
+	require.NoError(t, err)
+
+	require.NoError(t, store.UpdateAppStatus(serverID, "systemd", "nginx.service", "running"))
+
+	rows, err := app.FindRecordsByFilter("host_apps", "server = {:server}", "", 0, 0, map[string]any{"server": serverID})
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	require.Equal(t, "running", rows[0].GetString("status"))
+
+	require.Error(t, store.UpdateAppStatus(serverID, "systemd", "missing.service", "running"))
+}
+
 func TestHostStoreSaveAppMetrics(t *testing.T) {
 	app, serverID := newHostTestApp(t)
 	store := NewHostStore(app)

@@ -65,6 +65,23 @@ func (s *HostStore) SaveAppMetrics(serverID string, apps []*agentpb.HostApp, at 
 	return nil
 }
 
+func (s *HostStore) UpdateAppStatus(serverID, source, name, status string) error {
+	record, err := s.app.FindFirstRecordByFilter(
+		constants.CollHostApps,
+		"server = {:server} && source = {:source} && name = {:name}",
+		map[string]any{"server": serverID, "source": source, "name": name},
+	)
+	if err != nil {
+		return fmt.Errorf("find host app %s/%s: %w", source, name, err)
+	}
+	record.Set("status", status)
+	record.Set("last_seen", time.Now().UTC())
+	if err := s.app.Save(record); err != nil {
+		return fmt.Errorf("update host app status: %w", err)
+	}
+	return nil
+}
+
 func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp, processes []*agentpb.HostProcess, ports []*agentpb.HostPort) (int, bool, error) {
 	appsCol, err := app.FindCachedCollectionByNameOrId(constants.CollHostApps)
 	if err != nil {
