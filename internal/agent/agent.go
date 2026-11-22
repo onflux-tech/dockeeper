@@ -142,10 +142,12 @@ func (a *Agent) Run(ctx context.Context) error {
 		go traefikColl.Run(ctx)
 	}
 
+	hostState := collector.NewHostInventoryState()
 	hostCollector := collector.NewHostInventoryCollector(a.logger)
 	hostReporter := NewHostReporter(a.client.Host(), a.cfg.ServerID, a.logger)
 	hostReporter.SetServerGoneCallback(triggerReEnrollment)
 	go hostCollector.Run(ctx, 15*time.Second, func(inventory *collector.HostInventory) error {
+		hostState.Set(inventory)
 		return hostReporter.Report(ctx, inventory)
 	})
 
@@ -167,6 +169,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.client.Conn(),
 		commandExecutor,
 		orch,
+		hostState,
 		a.logger,
 		cancel,
 		a.cfg.DataDir,

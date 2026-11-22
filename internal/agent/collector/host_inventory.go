@@ -6,10 +6,35 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/host"
 )
+
+type HostInventoryState struct {
+	mu        sync.RWMutex
+	inventory *HostInventory
+}
+
+func NewHostInventoryState() *HostInventoryState {
+	return &HostInventoryState{}
+}
+
+func (s *HostInventoryState) Set(inventory *HostInventory) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.inventory = inventory
+}
+
+func (s *HostInventoryState) Apps() []HostApp {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.inventory == nil {
+		return nil
+	}
+	return s.inventory.Apps
+}
 
 type HostApp struct {
 	Source         string

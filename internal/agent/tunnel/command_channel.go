@@ -44,6 +44,7 @@ type Client struct {
 	volHandler     *grpchandlers.VolumeHandler
 	healthHandler  *grpchandlers.HealthHandler
 	updateHandler  *grpchandlers.UpdateHandler
+	hostActions    *executor.HostActionExecutor
 
 	// Dependencies for streaming operations.
 	exec executor.Executor
@@ -59,6 +60,7 @@ func NewClient(
 	conn *grpc.ClientConn,
 	exec executor.Executor,
 	orch collector.OrchestratorClient,
+	hostState *collector.HostInventoryState,
 	logger *slog.Logger,
 	onShutdown func(),
 	dataDir string,
@@ -80,6 +82,7 @@ func NewClient(
 		volHandler:     grpchandlers.NewVolumeHandler(exec, logger),
 		healthHandler:  grpchandlers.NewHealthHandler(logger),
 		updateHandler:  grpchandlers.NewUpdateHandler(exec, logger, dataDir),
+		hostActions:    executor.NewHostActionExecutor(logger, executor.WithInventory(hostState.Apps)),
 
 		exec:       exec,
 		orch:       orch,
@@ -333,6 +336,19 @@ func (c *Client) dispatchCommand(ctx context.Context, cmd *agentpb.ChannelComman
 		} else {
 			result.Result = &agentpb.ChannelCommandResult_CheckImageDigest{CheckImageDigest: resp}
 		}
+
+	case *agentpb.ChannelCommand_HostAppAction:
+		request := req.HostAppAction
+		exitCode, output, err := c.hostActions.Execute(ctx, request.GetSource(), request.GetName(), request.GetAction())
+		actionResult := &agentpb.HostAppActionResult{
+			Success:  err == nil,
+			ExitCode: int32(exitCode),
+			Output:   output,
+		}
+		if err != nil {
+			actionResult.Error = err.Error()
+		}
+		result.Result = &agentpb.ChannelCommandResult_HostAppAction{HostAppAction: actionResult}
 
 	default:
 		result.Result = &agentpb.ChannelCommandResult_Error{
