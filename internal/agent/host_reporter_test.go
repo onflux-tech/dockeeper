@@ -26,6 +26,10 @@ func (f *fakeHostClient) ReportHostInventory(ctx context.Context, req *agentpb.R
 	return &agentpb.ReportHostInventoryResponse{ReceivedApps: int32(len(req.GetApps()))}, nil
 }
 
+func (f *fakeHostClient) ReportConnectivity(ctx context.Context, req *agentpb.ReportConnectivityRequest, opts ...grpc.CallOption) (*agentpb.ReportConnectivityResponse, error) {
+	return &agentpb.ReportConnectivityResponse{}, nil
+}
+
 func TestHostReporterMapsInventory(t *testing.T) {
 	fake := &fakeHostClient{}
 	reporter := NewHostReporter(fake, "srv1", slog.Default())
