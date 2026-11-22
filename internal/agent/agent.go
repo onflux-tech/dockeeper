@@ -13,8 +13,10 @@ import (
 
 	"github.com/onflux-tech/dockeeper/internal/agent/cert"
 	"github.com/onflux-tech/dockeeper/internal/agent/collector"
+	"github.com/onflux-tech/dockeeper/internal/agent/collector/proxies"
 	"github.com/onflux-tech/dockeeper/internal/agent/executor"
 	"github.com/onflux-tech/dockeeper/internal/agent/tunnel"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 // Version is set at build time via ldflags.
@@ -156,6 +158,15 @@ func (a *Agent) Run(ctx context.Context) error {
 	connectivityReporter.SetServerGoneCallback(triggerReEnrollment)
 	go connectivityCollector.Run(ctx, time.Minute, func(report *collector.ConnectivityReport) error {
 		return connectivityReporter.Report(ctx, report)
+	})
+
+	proxyCollector := proxies.New(a.logger, hostState.Apps, proxies.WithTraefikAPIURL(func(ctx context.Context) string {
+		return collector.DetectTraefikAPIURL(ctx, orch, a.logger)
+	}))
+	proxyReporter := NewProxyReporter(a.client.Host(), a.cfg.ServerID, a.logger)
+	proxyReporter.SetServerGoneCallback(triggerReEnrollment)
+	go proxyCollector.Run(ctx, time.Minute, func(instances []*agentpb.ProxyInstanceInfo) error {
+		return proxyReporter.Report(ctx, instances)
 	})
 
 	// Start reverse tunnel client — replaces the old agent gRPC server.

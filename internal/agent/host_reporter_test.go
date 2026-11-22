@@ -27,6 +27,13 @@ func (f *fakeHostClient) ReportHostInventory(ctx context.Context, req *agentpb.R
 	return &agentpb.ReportHostInventoryResponse{ReceivedApps: int32(len(req.GetApps()))}, nil
 }
 
+func (f *fakeHostClient) ReportProxyInventory(ctx context.Context, req *agentpb.ReportProxyInventoryRequest, opts ...grpc.CallOption) (*agentpb.ReportProxyInventoryResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &agentpb.ReportProxyInventoryResponse{ReceivedInstances: int32(len(req.GetInstances()))}, nil
+}
+
 func (f *fakeHostClient) ReportConnectivity(ctx context.Context, req *agentpb.ReportConnectivityRequest, opts ...grpc.CallOption) (*agentpb.ReportConnectivityResponse, error) {
 	f.connReq = req
 	if f.err != nil {

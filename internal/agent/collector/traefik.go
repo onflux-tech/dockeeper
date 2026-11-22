@@ -193,8 +193,44 @@ func (t *TraefikCollector) resolveAPIURL(ctx context.Context, c *agentpb.Contain
 	return "http://127.0.0.1:8080"
 }
 
-// resolveContainerIP inspects the container to find an IP address in any network.
-func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID string) string {
+// DetectTraefikAPIURL finds a running Traefik container and resolves an API URL
+// reachable from the host: the published 8080 port first, then the container IP.
+func DetectTraefikAPIURL(ctx context.Context, orch OrchestratorClient, logger *slog.Logger) string {
+	if orch == nil {
+		return ""
+	}
+
+	containers, err := orch.ListContainerSummaries(ctx)
+	if err != nil {
+		return ""
+	}
+
+	for _, c := range containers {
+		if !strings.Contains(strings.ToLower(c.GetImage()), "traefik") {
+			continue
+		}
+		if portsJSON := c.GetPortsJson(); portsJSON != "" {
+			var ports []map[string]any
+			if err := json.Unmarshal([]byte(portsJSON), &ports); err == nil {
+				for _, p := range ports {
+					privatePort, _ := p["PrivatePort"].(float64)
+					publicPort, _ := p["PublicPort"].(float64)
+					if int(privatePort) == 8080 && int(publicPort) != 0 {
+						return fmt.Sprintf("http://127.0.0.1:%d", int(publicPort))
+					}
+				}
+			}
+		}
+		if ip := containerIP(ctx, orch, logger, c.GetContainerId()); ip != "" {
+			return fmt.Sprintf("http://%s:8080", ip)
+		}
+		return "http://127.0.0.1:8080"
+	}
+
+	return ""
+}
+
+func containerIP(ctx context.Context, orch OrchestratorClient, logger *slog.Logger, containerID string) string {
 	if containerID == "" {
 		return ""
 	}
@@ -202,9 +238,9 @@ func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID s
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	info, err := t.orch.InspectContainer(ctx, containerID)
+	info, err := orch.InspectContainer(ctx, containerID)
 	if err != nil {
-		t.logger.Debug("traefik: inspect container failed", "container", containerID, "error", err)
+		logger.Debug("traefik: inspect container failed", "container", containerID, "error", err)
 		return ""
 	}
 
@@ -212,7 +248,7 @@ func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID s
 		IPAddress string `json:"IPAddress"`
 	}
 	if err := json.Unmarshal([]byte(info.GetNetworksJson()), &networks); err != nil {
-		t.logger.Debug("traefik: parse container networks failed", "container", containerID, "error", err)
+		logger.Debug("traefik: parse container networks failed", "container", containerID, "error", err)
 		return ""
 	}
 
@@ -222,6 +258,11 @@ func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID s
 		}
 	}
 	return ""
+}
+
+// resolveContainerIP inspects the container to find an IP address in any network.
+func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID string) string {
+	return containerIP(ctx, t.orch, t.logger, containerID)
 }
 
 // fetchRoutes tries the Traefik API first, then falls back to Docker labels.
