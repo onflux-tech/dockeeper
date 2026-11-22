@@ -219,6 +219,12 @@ export interface UpdatePolicyRecord extends BaseRecord {
 export interface BackupPolicyRecord extends BaseRecord {
 	volume: string;
 	server: string;
+	target_type: "volume" | "host_app";
+	app_source: "systemd" | "pm2" | "process" | "";
+	app_name: string;
+	paths: string[];
+	exclude: string[];
+	max_bytes: number;
 	schedule: string;
 	retention_days: number;
 	s3_bucket: string;
@@ -230,6 +236,11 @@ export interface BackupRecordRecord extends BaseRecord {
 	policy: string;
 	volume_name: string;
 	server: string;
+	target_type: "volume" | "host_app";
+	app_source: "systemd" | "pm2" | "process" | "";
+	app_name: string;
+	target_label: string;
+	manifest: Record<string, unknown> | null;
 	s3_key: string;
 	size: number;
 	status: "pending" | "running" | "success" | "failed";
@@ -324,6 +335,31 @@ export interface TraefikRouteRecord extends BaseRecord {
 	middlewares: unknown;
 	provider: string;
 	status: string;
+}
+
+export interface ProxyInstanceRecord extends BaseRecord {
+	server: string;
+	kind: "traefik" | "nginx" | "caddy" | "haproxy" | "envoy";
+	source: "systemd" | "docker" | "process";
+	app: string;
+	version: string;
+	config_path: string;
+	admin_url: string;
+	status: "healthy" | "degraded" | "unknown";
+	last_seen: string;
+}
+
+export interface ProxyRouteRecord extends BaseRecord {
+	instance: string;
+	server: string;
+	name: string;
+	hosts: string[];
+	paths: string[];
+	upstreams: string[];
+	tls: boolean;
+	middlewares: string[];
+	status: "healthy" | "degraded" | "unknown";
+	provider: string;
 }
 
 export interface HealthCheckRecord extends BaseRecord {

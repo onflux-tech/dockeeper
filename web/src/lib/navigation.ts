@@ -66,7 +66,7 @@ export const navigation: NavGroup[] = [
 			},
 			{ label: "Alerts", href: "/alerts", icon: Bell, capability: "alerts.view" },
 			{ label: "Backups", href: "/backups", icon: Archive, capability: "backups.view" },
-			{ label: "Traefik", href: "/traefik", icon: Globe, capability: "traefik.view" },
+			{ label: "Proxies", href: "/proxies", icon: Globe, capability: "proxies.view" },
 		],
 	},
 	{

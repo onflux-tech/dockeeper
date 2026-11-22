@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
-import { Routes, Route } from "react-router";
+import { Routes, Route, Navigate } from "react-router";
 import { RequireCapability } from "@/components/layout/require-capability";
 
 const ProtectedRoute = lazy(() => import("@/components/layout/protected-route"));
@@ -22,7 +22,7 @@ const VolumesPage = lazy(() => import("@/pages/volumes"));
 const AlertsPage = lazy(() => import("@/pages/alerts"));
 const BackupsPage = lazy(() => import("@/pages/backups"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
-const TraefikPage = lazy(() => import("@/pages/traefik"));
+const ProxiesPage = lazy(() => import("@/pages/proxies"));
 const ServerCreatePage = lazy(() => import("@/pages/server-create"));
 const AuditLogsPage = lazy(() => import("@/pages/audit-logs"));
 const UsersPage = lazy(() => import("@/pages/users"));
@@ -182,13 +182,14 @@ function App() {
 								}
 							/>
 							<Route
-								path="traefik"
+								path="proxies"
 								element={
-									<Cap cap="traefik.view">
-										<TraefikPage />
+									<Cap cap="proxies.view">
+										<ProxiesPage />
 									</Cap>
 								}
 							/>
+							<Route path="traefik" element={<Navigate to="/proxies" replace />} />
 							<Route
 								path="settings"
 								element={

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Archive, Plus, Pencil, Trash2, Play, Loader2, Search, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,14 +47,16 @@ import { RecordsTable } from "@/components/backups/records-table";
 import type {
 	ServerRecord,
 	VolumeRecord,
+	HostAppRecord,
 	BackupPolicyRecord,
 	BackupRecordRecord,
 } from "@/types/pocketbase";
 
 export default function BackupsPage() {
+	const [searchParams] = useSearchParams();
 	const [policiesPage, setPoliciesPage] = useState(1);
 	const [recordsPage, setRecordsPage] = useState(1);
-	const [serverFilter, setServerFilter] = useState<string>("all");
+	const [serverFilter, setServerFilter] = useState<string>(searchParams.get("server") ?? "all");
 	const [search, setSearch] = useState("");
 	const [policyOpen, setPolicyOpen] = useState(false);
 	const [editPolicy, setEditPolicy] = useState<BackupPolicyRecord | null>(null);
@@ -67,6 +70,10 @@ export default function BackupsPage() {
 		perPage: 500,
 		...(serverId ? { filter: `server = '${serverId}'` } : {}),
 	});
+	const { data: hostAppsResult } = useCollection("host_apps", {
+		perPage: 500,
+		...(serverId ? { filter: `server = '${serverId}'` } : {}),
+	});
 
 	useRealtime("backup_policies");
 	useRealtime("backup_records");
@@ -77,7 +84,7 @@ export default function BackupsPage() {
 		sort: "-created",
 		filter: andFilters([
 			serverId ? eqFilter("server", serverId) : "",
-			containsAnyFilter(["volume", "schedule", "s3_bucket"], search),
+			containsAnyFilter(["volume", "app_name", "schedule", "s3_bucket"], search),
 		]),
 	});
 	const { data: recordsResult, isLoading: recordsLoading } = useCollection("backup_records", {
@@ -98,6 +105,10 @@ export default function BackupsPage() {
 	const volumes = useMemo(
 		() => (volumesResult?.items ?? []) as VolumeRecord[],
 		[volumesResult?.items],
+	);
+	const hostApps = useMemo(
+		() => (hostAppsResult?.items ?? []) as HostAppRecord[],
+		[hostAppsResult?.items],
 	);
 	const policies = useMemo(
 		() => (policiesResult?.items ?? []) as BackupPolicyRecord[],
@@ -215,7 +226,7 @@ export default function BackupsPage() {
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Volume</TableHead>
+									<TableHead>Target</TableHead>
 									<TableHead>Schedule</TableHead>
 									<TableHead>Retention</TableHead>
 									<TableHead>S3 Bucket</TableHead>
@@ -238,7 +249,11 @@ export default function BackupsPage() {
 											setRecordsPage(1);
 										}}
 									>
-										<TableCell className="font-medium">{policy.volume}</TableCell>
+										<TableCell className="font-medium">
+											{policy.target_type === "host_app"
+												? `${policy.app_source}/${policy.app_name}`
+												: policy.volume}
+										</TableCell>
 										<TableCell>
 											<div className="flex flex-col">
 												<span className="font-mono text-xs">{policy.schedule}</span>
@@ -371,6 +386,7 @@ export default function BackupsPage() {
 					}}
 					serverID={editPolicy?.server ?? serverFilter}
 					volumes={volumes}
+					hostApps={hostApps}
 					editPolicy={editPolicy}
 				/>
 			)}

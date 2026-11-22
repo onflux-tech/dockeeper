@@ -27,6 +27,7 @@ import { HostAppsTable } from "@/components/server/host-apps-table";
 import { HostProcessesTable } from "@/components/server/host-processes-table";
 import { HostConnectivityCard } from "@/components/server/host-connectivity-card";
 import { HostHealthCard } from "@/components/server/host-health-card";
+import { HostBackupsCard } from "@/components/server/host-backups-card";
 import { useHostApps, useHostProcesses } from "@/hooks/use-host-inventory";
 import { useHealthChecks } from "@/hooks/use-health-checks";
 import { CONTAINER_SORT_FIELDS, type SortDir, type SortKey } from "@/lib/container-constants";
@@ -271,6 +272,7 @@ export default function ServerDetailPage() {
 						<div className="grid gap-4 md:grid-cols-2">
 							<HostConnectivityCard server={server} />
 							<HostHealthCard checks={healthChecks ?? []} serverID={id ?? ""} />
+							<HostBackupsCard serverID={id ?? ""} />
 						</div>
 						<div className="flex items-center justify-between">
 							<h2 className="text-lg font-medium">Applications</h2>
