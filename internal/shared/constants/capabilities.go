@@ -24,6 +24,7 @@ const (
 	CapUsersManage         = "users.manage"
 	CapAuditView           = "audit.view"
 	CapTraefikView         = "traefik.view"
+	CapProxiesView         = "proxies.view"
 	CapHostAppsView        = "host.apps.view"
 	CapHostAppsManage      = "host.apps.manage"
 	CapEventsView          = "events.view"
@@ -48,6 +49,7 @@ var AllCapabilities = []string{
 	CapSettingsView, CapSettingsManage,
 	CapUsersView, CapUsersManage,
 	CapAuditView, CapTraefikView,
+	CapProxiesView,
 	CapHostAppsView,
 	CapHostAppsManage,
 	CapEventsView,

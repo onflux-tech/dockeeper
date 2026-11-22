@@ -507,6 +507,28 @@ message RestoreVolumeRequest {
   S3Config s3 = 3;
 }
 
+message BackupAppRequest {
+  string server_id = 1;
+  string policy_id = 2;
+  string record_id = 3;
+  string app_source = 4;
+  string app_name = 5;
+  repeated string paths = 6;
+  repeated string exclude = 7;
+  uint64 max_bytes = 8;
+  S3Config s3 = 9;
+}
+
+message RestoreAppRequest {
+  string server_id = 1;
+  string record_id = 2;
+  string app_source = 3;
+  string app_name = 4;
+  repeated string paths = 5;
+  string s3_key = 6;
+  S3Config s3 = 7;
+}
+
 message BackupProgress {
   string status = 1;         // starting, tarring, uploading, downloading, extracting, done
   string message = 2;
@@ -774,6 +796,8 @@ message OpenDataStreamSignal {
     RestoreVolumeRequest restore_volume = 16;
     ExecuteContainerUpdateRequest container_update = 17;
     DataStreamUpdateBinaryParams update_binary = 18;
+    BackupAppRequest backup_app = 19;
+    RestoreAppRequest restore_app = 20;
   }
 }
 
@@ -788,6 +812,8 @@ enum DataStreamType {
   DATA_STREAM_TYPE_RESTORE = 7;
   DATA_STREAM_TYPE_CONTAINER_UPDATE = 8;
   DATA_STREAM_TYPE_AGENT_UPDATE = 9;
+  DATA_STREAM_TYPE_BACKUP_APP = 10;
+  DATA_STREAM_TYPE_RESTORE_APP = 11;
 }
 
 // Parameters for agent binary update via DataStream.
@@ -915,6 +941,7 @@ message ExecStreamExit {
 service AgentHostService {
   rpc ReportHostInventory(ReportHostInventoryRequest) returns (ReportHostInventoryResponse);
   rpc ReportConnectivity(ReportConnectivityRequest) returns (ReportConnectivityResponse);
+  rpc ReportProxyInventory(ReportProxyInventoryRequest) returns (ReportProxyInventoryResponse);
 }
 
 message HostApp {
@@ -982,3 +1009,36 @@ message ReportConnectivityRequest {
 }
 
 message ReportConnectivityResponse {}
+
+message ProxyRouteInfo {
+  string name = 1;
+  repeated string hosts = 2;
+  repeated string paths = 3;
+  repeated string upstreams = 4;
+  bool tls = 5;
+  repeated string middlewares = 6;
+  string status = 7;
+  string provider = 8;
+}
+
+message ProxyInstanceInfo {
+  string kind = 1;
+  string source = 2;
+  string app = 3;
+  string version = 4;
+  string config_path = 5;
+  string admin_url = 6;
+  string status = 7;
+  repeated ProxyRouteInfo routes = 8;
+}
+
+message ReportProxyInventoryRequest {
+  string server_id = 1;
+  repeated ProxyInstanceInfo instances = 2;
+  google.protobuf.Timestamp collected_at = 3;
+}
+
+message ReportProxyInventoryResponse {
+  int32 received_instances = 1;
+  int32 received_routes = 2;
+}

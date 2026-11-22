@@ -2445,8 +2445,9 @@ var AgentExecStreamService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	AgentHostService_ReportHostInventory_FullMethodName = "/dockeeper.agent.v1.AgentHostService/ReportHostInventory"
-	AgentHostService_ReportConnectivity_FullMethodName  = "/dockeeper.agent.v1.AgentHostService/ReportConnectivity"
+	AgentHostService_ReportHostInventory_FullMethodName  = "/dockeeper.agent.v1.AgentHostService/ReportHostInventory"
+	AgentHostService_ReportConnectivity_FullMethodName   = "/dockeeper.agent.v1.AgentHostService/ReportConnectivity"
+	AgentHostService_ReportProxyInventory_FullMethodName = "/dockeeper.agent.v1.AgentHostService/ReportProxyInventory"
 )
 
 // AgentHostServiceClient is the client API for AgentHostService service.
@@ -2455,6 +2456,7 @@ const (
 type AgentHostServiceClient interface {
 	ReportHostInventory(ctx context.Context, in *ReportHostInventoryRequest, opts ...grpc.CallOption) (*ReportHostInventoryResponse, error)
 	ReportConnectivity(ctx context.Context, in *ReportConnectivityRequest, opts ...grpc.CallOption) (*ReportConnectivityResponse, error)
+	ReportProxyInventory(ctx context.Context, in *ReportProxyInventoryRequest, opts ...grpc.CallOption) (*ReportProxyInventoryResponse, error)
 }
 
 type agentHostServiceClient struct {
@@ -2485,12 +2487,23 @@ func (c *agentHostServiceClient) ReportConnectivity(ctx context.Context, in *Rep
 	return out, nil
 }
 
+func (c *agentHostServiceClient) ReportProxyInventory(ctx context.Context, in *ReportProxyInventoryRequest, opts ...grpc.CallOption) (*ReportProxyInventoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportProxyInventoryResponse)
+	err := c.cc.Invoke(ctx, AgentHostService_ReportProxyInventory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentHostServiceServer is the server API for AgentHostService service.
 // All implementations must embed UnimplementedAgentHostServiceServer
 // for forward compatibility.
 type AgentHostServiceServer interface {
 	ReportHostInventory(context.Context, *ReportHostInventoryRequest) (*ReportHostInventoryResponse, error)
 	ReportConnectivity(context.Context, *ReportConnectivityRequest) (*ReportConnectivityResponse, error)
+	ReportProxyInventory(context.Context, *ReportProxyInventoryRequest) (*ReportProxyInventoryResponse, error)
 	mustEmbedUnimplementedAgentHostServiceServer()
 }
 
@@ -2506,6 +2519,9 @@ func (UnimplementedAgentHostServiceServer) ReportHostInventory(context.Context, 
 }
 func (UnimplementedAgentHostServiceServer) ReportConnectivity(context.Context, *ReportConnectivityRequest) (*ReportConnectivityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportConnectivity not implemented")
+}
+func (UnimplementedAgentHostServiceServer) ReportProxyInventory(context.Context, *ReportProxyInventoryRequest) (*ReportProxyInventoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportProxyInventory not implemented")
 }
 func (UnimplementedAgentHostServiceServer) mustEmbedUnimplementedAgentHostServiceServer() {}
 func (UnimplementedAgentHostServiceServer) testEmbeddedByValue()                          {}
@@ -2564,6 +2580,24 @@ func _AgentHostService_ReportConnectivity_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentHostService_ReportProxyInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportProxyInventoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentHostServiceServer).ReportProxyInventory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentHostService_ReportProxyInventory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentHostServiceServer).ReportProxyInventory(ctx, req.(*ReportProxyInventoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentHostService_ServiceDesc is the grpc.ServiceDesc for AgentHostService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2578,6 +2612,10 @@ var AgentHostService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReportConnectivity",
 			Handler:    _AgentHostService_ReportConnectivity_Handler,
+		},
+		{
+			MethodName: "ReportProxyInventory",
+			Handler:    _AgentHostService_ReportProxyInventory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
