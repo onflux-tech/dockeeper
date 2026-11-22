@@ -124,7 +124,7 @@ export default function ServerDetailPage() {
 	return (
 		<div className="flex flex-col gap-6">
 			{/* Header */}
-			<div className="flex items-center gap-3">
+			<div className="flex flex-wrap items-center gap-3">
 				<Button variant="ghost" size="icon" className="h-8 w-8" asChild>
 					<Link to="/servers">
 						<ArrowLeft className="h-4 w-4" />
@@ -137,7 +137,7 @@ export default function ServerDetailPage() {
 					</>
 				) : (
 					<>
-						<h1 className="text-2xl font-semibold">
+						<h1 className="text-xl font-semibold sm:text-2xl">
 							{server?.name || server?.hostname || "Server"}
 						</h1>
 						{server && <Badge variant={statusVariant}>{server.status}</Badge>}
