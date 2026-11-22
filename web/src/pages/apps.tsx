@@ -57,11 +57,13 @@ export default function AppsPage() {
 	const statusCount = (status: string) => ({
 		perPage: 1,
 		filter: andFilters([baseFilter, eqFilter("status", status)]),
+		requestKey: null,
 	});
 	const { data: runningResult } = useCollection("host_apps", statusCount("running"));
 	const { data: stoppedResult } = useCollection("host_apps", statusCount("stopped"));
 	const { data: failedResult } = useCollection("host_apps", statusCount("failed"));
 
+	useRealtime("host_apps");
 	useRealtime("servers", 3000);
 
 	const servers = useMemo(() => serversResult?.items ?? [], [serversResult]);
