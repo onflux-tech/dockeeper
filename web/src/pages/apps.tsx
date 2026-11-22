@@ -26,6 +26,7 @@ import { useCollection } from "@/hooks/use-collection";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useRealtime } from "@/hooks/use-realtime";
 import { formatCpuMem, formatUptime } from "@/lib/format";
+import { andFilters, containsAnyFilter, eqFilter } from "@/lib/pocketbase-filters";
 import type { HostAppRecord } from "@/types/pocketbase";
 
 const sourceOptions = ["all", "systemd", "pm2", "process"];
@@ -47,6 +48,19 @@ export default function AppsPage() {
 
 	const { data: appsResult, isLoading } = useCollection("host_apps", pbOptions);
 	const { data: serversResult } = useCollection("servers", { perPage: 200 });
+
+	const baseFilter = andFilters([
+		containsAnyFilter(["name", "unit", "pm_id"], filters.search || undefined),
+		eqFilter("server", filters.custom.server === "all" ? undefined : filters.custom.server),
+		eqFilter("source", filters.custom.source === "all" ? undefined : filters.custom.source),
+	]);
+	const statusCount = (status: string) => ({
+		perPage: 1,
+		filter: andFilters([baseFilter, eqFilter("status", status)]),
+	});
+	const { data: runningResult } = useCollection("host_apps", statusCount("running"));
+	const { data: stoppedResult } = useCollection("host_apps", statusCount("stopped"));
+	const { data: failedResult } = useCollection("host_apps", statusCount("failed"));
 
 	useRealtime("host_apps");
 	useRealtime("servers", 3000);
@@ -76,7 +90,9 @@ export default function AppsPage() {
 					)}
 				</div>
 				<p className="text-sm text-muted-foreground">
-					systemd units, PM2 processes and listening services across your servers.
+					{runningResult && stoppedResult && failedResult
+						? `${runningResult.totalItems} running · ${stoppedResult.totalItems} stopped · ${failedResult.totalItems} failed`
+						: "systemd units, PM2 processes and listening services across your servers."}
 				</p>
 			</div>
 

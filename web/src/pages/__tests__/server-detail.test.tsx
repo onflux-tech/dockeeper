@@ -91,4 +91,18 @@ describe("ServerDetailPage agent update", () => {
 		await user.click(screen.getByRole("tab", { name: /Containers/ }));
 		expect(screen.getByText("No container runtime")).toBeInTheDocument();
 	});
+
+	it("hides the host tab and keeps the container count on docker servers", () => {
+		mocks.orchestrator = "docker";
+		renderPage();
+		expect(screen.queryByRole("tab", { name: "Host" })).not.toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Containers (0)" })).toBeInTheDocument();
+	});
+
+	it("omits the misleading container count when there is no runtime", () => {
+		mocks.orchestrator = "none";
+		renderPage();
+		expect(screen.getByRole("tab", { name: "Containers" })).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: /Containers \(/ })).not.toBeInTheDocument();
+	});
 });

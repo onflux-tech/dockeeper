@@ -152,7 +152,9 @@ export default function ServerDetailPage() {
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
 					<TabsTrigger value="containers">
-						Containers ({containersResult?.totalItems ?? containers.length})
+						{hostOnly
+							? "Containers"
+							: `Containers (${containersResult?.totalItems ?? containers.length})`}
 					</TabsTrigger>
 					{hostOnly && <TabsTrigger value="host">Host</TabsTrigger>}
 				</TabsList>
