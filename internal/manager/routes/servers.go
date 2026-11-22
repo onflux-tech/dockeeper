@@ -2,6 +2,7 @@ package routes
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
@@ -254,6 +255,21 @@ func handleAgentDownload(e *core.RequestEvent) error {
 	e.Response.Header().Set("Content-Disposition", "attachment; filename=dockeeper-agent")
 	http.ServeFile(e.Response, e.Request, filePath)
 	return nil
+}
+
+func readLocalAgentBinary(goos, goarch string) ([]byte, string, error) {
+	filename := fmt.Sprintf("dockeeper-agent-%s-%s", goos, goarch)
+	for _, path := range []string{
+		fmt.Sprintf("/app/agents/%s", filename),
+		fmt.Sprintf("./bin/%s", filename),
+	} {
+		data, err := os.ReadFile(path)
+		if err == nil && len(data) > 1024 {
+			sum := sha256.Sum256(data)
+			return data, hex.EncodeToString(sum[:]), nil
+		}
+	}
+	return nil, "", fmt.Errorf("agent binary %s not found", filename)
 }
 
 // downloadAgentFromGitHub fetches the latest agent binary from GitHub Releases.
