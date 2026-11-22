@@ -47,7 +47,7 @@ export function HostAppsTable({
 		return (
 			<div className="rounded-md border">
 				<div className="px-6">
-					<Table>
+					<Table className="table-fixed">
 						<TableHeader>
 							<TableRow>
 								{Array.from({ length: 7 }).map((_, index) => (
@@ -86,7 +86,7 @@ export function HostAppsTable({
 				</div>
 			) : null}
 			<div className="px-6">
-				<Table>
+				<Table className="table-fixed">
 					<TableHeader>
 						<TableRow>
 							<TableHead className="text-sm font-medium text-foreground uppercase">App</TableHead>
@@ -119,9 +119,14 @@ export function HostAppsTable({
 							visibleApps.map((app) => (
 								<TableRow key={app.id}>
 									<TableCell>
-										<div className="flex flex-col">
-											<span className="text-sm font-medium">{app.name}</span>
-											<span className="text-xs text-muted-foreground">
+										<div className="flex min-w-0 flex-col">
+											<span className="truncate text-sm font-medium" title={app.name}>
+												{app.name}
+											</span>
+											<span
+												className="truncate text-xs text-muted-foreground"
+												title={`${app.source}${app.exec_path ? ` · ${app.exec_path}` : ""}`}
+											>
 												{app.source}
 												{app.exec_path ? ` · ${app.exec_path}` : ""}
 											</span>
