@@ -49,7 +49,6 @@ const REF_ALLOW = new Set([
 	".claude/settings.local.json",
 ]);
 const REF_ALLOW_PREFIXES = ["web/dist", "web/node_modules", "bin/", "dk_data/", "dk-agent-data/", "tmp/", "dist/"];
-const DOC_EXCLUDED_PREFIXES = ["docs/superpowers/"];
 const PORT_DIRS = [
 	".claude/skills",
 	".claude/commands",
@@ -83,8 +82,13 @@ function walk(dir) {
 	return files;
 }
 
+const trackedDocs = () => {
+	const output = execFileSync("git", ["ls-files", "--", "docs"], { cwd: ROOT, encoding: "utf8" });
+	return new Set(output.split("\n").filter(Boolean));
+};
+
 const walkDocs = () =>
-	walk(join(ROOT, "docs")).filter((file) => !DOC_EXCLUDED_PREFIXES.some((prefix) => rel(file).startsWith(prefix)));
+	walk(join(ROOT, "docs")).filter((file) => trackedDocs().has(rel(file)));
 
 export function parseFrontmatter(text) {
 	const normalized = normalize(text);
