@@ -144,7 +144,7 @@ func (h *HostHealthHandler) executeHTTP(ctx context.Context, req *agentpb.HostHe
 		result.ResponseTimeMs = elapsedMS(started)
 		return result
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	body, _ := io.ReadAll(io.LimitReader(response.Body, maxHostCheckBodyBytes))
 	result := &agentpb.HostHealthCheckResult{

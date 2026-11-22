@@ -49,6 +49,42 @@ export const changelog: ChangelogEntry[] = [
 				description:
 					"Let each server's disk chart switch between all disks summed and a single mountpoint, remembering the choice per server.",
 			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Start, stop and restart systemd units and PM2 apps from the manager, running PM2 with the owning user's credentials.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Added host app actions with RBAC (host.apps.manage), an in-flight lock, audit entries and optimistic status updates.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Generalized health checks to host applications with HTTP, TCP and process checks, and applied success thresholds to container checks as well.",
+			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Probed internet, DNS and gateway every minute and reported connectivity state with latency history.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Stored connectivity history, flagged degraded servers, and allowed alerts on host app metrics and connectivity probes.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Enabled host app actions from the Host tab and Applications page, added connectivity and health cards, host app health checks and a per-server view scope.",
+			},
 		],
 	},
 	{
