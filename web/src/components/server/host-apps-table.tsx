@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -18,6 +19,9 @@ interface HostAppsTableProps {
 	serverID?: string;
 	serverOnline?: boolean;
 	limit?: number;
+	title?: string;
+	subtitle?: string;
+	action?: ReactNode;
 }
 
 const statusVariants: Record<HostAppRecord["status"], "default" | "secondary" | "destructive"> = {
@@ -33,6 +37,9 @@ export function HostAppsTable({
 	serverID,
 	serverOnline,
 	limit,
+	title,
+	subtitle,
+	action,
 }: HostAppsTableProps) {
 	const visibleApps = limit ? apps.slice(0, limit) : apps;
 
@@ -67,20 +74,29 @@ export function HostAppsTable({
 
 	return (
 		<div className="rounded-md border">
+			{title ? (
+				<div className="flex items-start justify-between gap-3 p-6">
+					<div>
+						<h2 className="text-base font-semibold">{title}</h2>
+						{subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
+					</div>
+					{action}
+				</div>
+			) : null}
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead>App</TableHead>
-						<TableHead className="w-24">Source</TableHead>
-						<TableHead className="w-24">Status</TableHead>
-						<TableHead className="w-32">Ports</TableHead>
-						<TableHead className="w-32">CPU / Mem</TableHead>
-						<TableHead className="w-20">Health</TableHead>
+						<TableHead className="text-sm font-medium text-foreground">App</TableHead>
+						<TableHead className="w-24 text-sm font-medium text-foreground">Source</TableHead>
+						<TableHead className="w-24 text-sm font-medium text-foreground">Status</TableHead>
+						<TableHead className="w-32 text-sm font-medium text-foreground">Ports</TableHead>
+						<TableHead className="w-32 text-sm font-medium text-foreground">CPU / Mem</TableHead>
+						<TableHead className="w-20 text-sm font-medium text-foreground">Health</TableHead>
 						<TableHead className="w-10" />
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{apps.length === 0 ? (
+					{visibleApps.length === 0 ? (
 						<TableRow>
 							<TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
 								No applications reported.
@@ -89,7 +105,15 @@ export function HostAppsTable({
 					) : (
 						visibleApps.map((app) => (
 							<TableRow key={app.id}>
-								<TableCell className="text-sm font-medium">{app.name}</TableCell>
+								<TableCell>
+									<div className="flex flex-col">
+										<span className="text-sm font-medium">{app.name}</span>
+										<span className="text-xs text-muted-foreground">
+											{app.source}
+											{app.exec_path ? ` · ${app.exec_path}` : ""}
+										</span>
+									</div>
+								</TableCell>
 								<TableCell>
 									<Badge variant="outline">{app.source}</Badge>
 								</TableCell>
@@ -114,7 +138,7 @@ export function HostAppsTable({
 				</TableBody>
 			</Table>
 			{limit && apps.length > limit ? (
-				<div className="border-t px-3 py-2 text-xs text-muted-foreground">
+				<div className="border-t px-6 py-3 text-xs text-muted-foreground">
 					Showing {visibleApps.length} of {apps.length}
 				</div>
 			) : null}

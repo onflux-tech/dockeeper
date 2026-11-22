@@ -16,11 +16,13 @@ interface SummaryCardProps {
 
 function SummaryCard({ title, icon, value, detail }: SummaryCardProps) {
 	return (
-		<Card>
-			<CardContent className="flex items-center gap-4 p-5">
-				<div className="rounded-md bg-muted p-2 text-muted-foreground">{icon}</div>
+		<Card className="py-0">
+			<CardContent className="flex items-center gap-4 p-6">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+					{icon}
+				</div>
 				<div className="min-w-0">
-					<div className="text-2xl font-semibold tabular-nums">{value}</div>
+					<div className="text-2xl font-bold tabular-nums">{value}</div>
 					<p className="text-xs leading-tight text-muted-foreground">
 						{title} · {detail}
 					</p>

@@ -171,6 +171,7 @@ export default function ServerDetailPage() {
 			<Tabs defaultValue="overview">
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
+					{showHost && <TabsTrigger value="host">Host</TabsTrigger>}
 					{showContainers && (
 						<TabsTrigger value="containers">
 							{hostOnly
@@ -178,7 +179,6 @@ export default function ServerDetailPage() {
 								: `Containers (${containersResult?.totalItems ?? containers.length})`}
 						</TabsTrigger>
 					)}
-					{showHost && <TabsTrigger value="host">Host</TabsTrigger>}
 				</TabsList>
 
 				{/* Overview Tab */}
@@ -279,27 +279,30 @@ export default function ServerDetailPage() {
 					<TabsContent value="host" className="flex flex-col gap-4 mt-4">
 						<HostNotice />
 						<HostSummaryCards metrics={metrics} />
-						<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+						<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
 							<div className="flex min-w-0 flex-col gap-4">
-								<div className="flex items-start justify-between gap-3">
-									<div>
-										<h2 className="text-lg font-medium">Applications</h2>
-										<p className="text-xs text-muted-foreground">{hostAppSummary}</p>
-									</div>
-									<Button variant="ghost" size="sm" asChild>
-										<Link to={`/apps?server=${id}`}>View all</Link>
-									</Button>
-								</div>
 								<HostAppsTable
 									apps={hostApps}
 									isLoading={loadingHostApps}
 									serverID={id}
 									serverOnline={server?.status === "online"}
 									limit={6}
+									title="Applications"
+									subtitle={hostAppSummary}
+									action={
+										<Button
+											variant="ghost"
+											size="sm"
+											className="text-primary hover:text-primary/80"
+											asChild
+										>
+											<Link to={`/apps?server=${id}`}>View all</Link>
+										</Button>
+									}
 								/>
 								<div>
-									<h2 className="text-lg font-medium">Top processes</h2>
-									<p className="text-xs text-muted-foreground">{hostProcesses.length} processes</p>
+									<h2 className="text-base font-semibold">Top processes</h2>
+									<p className="text-sm text-muted-foreground">{hostProcesses.length} processes</p>
 								</div>
 								<HostProcessesTable
 									processes={hostProcesses}
@@ -309,7 +312,7 @@ export default function ServerDetailPage() {
 							</div>
 							<aside className="flex flex-col gap-4">
 								<HostConnectivityCard server={server} />
-								<HostHealthCard checks={healthChecks ?? []} serverID={id ?? ""} />
+								<HostHealthCard checks={healthChecks ?? []} />
 								<HostBackupsCard serverID={id ?? ""} />
 							</aside>
 						</div>
