@@ -18,13 +18,19 @@ import (
 
 type HostHandler struct {
 	agentpb.UnimplementedAgentHostServiceServer
-	app   core.App
-	store *store.HostStore
-	bus   *events.Bus
+	app          core.App
+	store        *store.HostStore
+	connectivity *store.ConnectivityStore
+	bus          *events.Bus
 }
 
 func NewHostHandler(app core.App, hostStore *store.HostStore, bus *events.Bus) *HostHandler {
-	return &HostHandler{app: app, store: hostStore, bus: bus}
+	return &HostHandler{
+		app:          app,
+		store:        hostStore,
+		connectivity: store.NewConnectivityStore(app),
+		bus:          bus,
+	}
 }
 
 func (h *HostHandler) ReportHostInventory(ctx context.Context, req *agentpb.ReportHostInventoryRequest) (*agentpb.ReportHostInventoryResponse, error) {

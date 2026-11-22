@@ -105,6 +105,16 @@ func matchesScope(rule *core.Record, e Event) bool {
 		return e.ServerID == parts[1]
 	case "container":
 		return e.ContainerID == parts[1]
+	case "connectivity":
+		return e.ServerID == parts[1]
+	case "host_app":
+		bits := strings.SplitN(parts[1], ":", 3)
+		if len(bits) != 3 {
+			return false
+		}
+		return e.ServerID == bits[0] &&
+			fmt.Sprint(e.Details["source"]) == bits[1] &&
+			fmt.Sprint(e.Details["name"]) == bits[2]
 	default:
 		return false
 	}
@@ -112,8 +122,10 @@ func matchesScope(rule *core.Record, e Event) bool {
 
 // resolutionMap maps recovery events to the failure events they resolve.
 var resolutionMap = map[string][]string{
-	string(ContainerStarted): {string(ContainerCrashed), string(ContainerStopped)},
-	string(ServerOnline):     {string(ServerOffline)},
+	string(ContainerStarted):            {string(ContainerCrashed), string(ContainerStopped)},
+	string(ServerOnline):                {string(ServerOffline)},
+	string(HostAppHealthRecovered):      {string(HostAppHealthDegraded)},
+	string(ServerConnectivityRecovered): {string(ServerConnectivityDegraded)},
 }
 
 func isResolutionEvent(ruleEventType string, e Event) bool {
