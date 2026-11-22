@@ -167,4 +167,3 @@ func TestCollectorDetectsNginx(t *testing.T) {
 	require.Equal(t, "systemd", instances[0].Source)
 	require.Len(t, instances[0].Routes, 2)
 }
-

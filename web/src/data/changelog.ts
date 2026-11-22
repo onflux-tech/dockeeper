@@ -85,6 +85,42 @@ export const changelog: ChangelogEntry[] = [
 				description:
 					"Enabled host app actions from the Host tab and Applications page, added connectivity and health cards, host app health checks and a per-server view scope.",
 			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Backed up absolute paths of systemd units and PM2 apps with a manifest, exclusions and size limits, restoring with a safety archive, stop/start and rollback.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Let backup policies target a volume or a host app, required a typed RESTORE confirmation for app restores and published backup completed, failed and restored events.",
+			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Collected nginx, Caddy, HAProxy, Envoy and Traefik instances and routes every minute without requiring Docker.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Stored proxy instances and routes per server and exposed a read-only Proxies API guarded by proxies.view.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Added the Proxies page, replaced the Traefik menu item and redirected /traefik to /proxies.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Added volume or host app targets to backup policies, typed app restore confirmation and a backups card on the Host tab.",
+			},
 		],
 	},
 	{
