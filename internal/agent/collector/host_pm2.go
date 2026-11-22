@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
+	"os"
 	"time"
 )
 
@@ -32,8 +32,16 @@ type pm2Daemon struct {
 	PM2Home string
 }
 
-type pm2Collector struct {
-	logger *slog.Logger
+type pm2Collector struct{}
+
+func pm2Env(daemon pm2Daemon) []string {
+	return []string{
+		"PATH=" + os.Getenv("PATH"),
+		"HOME=" + daemon.Home,
+		"PM2_HOME=" + daemon.PM2Home,
+		"USER=" + daemon.User,
+		"LOGNAME=" + daemon.User,
+	}
 }
 
 func (c *pm2Collector) ListApps(ctx context.Context) ([]PM2App, error) {
@@ -46,13 +54,11 @@ func (c *pm2Collector) ListApps(ctx context.Context) ([]PM2App, error) {
 	for _, daemon := range daemons {
 		output, err := runPM2Jlist(ctx, daemon)
 		if err != nil {
-			c.logger.Warn("pm2 jlist failed", "user", daemon.User, "error", err)
-			continue
+			return nil, fmt.Errorf("pm2 jlist for %s: %w", daemon.User, err)
 		}
 		parsed, err := parsePM2Jlist(output)
 		if err != nil {
-			c.logger.Warn("pm2 jlist parse failed", "user", daemon.User, "error", err)
-			continue
+			return nil, fmt.Errorf("parse pm2 jlist for %s: %w", daemon.User, err)
 		}
 		for index := range parsed {
 			if parsed[index].User == "" {

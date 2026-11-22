@@ -111,7 +111,7 @@ func runPM2Jlist(ctx context.Context, daemon pm2Daemon) ([]byte, error) {
 	defer cancel()
 
 	command := exec.CommandContext(ctx, path, "jlist")
-	command.Env = append(os.Environ(), "HOME="+daemon.Home, "PM2_HOME="+daemon.PM2Home)
+	command.Env = pm2Env(daemon)
 	command.SysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{Uid: daemon.UID, Gid: daemon.GID},
 	}

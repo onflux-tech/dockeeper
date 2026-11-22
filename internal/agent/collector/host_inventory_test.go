@@ -60,6 +60,54 @@ func TestHostInventoryProcessFailure(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestHostInventorySystemdFailure(t *testing.T) {
+	c := newFixtureCollector(nil, nil, nil, nil)
+	c.systemd = fixtureSystemd{err: errors.New("dbus down")}
+
+	_, err := c.Collect(context.Background())
+	require.Error(t, err)
+}
+
+func TestHostInventoryPM2Failure(t *testing.T) {
+	c := newFixtureCollector(nil, nil, nil, nil)
+	c.pm2 = fixturePM2{err: errors.New("jlist failed")}
+
+	_, err := c.Collect(context.Background())
+	require.Error(t, err)
+}
+
+func TestHostInventoryPortsFailure(t *testing.T) {
+	c := newFixtureCollector(nil, nil, nil, nil)
+	c.processes = fixtureProcesses{portsErr: errors.New("proc net unavailable")}
+
+	_, err := c.Collect(context.Background())
+	require.Error(t, err)
+}
+
+func TestHostInventoryAggregatesSameNameProcesses(t *testing.T) {
+	c := newFixtureCollector(
+		nil,
+		nil,
+		[]ProcessInfo{
+			{PID: 300, Name: "node", CPU: 1.5, Mem: 100 << 20, Threads: 6},
+			{PID: 301, Name: "node", CPU: 2.5, Mem: 200 << 20, Threads: 8},
+		},
+		[]ListeningPort{
+			{Port: 3000, PID: 300, Protocol: "tcp", Address: "0.0.0.0"},
+			{Port: 8080, PID: 301, Protocol: "tcp", Address: "0.0.0.0"},
+		},
+	)
+
+	inv, err := c.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, inv.Apps, 1)
+	require.Equal(t, "process", inv.Apps[0].Source)
+	require.Equal(t, "node", inv.Apps[0].Name)
+	require.Equal(t, []uint32{300, 301}, inv.Apps[0].PIDs)
+	require.Equal(t, []uint32{3000, 8080}, inv.Apps[0].Ports)
+	require.Equal(t, 4.0, inv.Apps[0].CPUPercent)
+}
+
 type fixtureSystemd struct {
 	units []SystemdUnit
 	err   error
@@ -79,9 +127,10 @@ func (f fixturePM2) ListApps(context.Context) ([]PM2App, error) {
 }
 
 type fixtureProcesses struct {
-	procs []ProcessInfo
-	ports []ListeningPort
-	err   error
+	procs    []ProcessInfo
+	ports    []ListeningPort
+	err      error
+	portsErr error
 }
 
 func (f fixtureProcesses) ListProcesses(context.Context) ([]ProcessInfo, error) {
@@ -89,7 +138,7 @@ func (f fixtureProcesses) ListProcesses(context.Context) ([]ProcessInfo, error) 
 }
 
 func (f fixtureProcesses) ListListeningPorts(context.Context) ([]ListeningPort, error) {
-	return f.ports, nil
+	return f.ports, f.portsErr
 }
 
 type failingProcessSource struct{}

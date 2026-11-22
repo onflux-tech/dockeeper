@@ -107,8 +107,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		cancel()
 	}
 
-	// Detect container runtime. Without one, the agent keeps the control plane
-	// and reports host inventory instead of containers.
 	orchType, orch, orchErr := DetectOrchestrator(ctx)
 	if orchErr != nil || orch == nil {
 		orch = nil
@@ -144,7 +142,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		go traefikColl.Run(ctx)
 	}
 
-	// Host inventory runs with or without a container runtime.
 	hostCollector := collector.NewHostInventoryCollector(a.logger)
 	hostReporter := NewHostReporter(a.client.Host(), a.cfg.ServerID, a.logger)
 	hostReporter.SetServerGoneCallback(triggerReEnrollment)

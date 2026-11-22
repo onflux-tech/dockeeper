@@ -80,7 +80,7 @@ func NewHostInventoryCollector(logger *slog.Logger) *HostInventoryCollector {
 	return &HostInventoryCollector{
 		logger:    logger,
 		systemd:   &systemdCollector{logger: logger, cgroupRoot: defaultCgroupRoot},
-		pm2:       &pm2Collector{logger: logger},
+		pm2:       &pm2Collector{},
 		processes: &procfsCollector{logger: logger},
 	}
 }
@@ -88,12 +88,12 @@ func NewHostInventoryCollector(logger *slog.Logger) *HostInventoryCollector {
 func (c *HostInventoryCollector) Collect(ctx context.Context) (*HostInventory, error) {
 	units, err := c.systemd.ListUnits(ctx)
 	if err != nil {
-		c.logger.Warn("systemd inventory unavailable", "error", err)
+		return nil, fmt.Errorf("list systemd units: %w", err)
 	}
 
 	pm2Apps, err := c.pm2.ListApps(ctx)
 	if err != nil {
-		c.logger.Warn("pm2 inventory unavailable", "error", err)
+		return nil, fmt.Errorf("list pm2 apps: %w", err)
 	}
 
 	processes, err := c.processes.ListProcesses(ctx)
@@ -103,7 +103,7 @@ func (c *HostInventoryCollector) Collect(ctx context.Context) (*HostInventory, e
 
 	ports, err := c.processes.ListListeningPorts(ctx)
 	if err != nil {
-		c.logger.Warn("host listening ports unavailable", "error", err)
+		return nil, fmt.Errorf("list host listening ports: %w", err)
 	}
 
 	uptime, err := host.UptimeWithContext(ctx)
@@ -202,6 +202,7 @@ func mergeHostInventory(units []SystemdUnit, pm2Apps []PM2App, processes []Proce
 	}
 
 	seenPortPID := make(map[uint32]bool)
+	processAppByName := make(map[string]int)
 	for _, port := range ports {
 		if _, ok := pidToApp[port.PID]; ok {
 			continue
@@ -214,6 +215,14 @@ func mergeHostInventory(units []SystemdUnit, pm2Apps []PM2App, processes []Proce
 			continue
 		}
 		seenPortPID[port.PID] = true
+		if index, exists := processAppByName[process.Name]; exists {
+			apps[index].PIDs = append(apps[index].PIDs, process.PID)
+			apps[index].CPUPercent += process.CPU
+			apps[index].MemBytes += process.Mem
+			apps[index].Ports = appendUniquePort(apps[index].Ports, port.Port)
+			pidToApp[port.PID] = index
+			continue
+		}
 		entry := HostApp{
 			Source:     "process",
 			Name:       process.Name,
@@ -226,8 +235,10 @@ func mergeHostInventory(units []SystemdUnit, pm2Apps []PM2App, processes []Proce
 			ExecPath:   process.ExecPath,
 		}
 		apps = append(apps, entry)
-		pidToApp[port.PID] = len(apps) - 1
-		apps[len(apps)-1].Ports = appendUniquePort(apps[len(apps)-1].Ports, port.Port)
+		index := len(apps) - 1
+		processAppByName[process.Name] = index
+		pidToApp[port.PID] = index
+		apps[index].Ports = appendUniquePort(apps[index].Ports, port.Port)
 	}
 
 	for index := range apps {
