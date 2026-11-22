@@ -22,7 +22,7 @@ export function HostHealthCard({ checks }: HostHealthCardProps) {
 			</CardHeader>
 			<CardContent className="p-6 pt-0 text-xs">
 				{checks.length === 0 ? (
-					<p className="text-muted-foreground">No health checks configured for this server.</p>
+					<p className="text-muted-foreground">No health checks configured.</p>
 				) : (
 					<div className="flex flex-col gap-1.5">
 						{checks.slice(0, 3).map((check) => (

@@ -46,28 +46,30 @@ export function HostAppsTable({
 	if (isLoading) {
 		return (
 			<div className="rounded-md border">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							{Array.from({ length: 7 }).map((_, index) => (
-								<TableHead key={index}>
-									<Skeleton className="h-4 w-16" />
-								</TableHead>
-							))}
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{Array.from({ length: 4 }).map((_, row) => (
-							<TableRow key={row}>
-								{Array.from({ length: 7 }).map((_, col) => (
-									<TableCell key={col}>
-										<Skeleton className="h-4 w-full" />
-									</TableCell>
+				<div className="px-6">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								{Array.from({ length: 7 }).map((_, index) => (
+									<TableHead key={index}>
+										<Skeleton className="h-4 w-16" />
+									</TableHead>
 								))}
 							</TableRow>
-						))}
-					</TableBody>
-				</Table>
+						</TableHeader>
+						<TableBody>
+							{Array.from({ length: 4 }).map((_, row) => (
+								<TableRow key={row}>
+									{Array.from({ length: 7 }).map((_, col) => (
+										<TableCell key={col}>
+											<Skeleton className="h-4 w-full" />
+										</TableCell>
+									))}
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
 			</div>
 		);
 	}
@@ -83,60 +85,72 @@ export function HostAppsTable({
 					{action}
 				</div>
 			) : null}
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead className="text-sm font-medium text-foreground">App</TableHead>
-						<TableHead className="w-24 text-sm font-medium text-foreground">Source</TableHead>
-						<TableHead className="w-24 text-sm font-medium text-foreground">Status</TableHead>
-						<TableHead className="w-32 text-sm font-medium text-foreground">Ports</TableHead>
-						<TableHead className="w-32 text-sm font-medium text-foreground">CPU / Mem</TableHead>
-						<TableHead className="w-20 text-sm font-medium text-foreground">Health</TableHead>
-						<TableHead className="w-10" />
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{visibleApps.length === 0 ? (
+			<div className="px-6">
+				<Table>
+					<TableHeader>
 						<TableRow>
-							<TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-								No applications reported.
-							</TableCell>
+							<TableHead className="text-sm font-medium text-foreground uppercase">App</TableHead>
+							<TableHead className="w-24 text-sm font-medium text-foreground uppercase">
+								Source
+							</TableHead>
+							<TableHead className="w-24 text-sm font-medium text-foreground uppercase">
+								Status
+							</TableHead>
+							<TableHead className="w-32 text-sm font-medium text-foreground uppercase">
+								Ports
+							</TableHead>
+							<TableHead className="w-32 text-sm font-medium text-foreground uppercase">
+								CPU / Mem
+							</TableHead>
+							<TableHead className="w-20 text-sm font-medium text-foreground uppercase">
+								Health
+							</TableHead>
+							<TableHead className="w-10" />
 						</TableRow>
-					) : (
-						visibleApps.map((app) => (
-							<TableRow key={app.id}>
-								<TableCell>
-									<div className="flex flex-col">
-										<span className="text-sm font-medium">{app.name}</span>
-										<span className="text-xs text-muted-foreground">
-											{app.source}
-											{app.exec_path ? ` · ${app.exec_path}` : ""}
-										</span>
-									</div>
-								</TableCell>
-								<TableCell>
-									<Badge variant="outline">{app.source}</Badge>
-								</TableCell>
-								<TableCell>
-									<Badge variant={statusVariants[app.status] ?? "secondary"}>{app.status}</Badge>
-								</TableCell>
-								<TableCell className="text-xs tabular-nums text-muted-foreground">
-									{app.ports?.length ? app.ports.join(", ") : "—"}
-								</TableCell>
-								<TableCell className="text-xs tabular-nums text-muted-foreground">
-									{formatCpuMem(app.cpu_percent, app.mem_bytes)}
-								</TableCell>
-								<TableCell className="text-xs text-muted-foreground">—</TableCell>
-								<TableCell>
-									{serverID ? (
-										<HostActionsMenu serverID={serverID} app={app} serverOnline={serverOnline} />
-									) : null}
+					</TableHeader>
+					<TableBody>
+						{visibleApps.length === 0 ? (
+							<TableRow>
+								<TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+									No applications reported.
 								</TableCell>
 							</TableRow>
-						))
-					)}
-				</TableBody>
-			</Table>
+						) : (
+							visibleApps.map((app) => (
+								<TableRow key={app.id}>
+									<TableCell>
+										<div className="flex flex-col">
+											<span className="text-sm font-medium">{app.name}</span>
+											<span className="text-xs text-muted-foreground">
+												{app.source}
+												{app.exec_path ? ` · ${app.exec_path}` : ""}
+											</span>
+										</div>
+									</TableCell>
+									<TableCell>
+										<Badge variant="outline">{app.source}</Badge>
+									</TableCell>
+									<TableCell>
+										<Badge variant={statusVariants[app.status] ?? "secondary"}>{app.status}</Badge>
+									</TableCell>
+									<TableCell className="text-xs tabular-nums text-muted-foreground">
+										{app.ports?.length ? app.ports.join(", ") : "—"}
+									</TableCell>
+									<TableCell className="text-xs tabular-nums text-muted-foreground">
+										{formatCpuMem(app.cpu_percent, app.mem_bytes)}
+									</TableCell>
+									<TableCell className="text-xs text-muted-foreground">—</TableCell>
+									<TableCell>
+										{serverID ? (
+											<HostActionsMenu serverID={serverID} app={app} serverOnline={serverOnline} />
+										) : null}
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</div>
 			{limit && apps.length > limit ? (
 				<div className="border-t px-6 py-3 text-xs text-muted-foreground">
 					Showing {visibleApps.length} of {apps.length}

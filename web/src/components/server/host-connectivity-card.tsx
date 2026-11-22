@@ -47,7 +47,7 @@ export function HostConnectivityCard({ server }: { server: ServerRecord }) {
 				) : null}
 				{details?.error ? <p className="text-xs text-destructive">{details.error}</p> : null}
 				{server.connectivity_checked_at ? (
-					<p className="text-xs text-muted-foreground">
+					<p className="border-t pt-2 text-xs text-muted-foreground">
 						Checked {relativeTime(server.connectivity_checked_at)}
 					</p>
 				) : null}
