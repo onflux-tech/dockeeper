@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 	"time"
 
@@ -273,12 +274,20 @@ func (s *BackupService) getS3Settings() (*s3Settings, error) {
 		settings[key] = fmt.Sprintf("%v", records[0].Get("value"))
 	}
 
+	endpoint := settings["s3_endpoint"]
+	useSSL := settings["s3_use_ssl"] == "true"
+	if parsed, err := url.Parse(endpoint); err == nil && parsed.Scheme != "" && parsed.Host != "" {
+		endpoint = parsed.Host
+		useSSL = parsed.Scheme == "https"
+	}
+	endpoint = strings.TrimSuffix(endpoint, "/")
+
 	return &s3Settings{
-		Endpoint:  settings["s3_endpoint"],
+		Endpoint:  endpoint,
 		AccessKey: settings["s3_access_key"],
 		SecretKey: settings["s3_secret_key"],
 		Region:    settings["s3_region"],
-		UseSSL:    settings["s3_use_ssl"] == "true",
+		UseSSL:    useSSL,
 	}, nil
 }
 

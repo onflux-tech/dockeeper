@@ -8,6 +8,34 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCreateBackupRecordSetsVolumeTarget(t *testing.T) {
+	app, err := tests.NewTestApp()
+	require.NoError(t, err)
+	t.Cleanup(app.Cleanup)
+
+	records := core.NewBaseCollection("backup_records")
+	records.Fields.Add(
+		&core.TextField{Name: "policy"},
+		&core.TextField{Name: "volume_name"},
+		&core.TextField{Name: "server"},
+		&core.SelectField{Name: "target_type", Values: []string{"volume", "host_app"}, MaxSelect: 1},
+		&core.TextField{Name: "target_label"},
+		&core.TextField{Name: "status"},
+		&core.DateField{Name: "started_at"},
+	)
+	require.NoError(t, app.Save(records))
+
+	s := NewBackupStore(app)
+	id, err := s.CreateBackupRecord("pol1", "data", "srv1")
+	require.NoError(t, err)
+
+	reloaded, err := app.FindRecordById("backup_records", id)
+	require.NoError(t, err)
+	require.Equal(t, "volume", reloaded.GetString("target_type"))
+	require.Equal(t, "data", reloaded.GetString("target_label"))
+	require.Equal(t, "running", reloaded.GetString("status"))
+}
+
 func TestMarkBackupSuccessStoresChecksum(t *testing.T) {
 	app, err := tests.NewTestApp()
 	require.NoError(t, err)

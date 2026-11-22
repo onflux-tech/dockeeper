@@ -131,6 +131,8 @@ func (s *BackupStore) CreateBackupRecord(policyID, volumeName, serverID string) 
 	rec.Set("policy", policyID)
 	rec.Set("volume_name", volumeName)
 	rec.Set("server", serverID)
+	rec.Set("target_type", "volume")
+	rec.Set("target_label", volumeName)
 	rec.Set("status", "running")
 	rec.Set("started_at", time.Now().UTC().Format(time.RFC3339))
 
