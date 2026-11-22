@@ -23,6 +23,7 @@ func newHostHandlerTestApp(t *testing.T) (*tests.TestApp, string) {
 	servers := core.NewBaseCollection("servers")
 	servers.Fields.Add(
 		&core.TextField{Name: "name"},
+		&core.TextField{Name: "hostname"},
 		&core.TextField{Name: "status"},
 		&core.DateField{Name: "last_seen"},
 	)
@@ -79,6 +80,7 @@ func newHostHandlerTestApp(t *testing.T) (*tests.TestApp, string) {
 
 	server := core.NewRecord(servers)
 	server.Set("name", "host-a")
+	server.Set("hostname", "host-a")
 	server.Set("status", "online")
 	require.NoError(t, app.Save(server))
 
@@ -115,10 +117,10 @@ func TestReportHostInventoryPublishesOnChange(t *testing.T) {
 	bus := events.NewBus()
 	defer bus.Close()
 
-	var count int
+	var published []events.Event
 	bus.Subscribe(events.HandlerFunc(func(event events.Event) {
 		if event.Type == events.ServerHostInventory {
-			count++
+			published = append(published, event)
 		}
 	}))
 
@@ -134,5 +136,34 @@ func TestReportHostInventoryPublishesOnChange(t *testing.T) {
 	}
 	bus.Close()
 
-	require.Equal(t, 1, count)
+	require.Len(t, published, 1)
+	require.Equal(t, "host-a", published[0].ServerName)
+}
+
+func TestReportHostInventoryIgnoresProcessChurn(t *testing.T) {
+	app, serverID := newHostHandlerTestApp(t)
+	bus := events.NewBus()
+	defer bus.Close()
+
+	var count int
+	bus.Subscribe(events.HandlerFunc(func(event events.Event) {
+		if event.Type == events.ServerHostInventory {
+			count++
+		}
+	}))
+
+	handler := NewHostHandler(app, store.NewHostStore(app), bus)
+	ctx := context.WithValue(context.Background(), serverIDKey, serverID)
+
+	for _, pid := range []uint32{300, 301} {
+		request := &agentpb.ReportHostInventoryRequest{
+			Apps:      []*agentpb.HostApp{{Source: "process", Name: "node", Status: "running", Pids: []uint32{pid}}},
+			Processes: []*agentpb.HostProcess{{Pid: pid, Name: "node"}},
+		}
+		_, err := handler.ReportHostInventory(ctx, request)
+		require.NoError(t, err)
+	}
+	bus.Close()
+
+	require.Zero(t, count)
 }

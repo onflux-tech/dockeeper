@@ -116,8 +116,8 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 			record.Set("server", serverID)
 			record.Set("source", hostApp.GetSource())
 			record.Set("name", hostApp.GetName())
-			changed = true
-		} else if record.GetString("status") != hostApp.GetStatus() {
+			changed = changed || hostApp.GetSource() != "process"
+		} else if hostApp.GetSource() != "process" && record.GetString("status") != hostApp.GetStatus() {
 			changed = true
 		}
 
@@ -155,7 +155,7 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 			slog.Error("prune host app failed", "server_id", serverID, "record_id", record.Id, "error", err)
 			continue
 		}
-		changed = true
+		changed = changed || record.GetString("source") != "process"
 	}
 
 	seenPIDs := make(map[string]bool, len(processes))
@@ -171,7 +171,6 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 			record = core.NewRecord(processesCol)
 			record.Set("server", serverID)
 			record.Set("pid", process.GetPid())
-			changed = true
 		}
 
 		record.Set("name", process.GetName())
@@ -194,9 +193,7 @@ func upsertHostInventory(app core.App, serverID string, apps []*agentpb.HostApp,
 		}
 		if err := app.Delete(record); err != nil {
 			slog.Error("prune host process failed", "server_id", serverID, "record_id", record.Id, "error", err)
-			continue
 		}
-		changed = true
 	}
 
 	return count, changed, nil

@@ -142,6 +142,29 @@ func TestHostStoreUpsertsProcesses(t *testing.T) {
 	require.Empty(t, rows)
 }
 
+func TestHostStoreIgnoresProcessChurnForChanges(t *testing.T) {
+	app, serverID := newHostTestApp(t)
+	store := NewHostStore(app)
+
+	_, changed, err := store.UpsertInventory(serverID, []*agentpb.HostApp{
+		{Source: "process", Name: "node", Status: "running", Pids: []uint32{300}},
+	}, []*agentpb.HostProcess{{Pid: 300, Name: "node"}}, nil)
+	require.NoError(t, err)
+	require.False(t, changed)
+
+	_, changed, err = store.UpsertInventory(serverID, []*agentpb.HostApp{
+		{Source: "process", Name: "node", Status: "running", Pids: []uint32{301}},
+	}, []*agentpb.HostProcess{{Pid: 999, Name: "transient"}}, nil)
+	require.NoError(t, err)
+	require.False(t, changed)
+
+	_, changed, err = store.UpsertInventory(serverID, []*agentpb.HostApp{
+		{Source: "systemd", Name: "nginx.service", Status: "running"},
+	}, nil, nil)
+	require.NoError(t, err)
+	require.True(t, changed)
+}
+
 func TestHostStoreSaveAppMetrics(t *testing.T) {
 	app, serverID := newHostTestApp(t)
 	store := NewHostStore(app)

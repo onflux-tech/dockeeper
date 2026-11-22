@@ -12,6 +12,7 @@ import (
 	"github.com/onflux-tech/dockeeper/internal/manager/events"
 	"github.com/onflux-tech/dockeeper/internal/manager/hooks"
 	"github.com/onflux-tech/dockeeper/internal/manager/store"
+	"github.com/onflux-tech/dockeeper/internal/shared/constants"
 	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
@@ -54,12 +55,17 @@ func (h *HostHandler) ReportHostInventory(ctx context.Context, req *agentpb.Repo
 	}
 
 	if changed && h.bus != nil {
+		serverName := ""
+		if record, err := h.app.FindRecordById(constants.CollServers, serverID); err == nil {
+			serverName = record.GetString("hostname")
+		}
 		h.bus.Publish(events.Event{
-			Type:      events.ServerHostInventory,
-			Severity:  events.SeverityFor(events.ServerHostInventory),
-			ServerID:  serverID,
-			Details:   map[string]any{"apps": count, "processes": len(req.GetProcesses())},
-			Timestamp: time.Now().UTC(),
+			Type:       events.ServerHostInventory,
+			Severity:   events.SeverityFor(events.ServerHostInventory),
+			ServerID:   serverID,
+			ServerName: serverName,
+			Details:    map[string]any{"apps": count, "processes": len(req.GetProcesses())},
+			Timestamp:  time.Now().UTC(),
 		})
 	}
 
