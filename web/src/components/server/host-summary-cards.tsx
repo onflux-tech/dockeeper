@@ -1,5 +1,5 @@
 import { Activity, HardDrive, MemoryStick, Network } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatBytes } from "@/lib/format";
 import type { MetricPoint } from "@/hooks/use-server-metrics";
 
@@ -17,13 +17,14 @@ interface SummaryCardProps {
 function SummaryCard({ title, icon, value, detail }: SummaryCardProps) {
 	return (
 		<Card>
-			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-				<CardTitle className="text-sm font-medium">{title}</CardTitle>
-				<span className="text-muted-foreground">{icon}</span>
-			</CardHeader>
-			<CardContent>
-				<div className="text-2xl font-semibold tabular-nums">{value}</div>
-				<p className="text-xs text-muted-foreground">{detail}</p>
+			<CardContent className="flex items-center gap-4 p-5">
+				<div className="rounded-md bg-muted p-2 text-muted-foreground">{icon}</div>
+				<div className="min-w-0">
+					<div className="text-2xl font-semibold tabular-nums">{value}</div>
+					<p className="text-xs leading-tight text-muted-foreground">
+						{title} · {detail}
+					</p>
+				</div>
 			</CardContent>
 		</Card>
 	);

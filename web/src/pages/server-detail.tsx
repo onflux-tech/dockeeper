@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router";
 import { ArrowLeft, Pencil, Download, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +86,16 @@ export default function ServerDetailPage() {
 		showHost ? id : undefined,
 	);
 	const { data: healthChecks } = useHealthChecks(showHost ? id : undefined);
+
+	const hostAppSummary = useMemo(() => {
+		const running = hostApps.filter((app) => app.status === "running").length;
+		const stopped = hostApps.filter((app) => app.status === "stopped").length;
+		const failed = hostApps.filter((app) => app.status === "failed").length;
+		const parts = [`${hostApps.length} apps`, `${running} running`];
+		if (stopped) parts.push(`${stopped} stopped`);
+		if (failed) parts.push(`${failed} failed`);
+		return parts.join(" · ");
+	}, [hostApps]);
 
 	const containers = containersResult?.items ?? [];
 	const metrics = metricsData ?? [];
@@ -269,25 +279,40 @@ export default function ServerDetailPage() {
 					<TabsContent value="host" className="flex flex-col gap-4 mt-4">
 						<HostNotice />
 						<HostSummaryCards metrics={metrics} />
-						<div className="grid gap-4 md:grid-cols-2">
-							<HostConnectivityCard server={server} />
-							<HostHealthCard checks={healthChecks ?? []} serverID={id ?? ""} />
-							<HostBackupsCard serverID={id ?? ""} />
+						<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+							<div className="flex min-w-0 flex-col gap-4">
+								<div className="flex items-start justify-between gap-3">
+									<div>
+										<h2 className="text-lg font-medium">Applications</h2>
+										<p className="text-xs text-muted-foreground">{hostAppSummary}</p>
+									</div>
+									<Button variant="ghost" size="sm" asChild>
+										<Link to={`/apps?server=${id}`}>View all</Link>
+									</Button>
+								</div>
+								<HostAppsTable
+									apps={hostApps}
+									isLoading={loadingHostApps}
+									serverID={id}
+									serverOnline={server?.status === "online"}
+									limit={6}
+								/>
+								<div>
+									<h2 className="text-lg font-medium">Top processes</h2>
+									<p className="text-xs text-muted-foreground">{hostProcesses.length} processes</p>
+								</div>
+								<HostProcessesTable
+									processes={hostProcesses}
+									isLoading={loadingHostProcesses}
+									limit={5}
+								/>
+							</div>
+							<aside className="flex flex-col gap-4">
+								<HostConnectivityCard server={server} />
+								<HostHealthCard checks={healthChecks ?? []} serverID={id ?? ""} />
+								<HostBackupsCard serverID={id ?? ""} />
+							</aside>
 						</div>
-						<div className="flex items-center justify-between">
-							<h2 className="text-lg font-medium">Applications</h2>
-							<Button variant="ghost" size="sm" asChild>
-								<Link to="/apps">View all</Link>
-							</Button>
-						</div>
-						<HostAppsTable
-							apps={hostApps}
-							isLoading={loadingHostApps}
-							serverID={id}
-							serverOnline={server?.status === "online"}
-						/>
-						<h2 className="text-lg font-medium">Top processes</h2>
-						<HostProcessesTable processes={hostProcesses} isLoading={loadingHostProcesses} />
 					</TabsContent>
 				)}
 			</Tabs>

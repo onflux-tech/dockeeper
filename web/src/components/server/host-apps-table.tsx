@@ -17,6 +17,7 @@ interface HostAppsTableProps {
 	isLoading: boolean;
 	serverID?: string;
 	serverOnline?: boolean;
+	limit?: number;
 }
 
 const statusVariants: Record<HostAppRecord["status"], "default" | "secondary" | "destructive"> = {
@@ -26,7 +27,15 @@ const statusVariants: Record<HostAppRecord["status"], "default" | "secondary" | 
 	unknown: "secondary",
 };
 
-export function HostAppsTable({ apps, isLoading, serverID, serverOnline }: HostAppsTableProps) {
+export function HostAppsTable({
+	apps,
+	isLoading,
+	serverID,
+	serverOnline,
+	limit,
+}: HostAppsTableProps) {
+	const visibleApps = limit ? apps.slice(0, limit) : apps;
+
 	if (isLoading) {
 		return (
 			<div className="rounded-md border">
@@ -78,7 +87,7 @@ export function HostAppsTable({ apps, isLoading, serverID, serverOnline }: HostA
 							</TableCell>
 						</TableRow>
 					) : (
-						apps.map((app) => (
+						visibleApps.map((app) => (
 							<TableRow key={app.id}>
 								<TableCell className="text-sm font-medium">{app.name}</TableCell>
 								<TableCell>
@@ -104,6 +113,11 @@ export function HostAppsTable({ apps, isLoading, serverID, serverOnline }: HostA
 					)}
 				</TableBody>
 			</Table>
+			{limit && apps.length > limit ? (
+				<div className="border-t px-3 py-2 text-xs text-muted-foreground">
+					Showing {visibleApps.length} of {apps.length}
+				</div>
+			) : null}
 		</div>
 	);
 }
