@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -30,6 +31,17 @@ func RegisterProxyRoutes(se *core.ServeEvent, app core.App, rbac *middleware.RBA
 	}).BindFunc(rbac.RequireCapability(constants.CapProxiesView))
 }
 
+func proxyRouteInstanceFilter(instanceIDs []string) (string, map[string]any) {
+	clauses := make([]string, 0, len(instanceIDs))
+	params := make(map[string]any, len(instanceIDs))
+	for index, instanceID := range instanceIDs {
+		key := fmt.Sprintf("instance%d", index)
+		clauses = append(clauses, fmt.Sprintf("instance = {:%s}", key))
+		params[key] = instanceID
+	}
+	return "(" + strings.Join(clauses, " || ") + ")", params
+}
+
 func listProxyRecords(e *core.RequestEvent, app core.App, collection string) error {
 	query := e.Request.URL.Query()
 
@@ -47,19 +59,47 @@ func listProxyRecords(e *core.RequestEvent, app core.App, collection string) err
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid proxy kind"})
 	}
 
+	server := query.Get("server")
 	var filters []string
 	params := map[string]any{}
-	if server := query.Get("server"); server != "" {
+	if server != "" {
 		filters = append(filters, "server = {:server}")
 		params["server"] = server
 	}
 	if kind != "" {
 		if collection == constants.CollProxyInstances {
 			filters = append(filters, "kind = {:kind}")
+			params["kind"] = kind
 		} else {
-			filters = append(filters, "instance.kind = {:kind}")
+			instanceFilter := "kind = {:kind}"
+			instanceParams := map[string]any{"kind": kind}
+			if server != "" {
+				instanceFilter += " && server = {:server}"
+				instanceParams["server"] = server
+			}
+			instances, err := app.FindRecordsByFilter(constants.CollProxyInstances, instanceFilter, "", 500, 0, instanceParams)
+			if err != nil {
+				return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			}
+			if len(instances) == 0 {
+				return e.JSON(http.StatusOK, map[string]any{
+					"items":      []any{},
+					"page":       page,
+					"perPage":    perPage,
+					"totalItems": 0,
+					"totalPages": 0,
+				})
+			}
+			instanceIDs := make([]string, 0, len(instances))
+			for _, instance := range instances {
+				instanceIDs = append(instanceIDs, instance.Id)
+			}
+			filter, filterParams := proxyRouteInstanceFilter(instanceIDs)
+			filters = append(filters, filter)
+			for key, value := range filterParams {
+				params[key] = value
+			}
 		}
-		params["kind"] = kind
 	}
 	if search := strings.TrimSpace(query.Get("search")); search != "" {
 		if collection == constants.CollProxyInstances {
