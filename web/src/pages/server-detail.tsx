@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router";
 import { ArrowLeft, Pencil, Download, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +87,16 @@ export default function ServerDetailPage() {
 	);
 	const { data: healthChecks } = useHealthChecks(showHost ? id : undefined);
 
+	const hostAppSummary = useMemo(() => {
+		const running = hostApps.filter((app) => app.status === "running").length;
+		const stopped = hostApps.filter((app) => app.status === "stopped").length;
+		const failed = hostApps.filter((app) => app.status === "failed").length;
+		const parts = [`${hostApps.length} apps`, `${running} running`];
+		if (stopped) parts.push(`${stopped} stopped`);
+		if (failed) parts.push(`${failed} failed`);
+		return parts.join(" · ");
+	}, [hostApps]);
+
 	const containers = containersResult?.items ?? [];
 	const metrics = metricsData ?? [];
 
@@ -114,7 +124,7 @@ export default function ServerDetailPage() {
 	return (
 		<div className="flex flex-col gap-6">
 			{/* Header */}
-			<div className="flex items-center gap-3">
+			<div className="flex flex-wrap items-center gap-3">
 				<Button variant="ghost" size="icon" className="h-8 w-8" asChild>
 					<Link to="/servers">
 						<ArrowLeft className="h-4 w-4" />
@@ -127,7 +137,7 @@ export default function ServerDetailPage() {
 					</>
 				) : (
 					<>
-						<h1 className="text-2xl font-semibold">
+						<h1 className="text-xl font-semibold sm:text-2xl">
 							{server?.name || server?.hostname || "Server"}
 						</h1>
 						{server && <Badge variant={statusVariant}>{server.status}</Badge>}
@@ -161,6 +171,7 @@ export default function ServerDetailPage() {
 			<Tabs defaultValue="overview">
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
+					{showHost && <TabsTrigger value="host">Host</TabsTrigger>}
 					{showContainers && (
 						<TabsTrigger value="containers">
 							{hostOnly
@@ -168,7 +179,6 @@ export default function ServerDetailPage() {
 								: `Containers (${containersResult?.totalItems ?? containers.length})`}
 						</TabsTrigger>
 					)}
-					{showHost && <TabsTrigger value="host">Host</TabsTrigger>}
 				</TabsList>
 
 				{/* Overview Tab */}
@@ -266,28 +276,46 @@ export default function ServerDetailPage() {
 				)}
 
 				{showHost && server && (
-					<TabsContent value="host" className="flex flex-col gap-4 mt-4">
-						<HostNotice />
+					<TabsContent value="host" className="flex flex-col gap-6 mt-4">
+						{hostOnly ? <HostNotice /> : null}
 						<HostSummaryCards metrics={metrics} />
-						<div className="grid gap-4 md:grid-cols-2">
-							<HostConnectivityCard server={server} />
-							<HostHealthCard checks={healthChecks ?? []} serverID={id ?? ""} />
-							<HostBackupsCard serverID={id ?? ""} />
+						<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_272px]">
+							<div className="flex min-w-0 flex-col gap-4">
+								<HostAppsTable
+									apps={hostApps}
+									isLoading={loadingHostApps}
+									serverID={id}
+									serverOnline={server?.status === "online"}
+									limit={6}
+									title="Applications"
+									subtitle={hostAppSummary}
+									action={
+										<Button
+											variant="ghost"
+											size="sm"
+											className="text-primary hover:text-primary/80"
+											asChild
+										>
+											<Link to={`/apps?server=${id}`}>View all</Link>
+										</Button>
+									}
+								/>
+								<div>
+									<h2 className="text-base font-semibold">Top processes</h2>
+									<p className="text-sm text-muted-foreground">{hostProcesses.length} processes</p>
+								</div>
+								<HostProcessesTable
+									processes={hostProcesses}
+									isLoading={loadingHostProcesses}
+									limit={5}
+								/>
+							</div>
+							<aside className="flex min-w-0 flex-col gap-4">
+								<HostConnectivityCard server={server} />
+								<HostHealthCard checks={healthChecks ?? []} />
+								<HostBackupsCard serverID={id ?? ""} />
+							</aside>
 						</div>
-						<div className="flex items-center justify-between">
-							<h2 className="text-lg font-medium">Applications</h2>
-							<Button variant="ghost" size="sm" asChild>
-								<Link to="/apps">View all</Link>
-							</Button>
-						</div>
-						<HostAppsTable
-							apps={hostApps}
-							isLoading={loadingHostApps}
-							serverID={id}
-							serverOnline={server?.status === "online"}
-						/>
-						<h2 className="text-lg font-medium">Top processes</h2>
-						<HostProcessesTable processes={hostProcesses} isLoading={loadingHostProcesses} />
 					</TabsContent>
 				)}
 			</Tabs>

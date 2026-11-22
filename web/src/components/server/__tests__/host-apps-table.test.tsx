@@ -43,4 +43,17 @@ describe("HostAppsTable", () => {
 		render(<HostAppsTable apps={[]} isLoading={false} />);
 		expect(screen.getByText("No applications reported.")).toBeInTheDocument();
 	});
+
+	it("limits rows and shows the total when a limit is set", () => {
+		const apps = Array.from({ length: 8 }, (_, index) => ({
+			...appFixture,
+			id: `app${index}`,
+			name: `app-${index}.service`,
+		}));
+		render(<HostAppsTable apps={apps} isLoading={false} limit={6} />);
+
+		expect(screen.getByText("app-5.service")).toBeInTheDocument();
+		expect(screen.queryByText("app-6.service")).not.toBeInTheDocument();
+		expect(screen.getByText("Showing 6 of 8")).toBeInTheDocument();
+	});
 });

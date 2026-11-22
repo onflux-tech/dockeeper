@@ -13,9 +13,12 @@ import type { HostProcessRecord } from "@/types/pocketbase";
 interface HostProcessesTableProps {
 	processes: HostProcessRecord[];
 	isLoading: boolean;
+	limit?: number;
 }
 
-export function HostProcessesTable({ processes, isLoading }: HostProcessesTableProps) {
+export function HostProcessesTable({ processes, isLoading, limit }: HostProcessesTableProps) {
+	const visibleProcesses = limit ? processes.slice(0, limit) : processes;
+
 	if (isLoading) {
 		return (
 			<div className="rounded-md border">
@@ -59,14 +62,14 @@ export function HostProcessesTable({ processes, isLoading }: HostProcessesTableP
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{processes.length === 0 ? (
+					{visibleProcesses.length === 0 ? (
 						<TableRow>
 							<TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
 								No processes reported.
 							</TableCell>
 						</TableRow>
 					) : (
-						processes.map((process) => (
+						visibleProcesses.map((process) => (
 							<TableRow key={process.id}>
 								<TableCell className="text-xs tabular-nums text-muted-foreground">
 									{process.pid}
@@ -89,6 +92,11 @@ export function HostProcessesTable({ processes, isLoading }: HostProcessesTableP
 					)}
 				</TableBody>
 			</Table>
+			{limit && processes.length > limit ? (
+				<div className="border-t px-3 py-2 text-xs text-muted-foreground">
+					Showing {visibleProcesses.length} of {processes.length}
+				</div>
+			) : null}
 		</div>
 	);
 }

@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router";
-import { Archive, Play, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,17 +53,20 @@ export function HostBackupsCard({ serverID }: { serverID: string }) {
 
 	return (
 		<>
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle className="flex items-center gap-2 text-sm font-medium">
-						<Archive className="h-4 w-4 text-muted-foreground" />
-						Backups
-					</CardTitle>
-					<Badge variant="secondary">
-						{recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
-					</Badge>
+			<Card className="gap-0 py-0">
+				<CardHeader className="flex flex-row items-center justify-between space-y-0 p-6 pb-3">
+					<CardTitle className="text-base font-semibold">Backups</CardTitle>
+					{recipes.length === 0 ? (
+						<Badge variant="outline" className="border-warning/40 bg-warning/10 text-warning">
+							not set
+						</Badge>
+					) : (
+						<Badge variant="secondary">
+							{recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
+						</Badge>
+					)}
 				</CardHeader>
-				<CardContent className="flex flex-col gap-1.5 text-sm">
+				<CardContent className="flex flex-col gap-2.5 p-6 pt-0 text-xs">
 					{last ? (
 						<div className="flex items-center justify-between gap-2">
 							<span className="truncate" title={last.target_label || last.app_name}>
@@ -88,22 +89,17 @@ export function HostBackupsCard({ serverID }: { serverID: string }) {
 							onClick={() => setPolicyOpen(true)}
 							disabled={!canManage}
 						>
-							<Plus className="mr-1 h-3.5 w-3.5" />
 							Add recipe
 						</Button>
-						<Button
-							size="sm"
-							onClick={() =>
-								latestPolicy ? triggerMut.mutate(latestPolicy.id) : setPolicyOpen(true)
-							}
-							disabled={!canManage || triggerMut.isPending}
-						>
-							<Play className="mr-1 h-3.5 w-3.5" />
-							Back up now
-						</Button>
-						<Link to={`/backups?server=${serverID}`} className="text-xs hover:underline">
-							View backups
-						</Link>
+						{latestPolicy ? (
+							<Button
+								size="sm"
+								onClick={() => triggerMut.mutate(latestPolicy.id)}
+								disabled={!canManage || triggerMut.isPending}
+							>
+								Back up now
+							</Button>
+						) : null}
 					</div>
 				</CardContent>
 			</Card>

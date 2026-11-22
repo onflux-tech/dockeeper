@@ -1,42 +1,49 @@
-import { Link } from "react-router";
-import { HeartPulse } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { HealthCheckRecord } from "@/types/pocketbase";
 
 interface HostHealthCardProps {
 	checks: HealthCheckRecord[];
-	serverID: string;
 }
 
-export function HostHealthCard({ checks, serverID }: HostHealthCardProps) {
-	const passing = checks.filter((check) => check.status === "healthy").length;
+export function HostHealthCard({ checks }: HostHealthCardProps) {
 	const failing = checks.filter((check) => check.status === "unhealthy").length;
 
 	return (
-		<Card>
-			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-				<CardTitle className="flex items-center gap-2 text-sm font-medium">
-					<HeartPulse className="h-4 w-4 text-muted-foreground" />
-					Health checks
-				</CardTitle>
+		<Card className="gap-0 py-0">
+			<CardHeader className="flex flex-row items-center justify-between space-y-0 p-6 pb-3">
+				<CardTitle className="text-base font-semibold">Health checks</CardTitle>
 				{failing > 0 ? (
-					<Badge variant="destructive">{failing} failing</Badge>
+					<span className="text-xs font-medium text-destructive">{failing} failing</span>
 				) : checks.length > 0 ? (
-					<Badge variant="default">all passing</Badge>
+					<span className="text-xs font-medium text-emerald-500">{checks.length} passing</span>
 				) : (
-					<Badge variant="secondary">none</Badge>
+					<span className="text-xs font-medium text-muted-foreground">none</span>
 				)}
 			</CardHeader>
-			<CardContent className="flex flex-col gap-1.5 text-sm">
+			<CardContent className="p-6 pt-0 text-xs">
 				{checks.length === 0 ? (
-					<p className="text-muted-foreground">No health checks configured for this server.</p>
+					<p className="text-muted-foreground">No health checks configured.</p>
 				) : (
-					<div className="flex items-center justify-between">
-						<span className="text-muted-foreground">Checks</span>
-						<Link to={`/health-checks?server=${serverID}`} className="tabular-nums hover:underline">
-							{passing}/{checks.length} passing
-						</Link>
+					<div className="flex flex-col gap-1.5">
+						{checks.slice(0, 3).map((check) => (
+							<div key={check.id} className="flex items-center justify-between gap-2">
+								<span className="truncate text-muted-foreground">
+									{check.name}
+									{check.host ? ` · ${check.host}` : ""}
+								</span>
+								<span
+									className={`tabular-nums ${
+										check.status === "healthy"
+											? "text-emerald-500"
+											: check.status === "unhealthy"
+												? "text-destructive"
+												: "text-muted-foreground"
+									}`}
+								>
+									{check.status === "healthy" ? "OK" : check.status === "unhealthy" ? "FAIL" : "—"}
+								</span>
+							</div>
+						))}
 					</div>
 				)}
 			</CardContent>

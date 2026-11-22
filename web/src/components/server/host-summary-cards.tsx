@@ -1,5 +1,5 @@
-import { Activity, HardDrive, MemoryStick, Network } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowDownUp, Cpu, HardDrive, MemoryStick } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatBytes } from "@/lib/format";
 import type { MetricPoint } from "@/hooks/use-server-metrics";
 
@@ -16,14 +16,17 @@ interface SummaryCardProps {
 
 function SummaryCard({ title, icon, value, detail }: SummaryCardProps) {
 	return (
-		<Card>
-			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-				<CardTitle className="text-sm font-medium">{title}</CardTitle>
-				<span className="text-muted-foreground">{icon}</span>
-			</CardHeader>
-			<CardContent>
-				<div className="text-2xl font-semibold tabular-nums">{value}</div>
-				<p className="text-xs text-muted-foreground">{detail}</p>
+		<Card className="py-0">
+			<CardContent className="flex items-center gap-4 p-6">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+					{icon}
+				</div>
+				<div className="min-w-0">
+					<div className="text-2xl font-bold tabular-nums">{value}</div>
+					<p className="text-xs leading-tight text-muted-foreground">
+						{title} · {detail}
+					</p>
+				</div>
 			</CardContent>
 		</Card>
 	);
@@ -34,10 +37,10 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 
 	if (!latest) {
 		return (
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
 				<SummaryCard
 					title="CPU"
-					icon={<Activity className="h-4 w-4" />}
+					icon={<Cpu className="h-4 w-4" />}
 					value="—"
 					detail="No metrics yet"
 				/>
@@ -55,7 +58,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 				/>
 				<SummaryCard
 					title="Network"
-					icon={<Network className="h-4 w-4" />}
+					icon={<ArrowDownUp className="h-4 w-4" />}
 					value="—"
 					detail="No metrics yet"
 				/>
@@ -64,10 +67,10 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 	}
 
 	return (
-		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+		<div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
 			<SummaryCard
 				title="CPU"
-				icon={<Activity className="h-4 w-4" />}
+				icon={<Cpu className="h-4 w-4" />}
 				value={`${latest.cpu_percent.toFixed(1)}%`}
 				detail={`${metrics.length} samples in range`}
 			/>
@@ -85,7 +88,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 			/>
 			<SummaryCard
 				title="Network"
-				icon={<Network className="h-4 w-4" />}
+				icon={<ArrowDownUp className="h-4 w-4" />}
 				value={`↓ ${formatBytes(latest.net_rx)}`}
 				detail={`↑ ${formatBytes(latest.net_tx)}`}
 			/>
