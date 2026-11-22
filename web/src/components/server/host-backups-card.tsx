@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Play, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,14 +53,18 @@ export function HostBackupsCard({ serverID }: { serverID: string }) {
 
 	return (
 		<>
-			<Card className="py-0">
+			<Card className="gap-0 py-0">
 				<CardHeader className="flex flex-row items-center justify-between space-y-0 p-6 pb-3">
 					<CardTitle className="text-base font-semibold">Backups</CardTitle>
-					<Badge variant="secondary">
-						{recipes.length === 0
-							? "not set"
-							: `${recipes.length} ${recipes.length === 1 ? "recipe" : "recipes"}`}
-					</Badge>
+					{recipes.length === 0 ? (
+						<Badge variant="outline" className="border-warning/40 bg-warning/10 text-warning">
+							not set
+						</Badge>
+					) : (
+						<Badge variant="secondary">
+							{recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
+						</Badge>
+					)}
 				</CardHeader>
 				<CardContent className="flex flex-col gap-2.5 p-6 pt-0 text-xs">
 					{last ? (
@@ -86,7 +89,6 @@ export function HostBackupsCard({ serverID }: { serverID: string }) {
 							onClick={() => setPolicyOpen(true)}
 							disabled={!canManage}
 						>
-							<Plus className="mr-1 h-3.5 w-3.5" />
 							Add recipe
 						</Button>
 						{latestPolicy ? (
@@ -95,7 +97,6 @@ export function HostBackupsCard({ serverID }: { serverID: string }) {
 								onClick={() => triggerMut.mutate(latestPolicy.id)}
 								disabled={!canManage || triggerMut.isPending}
 							>
-								<Play className="mr-1 h-3.5 w-3.5" />
 								Back up now
 							</Button>
 						) : null}

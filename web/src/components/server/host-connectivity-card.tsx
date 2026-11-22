@@ -28,7 +28,7 @@ export function HostConnectivityCard({ server }: { server: ServerRecord }) {
 	const status = server.connectivity_status || "unknown";
 
 	return (
-		<Card className="py-0">
+		<Card className="gap-0 py-0">
 			<CardHeader className="flex flex-row items-center justify-between space-y-0 p-6 pb-3">
 				<CardTitle className="text-base font-semibold">Connectivity</CardTitle>
 				<Badge variant={statusVariants[status] ?? "secondary"}>{status}</Badge>

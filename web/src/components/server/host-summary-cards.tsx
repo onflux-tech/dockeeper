@@ -1,4 +1,4 @@
-import { Activity, HardDrive, MemoryStick, Network } from "lucide-react";
+import { ArrowUpDown, Cpu, HardDrive, MemoryStick } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatBytes } from "@/lib/format";
 import type { MetricPoint } from "@/hooks/use-server-metrics";
@@ -40,7 +40,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<SummaryCard
 					title="CPU"
-					icon={<Activity className="h-4 w-4" />}
+					icon={<Cpu className="h-4 w-4" />}
 					value="—"
 					detail="No metrics yet"
 				/>
@@ -58,7 +58,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 				/>
 				<SummaryCard
 					title="Network"
-					icon={<Network className="h-4 w-4" />}
+					icon={<ArrowUpDown className="h-4 w-4" />}
 					value="—"
 					detail="No metrics yet"
 				/>
@@ -70,7 +70,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<SummaryCard
 				title="CPU"
-				icon={<Activity className="h-4 w-4" />}
+				icon={<Cpu className="h-4 w-4" />}
 				value={`${latest.cpu_percent.toFixed(1)}%`}
 				detail={`${metrics.length} samples in range`}
 			/>
@@ -88,7 +88,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 			/>
 			<SummaryCard
 				title="Network"
-				icon={<Network className="h-4 w-4" />}
+				icon={<ArrowUpDown className="h-4 w-4" />}
 				value={`↓ ${formatBytes(latest.net_rx)}`}
 				detail={`↑ ${formatBytes(latest.net_tx)}`}
 			/>

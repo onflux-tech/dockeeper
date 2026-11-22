@@ -276,10 +276,10 @@ export default function ServerDetailPage() {
 				)}
 
 				{showHost && server && (
-					<TabsContent value="host" className="flex flex-col gap-4 mt-4">
+					<TabsContent value="host" className="flex flex-col gap-6 mt-6">
 						<HostNotice />
 						<HostSummaryCards metrics={metrics} />
-						<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+						<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_272px]">
 							<div className="flex min-w-0 flex-col gap-4">
 								<HostAppsTable
 									apps={hostApps}
@@ -310,7 +310,7 @@ export default function ServerDetailPage() {
 									limit={5}
 								/>
 							</div>
-							<aside className="flex flex-col gap-4">
+							<aside className="flex min-w-0 flex-col gap-4">
 								<HostConnectivityCard server={server} />
 								<HostHealthCard checks={healthChecks ?? []} />
 								<HostBackupsCard serverID={id ?? ""} />
