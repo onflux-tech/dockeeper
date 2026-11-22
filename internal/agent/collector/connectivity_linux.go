@@ -64,7 +64,7 @@ func icmpEcho(ctx context.Context, gateway string) (uint32, bool) {
 	if err != nil {
 		return 0, false
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	echoID := os.Getpid() & 0xffff
 	message := icmp.Message{
