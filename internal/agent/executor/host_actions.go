@@ -83,14 +83,28 @@ func (e *HostActionExecutor) Execute(ctx context.Context, source, name, action s
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
+	var (
+		code   int
+		output string
+		err    error
+	)
 	if source == "systemd" {
-		return e.systemdRunner(ctx, []string{action, name})
+		code, output, err = e.systemdRunner(ctx, []string{action, name})
+	} else if app.User == "" {
+		code, output, err = 1, "", fmt.Errorf("%w: %s", ErrHostAppOwnerUnknown, name)
+	} else {
+		code, output, err = e.pm2Runner(ctx, []string{action, name, "--no-color"}, app.User)
 	}
 
-	if app.User == "" {
-		return 1, "", fmt.Errorf("%w: %s", ErrHostAppOwnerUnknown, name)
+	if e.logger != nil {
+		if err != nil {
+			e.logger.Warn("host app action failed", "source", source, "name", name, "action", action, "exit_code", code, "error", err)
+		} else {
+			e.logger.Info("host app action completed", "source", source, "name", name, "action", action, "exit_code", code)
+		}
 	}
-	return e.pm2Runner(ctx, []string{action, name, "--no-color"}, app.User)
+
+	return code, output, err
 }
 
 func (e *HostActionExecutor) findApp(source, name string) (collector.HostApp, bool) {

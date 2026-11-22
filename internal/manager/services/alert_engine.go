@@ -331,8 +331,8 @@ func (e *AlertEngine) queryMetrics(targetType, targetID, metric string, duration
 		if err != nil {
 			return nil, fmt.Errorf("host app %s: %w", targetID, err)
 		}
-		filter := fmt.Sprintf("server = '%s' && app = '%s' && timestamp >= '%s'",
-			hostApp.GetString("server"), hostApp.GetString("name"), cutoff)
+		filter := fmt.Sprintf("server = '%s' && source = '%s' && app = '%s' && timestamp >= '%s'",
+			hostApp.GetString("server"), hostApp.GetString("source"), hostApp.GetString("name"), cutoff)
 		return e.collectMetricValues(constants.CollHostAppMetricsRaw, filter, metric, extractMetricValue)
 	default:
 		return nil, fmt.Errorf("unknown target type: %s", targetType)

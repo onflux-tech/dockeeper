@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 	latest: "v0.9.0",
 	orchestrator: "docker",
 	viewScope: "auto",
+	canViewHostApps: true,
 }));
 
 vi.mock("@/hooks/use-record", () => ({
@@ -39,6 +40,10 @@ vi.mock("@/hooks/use-server-metrics", () => ({
 
 vi.mock("@/hooks/use-health-checks", () => ({
 	useHealthChecks: () => ({ data: [], isLoading: false }),
+}));
+
+vi.mock("@/hooks/use-permissions", () => ({
+	useHasCapability: () => mocks.canViewHostApps,
 }));
 
 vi.mock("@/hooks/use-settings", () => ({
@@ -99,12 +104,21 @@ describe("ServerDetailPage agent update", () => {
 		expect(screen.getByText("No container runtime")).toBeInTheDocument();
 	});
 
-	it("hides the host tab and keeps the container count on docker servers", () => {
+	it("shows both tabs on docker servers with view_scope auto", () => {
 		mocks.orchestrator = "docker";
 		mocks.viewScope = "auto";
 		renderPage();
-		expect(screen.queryByRole("tab", { name: "Host" })).not.toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Host" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Containers (0)" })).toBeInTheDocument();
+	});
+
+	it("hides the host tab without host.apps.view", () => {
+		mocks.orchestrator = "docker";
+		mocks.viewScope = "both";
+		mocks.canViewHostApps = false;
+		renderPage();
+		expect(screen.queryByRole("tab", { name: "Host" })).not.toBeInTheDocument();
+		mocks.canViewHostApps = true;
 	});
 
 	it("hides the containers tab when view_scope is server", () => {

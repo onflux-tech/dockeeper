@@ -151,6 +151,20 @@ func extendServersAndAlertRules(app core.App) error {
 		return err
 	}
 
+	existingServers, err := app.FindAllRecords(constants.CollServers)
+	if err != nil {
+		return err
+	}
+	for _, server := range existingServers {
+		if server.GetString("view_scope") != "" {
+			continue
+		}
+		server.Set("view_scope", "auto")
+		if err := app.Save(server); err != nil {
+			return err
+		}
+	}
+
 	alertRules, err := app.FindCollectionByNameOrId(constants.CollAlertRules)
 	if err != nil {
 		return err

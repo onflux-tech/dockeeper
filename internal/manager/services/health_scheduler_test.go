@@ -79,6 +79,15 @@ func newHealthSchedulerTestApp(t *testing.T) (*tests.TestApp, string) {
 	)
 	require.NoError(t, app.Save(logs))
 
+	hostApps := core.NewBaseCollection("host_apps")
+	hostApps.Fields.Add(
+		&core.RelationField{Name: "server", CollectionId: servers.Id, MaxSelect: 1},
+		&core.TextField{Name: "source"},
+		&core.TextField{Name: "name"},
+		&core.TextField{Name: "status"},
+	)
+	require.NoError(t, app.Save(hostApps))
+
 	server := core.NewRecord(servers)
 	server.Set("name", "host-a")
 	server.Set("status", "online")
@@ -188,6 +197,66 @@ func TestHostAppFailureUsesHostAppEvent(t *testing.T) {
 
 	bus.Close()
 	require.Len(t, published, 1)
+	require.Equal(t, "host-a", published[0].ServerName)
+	require.Equal(t, "nginx.service", published[0].ContainerName)
 	require.Equal(t, "systemd", published[0].Details["source"])
 	require.Equal(t, "nginx.service", published[0].Details["name"])
+}
+
+func TestHealthSchedulerHostAppTarget(t *testing.T) {
+	app, serverID := newHealthSchedulerTestApp(t)
+	check := newHostAppHealthCheck(t, app, serverID)
+
+	hostApps, err := app.FindCollectionByNameOrId("host_apps")
+	require.NoError(t, err)
+	appRecord := core.NewRecord(hostApps)
+	appRecord.Set("server", serverID)
+	appRecord.Set("source", "systemd")
+	appRecord.Set("name", "nginx.service")
+	appRecord.Set("status", "running")
+	require.NoError(t, app.Save(appRecord))
+
+	scheduler := NewHealthScheduler(app, store.NewHealthStore(app), nil, nil)
+	command, failure, skip := scheduler.buildCheckCommand(check, 5)
+	require.False(t, skip)
+	require.Empty(t, failure)
+	require.NotNil(t, command.GetHostHealthCheck())
+	require.Nil(t, command.GetHealthCheck())
+}
+
+func TestHealthSchedulerMissingHostAppFails(t *testing.T) {
+	app, serverID := newHealthSchedulerTestApp(t)
+	check := newHostAppHealthCheck(t, app, serverID)
+
+	scheduler := NewHealthScheduler(app, store.NewHealthStore(app), nil, nil)
+	command, failure, skip := scheduler.buildCheckCommand(check, 5)
+	require.False(t, skip)
+	require.Nil(t, command)
+	require.Equal(t, "host app not found", failure)
+}
+
+func TestContainerSuccessThresholdDelaysHealthy(t *testing.T) {
+	app, serverID := newHealthSchedulerTestApp(t)
+	collection, err := app.FindCollectionByNameOrId("health_checks")
+	require.NoError(t, err)
+	check := core.NewRecord(collection)
+	check.Set("name", "container http")
+	check.Set("server", serverID)
+	check.Set("target_type", "container")
+	check.Set("success_threshold", 2)
+	check.Set("status", "unknown")
+	check.Set("consecutive_successes", 0)
+	require.NoError(t, app.Save(check))
+
+	scheduler := NewHealthScheduler(app, store.NewHealthStore(app), nil, nil)
+	scheduler.handleSuccess(check, check.Id)
+	reloaded, err := app.FindRecordById("health_checks", check.Id)
+	require.NoError(t, err)
+	require.Equal(t, "unknown", reloaded.GetString("status"))
+	require.Equal(t, 1, reloaded.GetInt("consecutive_successes"))
+
+	scheduler.handleSuccess(reloaded, check.Id)
+	reloaded, err = app.FindRecordById("health_checks", check.Id)
+	require.NoError(t, err)
+	require.Equal(t, "healthy", reloaded.GetString("status"))
 }

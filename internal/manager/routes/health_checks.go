@@ -137,11 +137,51 @@ func RegisterHealthCheckRoutes(se *core.ServeEvent, app core.App, healthStore *s
 			}
 		}
 
-		if autoRestart, ok := fields["auto_restart"].(bool); ok && autoRestart {
-			existing, err := healthStore.GetCheckByID(checkID)
-			if err == nil && existing.GetString("target_type") == "host_app" {
-				return e.JSON(http.StatusBadRequest, map[string]string{"error": "auto_restart is not supported for host apps"})
-			}
+		existing, err := healthStore.GetCheckByID(checkID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]string{"error": "health check not found"})
+		}
+
+		target := healthCheckTarget{
+			targetType:  existing.GetString("target_type"),
+			container:   existing.GetString("container"),
+			appSource:   existing.GetString("app_source"),
+			appName:     existing.GetString("app_name"),
+			checkType:   existing.GetString("check_type"),
+			scheme:      existing.GetString("scheme"),
+			host:        existing.GetString("host"),
+			port:        existing.GetInt("port"),
+			autoRestart: existing.GetBool("auto_restart"),
+		}
+		if v, ok := fields["target_type"].(string); ok {
+			target.targetType = v
+		}
+		if v, ok := fields["container"].(string); ok {
+			target.container = v
+		}
+		if v, ok := fields["app_source"].(string); ok {
+			target.appSource = v
+		}
+		if v, ok := fields["app_name"].(string); ok {
+			target.appName = v
+		}
+		if v, ok := fields["check_type"].(string); ok {
+			target.checkType = v
+		}
+		if v, ok := fields["scheme"].(string); ok {
+			target.scheme = v
+		}
+		if v, ok := fields["host"].(string); ok {
+			target.host = v
+		}
+		if v, ok := fields["port"].(float64); ok {
+			target.port = int(v)
+		}
+		if v, ok := fields["auto_restart"].(bool); ok {
+			target.autoRestart = v
+		}
+		if message := target.validate(); message != "" {
+			return e.JSON(http.StatusBadRequest, map[string]string{"error": message})
 		}
 
 		if err := healthStore.UpdateCheck(checkID, fields); err != nil {

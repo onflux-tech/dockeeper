@@ -27,6 +27,8 @@ type HostHealthHandler struct {
 	logger        *slog.Logger
 	inventory     func() []collector.HostApp
 	systemdActive func(ctx context.Context, unit string) (bool, error)
+	httpClient    *http.Client
+	insecureHTTP  *http.Client
 }
 
 type HostHealthOption func(*HostHealthHandler)
@@ -44,11 +46,32 @@ func WithSystemdActive(active func(ctx context.Context, unit string) (bool, erro
 }
 
 func NewHostHealthHandler(logger *slog.Logger, opts ...HostHealthOption) *HostHealthHandler {
-	h := &HostHealthHandler{logger: logger, systemdActive: defaultSystemdActive}
+	h := &HostHealthHandler{
+		logger:        logger,
+		systemdActive: defaultSystemdActive,
+		httpClient:    newHostCheckClient(false),
+		insecureHTTP:  newHostCheckClient(true),
+	}
 	for _, opt := range opts {
 		opt(h)
 	}
 	return h
+}
+
+func newHostCheckClient(skipVerify bool) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify},
+			IdleConnTimeout: 90 * time.Second,
+			MaxIdleConns:    10,
+		},
+		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
+			if len(via) >= maxHostCheckRedirects {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
 }
 
 func (h *HostHealthHandler) Execute(ctx context.Context, req *agentpb.HostHealthCheckCommand) *agentpb.HostHealthCheckResult {
@@ -124,17 +147,9 @@ func (h *HostHealthHandler) executeHTTP(ctx context.Context, req *agentpb.HostHe
 		request.Header.Set(key, value)
 	}
 
-	client := &http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: req.GetTlsSkipVerify()},
-		},
-		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
-			if len(via) >= maxHostCheckRedirects {
-				return fmt.Errorf("too many redirects")
-			}
-			return nil
-		},
+	client := h.httpClient
+	if req.GetTlsSkipVerify() {
+		client = h.insecureHTTP
 	}
 
 	started := time.Now()

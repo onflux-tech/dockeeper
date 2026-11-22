@@ -140,13 +140,21 @@ func (s *HostActionService) Execute(ctx context.Context, serverID, source, name,
 	s.logAction(record.Id, serverID, source, name, action, userID, ip, true, actionResult.GetOutput())
 
 	if s.bus != nil {
-		s.bus.Publish(events.Event{
+		event := events.Event{
 			Type:      events.HostAppAction,
 			Severity:  events.SeverityFor(events.HostAppAction),
 			ServerID:  serverID,
 			Details:   map[string]any{"source": source, "name": name, "action": action, "success": true},
 			Timestamp: time.Now().UTC(),
-		})
+		}
+		if server, err := s.app.FindRecordById(constants.CollServers, serverID); err == nil {
+			event.ServerName = server.GetString("name")
+			if event.ServerName == "" {
+				event.ServerName = server.GetString("hostname")
+			}
+		}
+		event.ContainerName = name
+		s.bus.Publish(event)
 	}
 
 	return actionResult.GetOutput(), nil

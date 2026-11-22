@@ -88,22 +88,41 @@ func (s *ConnectivityStore) httpSummary(serverID string) map[string]any {
 		return nil
 	}
 
-	var total, successes, latencySum int
+	checkIDs := make(map[string]bool, len(checks))
 	for _, check := range checks {
-		logs, err := s.app.FindRecordsByFilter(
-			constants.CollHealthCheckLogs,
-			"health_check = {:check}",
-			"-checked_at", 1, 0,
-			map[string]any{"check": check.Id},
-		)
-		if err != nil || len(logs) == 0 {
+		checkIDs[check.Id] = true
+	}
+
+	cutoff := time.Now().UTC().Add(-15 * time.Minute).Format("2006-01-02 15:04:05.000Z")
+	logs, err := s.app.FindRecordsByFilter(
+		constants.CollHealthCheckLogs,
+		"health_check.server = {:server} && checked_at >= {:cutoff}",
+		"-checked_at", 2000, 0,
+		map[string]any{"server": serverID, "cutoff": cutoff},
+	)
+	if err != nil {
+		return nil
+	}
+
+	latest := make(map[string]*core.Record, len(checks))
+	for _, log := range logs {
+		checkID := log.GetString("health_check")
+		if !checkIDs[checkID] {
 			continue
 		}
+		if _, seen := latest[checkID]; seen {
+			continue
+		}
+		latest[checkID] = log
+	}
+
+	var total, successes, latencySum int
+	for _, log := range latest {
 		total++
-		if logs[0].GetBool("success") {
+		if log.GetBool("success") {
 			successes++
 		}
-		latencySum += logs[0].GetInt("response_time_ms")
+		latencySum += log.GetInt("response_time_ms")
 	}
 	if total == 0 {
 		return nil

@@ -72,6 +72,9 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 	}
 
 	server.Set("hostname", info.GetHostname())
+	if server.GetString("view_scope") == "" {
+		server.Set("view_scope", "auto")
+	}
 	server.Set("ip_address", ipAddress)
 	server.Set("os", info.GetOs())
 	server.Set("arch", info.GetArch())

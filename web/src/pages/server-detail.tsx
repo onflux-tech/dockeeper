@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRecord } from "@/hooks/use-record";
 import { useCollection } from "@/hooks/use-collection";
+import { useHasCapability } from "@/hooks/use-permissions";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useServerMetrics, type TimeRange } from "@/hooks/use-server-metrics";
 import { ServerInfo } from "@/components/server/server-info";
@@ -76,10 +77,9 @@ export default function ServerDetailPage() {
 
 	const hostOnly = server?.orchestrator === "none";
 	const viewScope = server?.view_scope || "auto";
-	const showHost =
-		viewScope === "server" || viewScope === "both" || (viewScope === "auto" && hostOnly);
-	const showContainers =
-		viewScope === "docker" || viewScope === "both" || (viewScope === "auto" && !hostOnly);
+	const canViewHost = useHasCapability("host.apps.view");
+	const showHost = canViewHost && viewScope !== "docker";
+	const showContainers = viewScope !== "server" && !(viewScope === "auto" && hostOnly);
 	const { data: hostApps, isLoading: loadingHostApps } = useHostApps(showHost ? id : undefined);
 	const { data: hostProcesses, isLoading: loadingHostProcesses } = useHostProcesses(
 		showHost ? id : undefined,

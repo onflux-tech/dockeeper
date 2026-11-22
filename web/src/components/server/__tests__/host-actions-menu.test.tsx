@@ -59,6 +59,11 @@ describe("HostActionsMenu", () => {
 		expect(screen.getByRole("button", { name: "Actions" })).toBeDisabled();
 	});
 
+	it("disables the menu when the server state is omitted", () => {
+		render(<HostActionsMenu serverID="srv1" app={app} />);
+		expect(screen.getByRole("button", { name: "Actions" })).toBeDisabled();
+	});
+
 	it("disables the menu for process apps", () => {
 		render(<HostActionsMenu serverID="srv1" app={{ ...app, source: "process" }} serverOnline />);
 		expect(screen.getByRole("button", { name: "Actions" })).toBeDisabled();

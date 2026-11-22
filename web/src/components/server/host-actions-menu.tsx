@@ -35,7 +35,7 @@ const actions: { value: HostAction; label: string; icon: typeof Play; destructiv
 	{ value: "restart", label: "Restart", icon: RotateCw },
 ];
 
-export function HostActionsMenu({ serverID, app, serverOnline = true }: HostActionsMenuProps) {
+export function HostActionsMenu({ serverID, app, serverOnline = false }: HostActionsMenuProps) {
 	const canManage = useHasCapability("host.apps.manage");
 	const mutation = useHostAction();
 	const [pending, setPending] = useState<HostAction | null>(null);

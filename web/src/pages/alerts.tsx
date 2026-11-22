@@ -156,15 +156,21 @@ export default function AlertsPage() {
 		return new Set(containers.filter((c) => c.server === serverFilter).map((c) => c.id));
 	}, [serverFilter, containers]);
 
-	// Filter rules by server (server targets + container targets belonging to server)
+	const serverHostAppIds = useMemo(() => {
+		if (serverFilter === "all") return null;
+		return new Set(hostApps.filter((a) => a.server === serverFilter).map((a) => a.id));
+	}, [serverFilter, hostApps]);
+
+	// Filter rules by server (server targets + container/host app targets belonging to server)
 	const rules = useMemo(() => {
 		if (serverFilter === "all") return allRules;
 		return allRules.filter((r) => {
 			if (r.target_type === "server" && r.target_id === serverFilter) return true;
 			if (r.target_type === "container" && serverContainerIds?.has(r.target_id)) return true;
+			if (r.target_type === "host_app" && serverHostAppIds?.has(r.target_id)) return true;
 			return false;
 		});
-	}, [allRules, serverFilter, serverContainerIds]);
+	}, [allRules, serverFilter, serverContainerIds, serverHostAppIds]);
 
 	// Filter logs by matching rule IDs from filtered rules
 	const filteredRuleIds = useMemo(() => new Set(rules.map((r) => r.id)), [rules]);
@@ -179,6 +185,10 @@ export default function AlertsPage() {
 		if (targetType === "server") {
 			const s = servers.find((sv) => sv.id === targetId);
 			return s?.name || s?.hostname || targetId.slice(0, 8);
+		}
+		if (targetType === "host_app") {
+			const a = hostApps.find((app) => app.id === targetId);
+			return a ? `${a.source}/${a.name}` : targetId.slice(0, 8);
 		}
 		const c = containers.find((ct) => ct.id === targetId);
 		return c?.name ?? targetId.slice(0, 8);

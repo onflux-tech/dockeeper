@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import {
 	HeartPulse,
 	Plus,
@@ -81,7 +82,13 @@ function StatusBadge({ status }: { status: string }) {
 // ── Main page ─────────────────────────────────────────────
 
 export default function HealthChecksPage() {
-	const { data: checks, isLoading } = useHealthChecks();
+	const [searchParams] = useSearchParams();
+	const serverFilter = searchParams.get("server");
+	const { data: allChecks, isLoading } = useHealthChecks();
+	const checks = useMemo(
+		() => (serverFilter ? allChecks?.filter((check) => check.server === serverFilter) : allChecks),
+		[allChecks, serverFilter],
+	);
 	const [showCreate, setShowCreate] = useState(false);
 	const [logsFor, setLogsFor] = useState<HealthCheckRecord | null>(null);
 	const [editCheck, setEditCheck] = useState<HealthCheckRecord | null>(null);

@@ -232,35 +232,13 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 		timeoutSec = 5
 	}
 
-	var command *agentpb.ChannelCommand
-	switch targetType {
-	case "container":
-		containerID := rec.GetString("container")
-		containerRec, err := s.app.FindRecordById(constants.CollContainers, containerID)
-		if err != nil {
-			slog.Warn("health check: container not found", "check_id", checkID, "container_id", containerID)
-			s.reschedule(checkID, rec.GetInt("interval_seconds"))
-			return
-		}
-		if containerRec.GetString("status") != "running" {
-			slog.Debug("health check: container not running, skipping", "check_id", checkID)
-			s.reschedule(checkID, rec.GetInt("interval_seconds"))
-			return
-		}
-		command = buildContainerHealthCommand(rec, containerRec.GetString("container_id"), timeoutSec)
-	case "host_app":
-		if _, err := s.app.FindFirstRecordByFilter(
-			constants.CollHostApps,
-			"server = {:server} && source = {:source} && name = {:name}",
-			map[string]any{"server": serverID, "source": rec.GetString("app_source"), "name": rec.GetString("app_name")},
-		); err != nil {
-			s.handleFailure(ctx, rec, checkID, 0, 0, "host app not found")
-			s.reschedule(checkID, rec.GetInt("interval_seconds"))
-			return
-		}
-		command = buildHostHealthCommand(rec, timeoutSec)
-	default:
-		s.handleFailure(ctx, rec, checkID, 0, 0, "unknown target type: "+targetType)
+	command, failure, skip := s.buildCheckCommand(rec, timeoutSec)
+	if skip {
+		s.reschedule(checkID, rec.GetInt("interval_seconds"))
+		return
+	}
+	if failure != "" {
+		s.handleFailure(ctx, rec, checkID, 0, 0, failure)
 		s.reschedule(checkID, rec.GetInt("interval_seconds"))
 		return
 	}
@@ -307,6 +285,33 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 	}
 
 	s.reschedule(checkID, rec.GetInt("interval_seconds"))
+}
+
+func (s *HealthScheduler) buildCheckCommand(rec *core.Record, timeoutSec int) (*agentpb.ChannelCommand, string, bool) {
+	switch rec.GetString("target_type") {
+	case "container":
+		containerRec, err := s.app.FindRecordById(constants.CollContainers, rec.GetString("container"))
+		if err != nil {
+			slog.Warn("health check: container not found", "check_id", rec.Id, "container_id", rec.GetString("container"))
+			return nil, "", true
+		}
+		if containerRec.GetString("status") != "running" {
+			slog.Debug("health check: container not running, skipping", "check_id", rec.Id)
+			return nil, "", true
+		}
+		return buildContainerHealthCommand(rec, containerRec.GetString("container_id"), timeoutSec), "", false
+	case "host_app":
+		if _, err := s.app.FindFirstRecordByFilter(
+			constants.CollHostApps,
+			"server = {:server} && source = {:source} && name = {:name}",
+			map[string]any{"server": rec.GetString("server"), "source": rec.GetString("app_source"), "name": rec.GetString("app_name")},
+		); err != nil {
+			return nil, "host app not found", false
+		}
+		return buildHostHealthCommand(rec, timeoutSec), "", false
+	default:
+		return nil, "unknown target type: " + rec.GetString("target_type"), false
+	}
 }
 
 func buildContainerHealthCommand(rec *core.Record, dockerContainerID string, timeoutSec int) *agentpb.ChannelCommand {
@@ -479,11 +484,21 @@ func (s *HealthScheduler) publishHealthEvent(eventType events.EventType, severit
 		Details:   details,
 		Timestamp: at,
 	}
+	if server, err := s.app.FindRecordById(constants.CollServers, event.ServerID); err == nil {
+		event.ServerName = server.GetString("name")
+		if event.ServerName == "" {
+			event.ServerName = server.GetString("hostname")
+		}
+	}
 	if rec.GetString("target_type") == "host_app" {
 		details["source"] = rec.GetString("app_source")
 		details["name"] = rec.GetString("app_name")
+		event.ContainerName = rec.GetString("app_name")
 	} else {
 		event.ContainerID = rec.GetString("container")
+		if container, err := s.app.FindRecordById(constants.CollContainers, event.ContainerID); err == nil {
+			event.ContainerName = container.GetString("name")
+		}
 	}
 	s.bus.Publish(event)
 }

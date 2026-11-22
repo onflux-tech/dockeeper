@@ -66,10 +66,11 @@ func icmpEcho(ctx context.Context, gateway string) (uint32, bool) {
 	}
 	defer conn.Close()
 
+	echoID := os.Getpid() & 0xffff
 	message := icmp.Message{
 		Type: ipv4.ICMPTypeEcho,
 		Code: 0,
-		Body: &icmp.Echo{ID: os.Getpid() & 0xffff, Seq: 1, Data: []byte("dockeeper")},
+		Body: &icmp.Echo{ID: echoID, Seq: 1, Data: []byte("dockeeper")},
 	}
 	payload, err := message.Marshal(nil)
 	if err != nil {
@@ -91,16 +92,24 @@ func icmpEcho(ctx context.Context, gateway string) (uint32, bool) {
 
 	buffer := make([]byte, 1500)
 	for {
-		n, _, err := conn.ReadFrom(buffer)
+		n, from, err := conn.ReadFrom(buffer)
 		if err != nil {
 			return 0, false
+		}
+		if from != nil && from.String() != gateway {
+			continue
 		}
 		reply, err := icmp.ParseMessage(ipv4.ICMPTypeEcho.Protocol(), buffer[:n])
 		if err != nil {
 			continue
 		}
-		if reply.Type == ipv4.ICMPTypeEchoReply {
-			return uint32(time.Since(started).Milliseconds()), true
+		if reply.Type != ipv4.ICMPTypeEchoReply {
+			continue
 		}
+		echo, ok := reply.Body.(*icmp.Echo)
+		if !ok || echo.ID != echoID || echo.Seq != 1 {
+			continue
+		}
+		return uint32(time.Since(started).Milliseconds()), true
 	}
 }
