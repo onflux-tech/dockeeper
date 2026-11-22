@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -56,6 +56,7 @@ vi.mock("@/components/server/metrics-charts", () => ({ MetricsCharts: () => null
 vi.mock("@/components/server/container-table", () => ({ ContainerTable: () => null }));
 vi.mock("@/components/server/edit-server-dialog", () => ({ EditServerDialog: () => null }));
 vi.mock("@/components/tag-selector", () => ({ TagSelector: () => null }));
+vi.mock("@/components/backups/policy-dialog", () => ({ PolicyDialog: () => null }));
 
 import ServerDetailPage from "../server-detail";
 
@@ -135,5 +136,37 @@ describe("ServerDetailPage agent update", () => {
 		renderPage();
 		expect(screen.getByRole("tab", { name: "Containers" })).toBeInTheDocument();
 		expect(screen.queryByRole("tab", { name: /Containers \(/ })).not.toBeInTheDocument();
+	});
+});
+
+describe("ServerDetailPage host tab", () => {
+	it("renders the host content and hides the host-only banner on docker servers", async () => {
+		const user = userEvent.setup();
+		mocks.orchestrator = "docker";
+		mocks.viewScope = "auto";
+		mocks.canViewHostApps = true;
+		renderPage();
+
+		await user.click(screen.getByRole("tab", { name: "Host" }));
+		const panel = screen.getByRole("tabpanel");
+
+		expect(within(panel).getByText("Applications")).toBeInTheDocument();
+		expect(within(panel).getByText("Top processes")).toBeInTheDocument();
+		expect(within(panel).getByText("Connectivity")).toBeInTheDocument();
+		expect(within(panel).getByText("Health checks")).toBeInTheDocument();
+		expect(within(panel).getByText("Backups")).toBeInTheDocument();
+		expect(screen.queryByText(/No container runtime detected/)).not.toBeInTheDocument();
+	});
+
+	it("shows the host-only banner when the server has no container runtime", async () => {
+		const user = userEvent.setup();
+		mocks.orchestrator = "none";
+		mocks.viewScope = "both";
+		mocks.canViewHostApps = true;
+		renderPage();
+
+		await user.click(screen.getByRole("tab", { name: "Host" }));
+
+		expect(screen.getByText(/No container runtime detected/)).toBeInTheDocument();
 	});
 });

@@ -277,7 +277,7 @@ export default function ServerDetailPage() {
 
 				{showHost && server && (
 					<TabsContent value="host" className="flex flex-col gap-6 mt-4">
-						<HostNotice />
+						{hostOnly ? <HostNotice /> : null}
 						<HostSummaryCards metrics={metrics} />
 						<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_272px]">
 							<div className="flex min-w-0 flex-col gap-4">

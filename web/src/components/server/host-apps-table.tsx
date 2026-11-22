@@ -90,19 +90,19 @@ export function HostAppsTable({
 					<TableHeader>
 						<TableRow>
 							<TableHead className="text-sm font-medium text-foreground uppercase">App</TableHead>
-							<TableHead className="w-24 text-sm font-medium text-foreground uppercase">
+							<TableHead className="hidden w-24 text-sm font-medium text-foreground uppercase lg:table-cell">
 								Source
 							</TableHead>
 							<TableHead className="w-24 text-sm font-medium text-foreground uppercase">
 								Status
 							</TableHead>
-							<TableHead className="w-32 text-sm font-medium text-foreground uppercase">
+							<TableHead className="hidden w-32 text-sm font-medium text-foreground uppercase min-[1400px]:table-cell">
 								Ports
 							</TableHead>
-							<TableHead className="w-32 text-sm font-medium text-foreground uppercase">
+							<TableHead className="hidden w-32 text-sm font-medium text-foreground uppercase min-[1400px]:table-cell">
 								CPU / Mem
 							</TableHead>
-							<TableHead className="w-20 text-sm font-medium text-foreground uppercase">
+							<TableHead className="hidden w-20 text-sm font-medium text-foreground uppercase min-[1400px]:table-cell">
 								Health
 							</TableHead>
 							<TableHead className="w-10" />
@@ -132,19 +132,21 @@ export function HostAppsTable({
 											</span>
 										</div>
 									</TableCell>
-									<TableCell>
+									<TableCell className="hidden lg:table-cell">
 										<Badge variant="outline">{app.source}</Badge>
 									</TableCell>
 									<TableCell>
 										<Badge variant={statusVariants[app.status] ?? "secondary"}>{app.status}</Badge>
 									</TableCell>
-									<TableCell className="text-xs tabular-nums text-muted-foreground">
+									<TableCell className="hidden text-xs tabular-nums text-muted-foreground min-[1400px]:table-cell">
 										{app.ports?.length ? app.ports.join(", ") : "—"}
 									</TableCell>
-									<TableCell className="text-xs tabular-nums text-muted-foreground">
+									<TableCell className="hidden text-xs tabular-nums text-muted-foreground min-[1400px]:table-cell">
 										{formatCpuMem(app.cpu_percent, app.mem_bytes)}
 									</TableCell>
-									<TableCell className="text-xs text-muted-foreground">—</TableCell>
+									<TableCell className="hidden text-xs text-muted-foreground min-[1400px]:table-cell">
+										—
+									</TableCell>
 									<TableCell>
 										{serverID ? (
 											<HostActionsMenu serverID={serverID} app={app} serverOnline={serverOnline} />

@@ -31,12 +31,16 @@ export function HostHealthCard({ checks }: HostHealthCardProps) {
 									{check.name}
 									{check.host ? ` · ${check.host}` : ""}
 								</span>
-								<span className="tabular-nums text-muted-foreground">
-									{check.status === "healthy"
-										? check.check_type === "http"
-											? "200 OK"
-											: "TCP OK"
-										: check.status}
+								<span
+									className={`tabular-nums ${
+										check.status === "healthy"
+											? "text-emerald-500"
+											: check.status === "unhealthy"
+												? "text-destructive"
+												: "text-muted-foreground"
+									}`}
+								>
+									{check.status === "healthy" ? "OK" : check.status === "unhealthy" ? "FAIL" : "—"}
 								</span>
 							</div>
 						))}

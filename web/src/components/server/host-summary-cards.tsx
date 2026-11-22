@@ -37,7 +37,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 
 	if (!latest) {
 		return (
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<div className="grid gap-4 sm:grid-cols-2 min-[1400px]:grid-cols-4">
 				<SummaryCard
 					title="CPU"
 					icon={<Cpu className="h-4 w-4" />}
@@ -67,7 +67,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 	}
 
 	return (
-		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+		<div className="grid gap-4 sm:grid-cols-2 min-[1400px]:grid-cols-4">
 			<SummaryCard
 				title="CPU"
 				icon={<Cpu className="h-4 w-4" />}
