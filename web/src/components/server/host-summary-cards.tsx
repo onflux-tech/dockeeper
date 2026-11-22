@@ -1,4 +1,4 @@
-import { ArrowUpDown, Cpu, HardDrive, MemoryStick } from "lucide-react";
+import { ArrowDownUp, Cpu, HardDrive, MemoryStick } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatBytes } from "@/lib/format";
 import type { MetricPoint } from "@/hooks/use-server-metrics";
@@ -58,7 +58,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 				/>
 				<SummaryCard
 					title="Network"
-					icon={<ArrowUpDown className="h-4 w-4" />}
+					icon={<ArrowDownUp className="h-4 w-4" />}
 					value="—"
 					detail="No metrics yet"
 				/>
@@ -88,7 +88,7 @@ export function HostSummaryCards({ metrics }: HostSummaryCardsProps) {
 			/>
 			<SummaryCard
 				title="Network"
-				icon={<ArrowUpDown className="h-4 w-4" />}
+				icon={<ArrowDownUp className="h-4 w-4" />}
 				value={`↓ ${formatBytes(latest.net_rx)}`}
 				detail={`↑ ${formatBytes(latest.net_tx)}`}
 			/>
