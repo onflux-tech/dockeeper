@@ -39,7 +39,7 @@ func TestGetS3SettingsNormalizesEndpoint(t *testing.T) {
 	settings, err := app.FindCollectionByNameOrId("settings")
 	if err != nil {
 		settings = core.NewBaseCollection("settings")
-		settings.Fields.Add(&core.TextField{Name: "key"}, &core.TextField{Name: "value"})
+		settings.Fields.Add(&core.TextField{Name: "key"}, &core.JSONField{Name: "value"})
 		require.NoError(t, app.Save(settings))
 	}
 

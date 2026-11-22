@@ -271,7 +271,11 @@ func (s *BackupService) getS3Settings() (*s3Settings, error) {
 			}
 			continue
 		}
-		settings[key] = fmt.Sprintf("%v", records[0].Get("value"))
+		var value string
+		if err := records[0].UnmarshalJSONField("value", &value); err != nil {
+			value = records[0].GetString("value")
+		}
+		settings[key] = value
 	}
 
 	endpoint := settings["s3_endpoint"]
