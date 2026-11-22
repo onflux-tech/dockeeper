@@ -44,6 +44,8 @@ O diff segue `AGENTS.md` e `docs/gotchas.md`? Confira:
 
 Toda afirmação sobre gate precisa de comando, saída e exit code. Sem isso, é alegação.
 
+- Toda mudança no diff precisa de teste que a exercite e evidência colada (comando, saída, exit code). Mudança sem teste ou sem evidência é achado Important, nunca `GO`.
+
 - `make verify` é o gate completo; `make verify-fast` é o de commit. No PR, o gate é o `quality` do CI.
 - Não canalize teste para `tail`/`head`/`grep`; redirecione para arquivo e leia.
 - Uma suíte por vez.

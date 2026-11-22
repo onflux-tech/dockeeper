@@ -120,6 +120,7 @@ Minor: inconsistência visual sem impacto na tarefa.
 
 ## Limites
 
+- Cada achado e o veredito exigem evidência (captura, rota e viewport); item não coberto é `INCONCLUSIVO`, não `GO`.
 - Descreva o defeito e a evidência; não sugira patch.
 - Declare o critério e o desvio, não "bonito" ou "feio".
 - Sem UI renderizada, sem `GO`.

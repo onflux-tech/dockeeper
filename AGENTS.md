@@ -125,6 +125,7 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 - `/verify` roda o gate (`make verify` ou `make verify-fast`) e cola a saída real.
 - `/review` despacha `dockeeper-reviewer` e depois `dockeeper-refuter` no mesmo diff; nenhum dos dois edita ou re-roda a suíte. Achado `REFUTED` não é corrigido; achado `UPHELD` ou `INCONCLUSIVO` continua valendo. A lente operacional do refuter pode abrir achado novo, que bloqueia como qualquer Important.
 - Diff que toca `web/**` também passa pelo `dockeeper-ui-qa`, em paralelo ao reviewer: rotas afetadas em 1440, 1024, 768 e 390, densidade/paginação, estados, a11y e o fluxo contra a API. `NO-GO` de UI bloqueia o merge de frontend.
+- Toda mudança no diff precisa de teste que a exercite e evidência colada (comando, saída, exit code). Sem isso, não é `GO`.
 - Contrato, eixos, evidência, refutação e formato: `docs/review.md`.
 
 ## Notas internas

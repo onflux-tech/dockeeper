@@ -61,6 +61,7 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | 2026-11-21 | Modelo de Bash amplo + deny-list: sem Edit/Write, shell livre para leitura (git, gh, cat, rg, compostos) e bloqueio de mutação de git, suíte, pipe de teste, flags de escrita e destrutivos no OpenCode e no hook do Claude. |
 | 2026-11-21 | Guarda única: hook do Claude e plugin `.opencode/plugins/subagent-guard.js` aplicam a mesma `evaluate`; as `permissions` do OpenCode ficam só com a estrutura read-only e o Bash amplo. |
 | 2026-11-22 | Papel `dockeeper-ui-qa` e comando `/qa`: QA read-only da UI renderizada para diffs `web/**`, com viewports 1440/1024/768/390, hierarquia, densidade/paginação, estados, a11y e fluxo principal; despachado pelo `/review` em paralelo ao reviewer. |
+| 2026-11-22 | Regra de evidência obrigatória: toda mudança no diff precisa de teste e saída colada; ausência é achado Important, nunca `GO`. |
 
 ## Cadência
 

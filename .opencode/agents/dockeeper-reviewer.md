@@ -35,7 +35,7 @@ Working tree por padrão: `git status --short`, `git diff`, `git diff --cached` 
 
 ## Contrato
 
-Leia `AGENTS.md`, `docs/gotchas.md` e `docs/review.md`. Aplique os dois eixos separados, sem rerank. Cite `arquivo:linha` e cenário de falha. Cobre evidência de gate com comando, saída e exit code; não aceite "já estava quebrado" sem baseline. Warning é achado. Minor não some.
+Leia `AGENTS.md`, `docs/gotchas.md` e `docs/review.md`. Aplique os dois eixos separados, sem rerank. Cite `arquivo:linha` e cenário de falha. Cobre evidência de gate com comando, saída e exit code; não aceite "já estava quebrado" sem baseline. Toda mudança no diff precisa de teste que a exercite e evidência colada; ausência é achado Important. Warning é achado. Minor não some.
 
 ## Formato
 
