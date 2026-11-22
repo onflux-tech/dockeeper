@@ -188,6 +188,10 @@ func handleUpdatePolicy(e *core.RequestEvent, backupStore *store.BackupStore) er
 }
 
 func recordStringList(record *core.Record, field string) []string {
+	var list []string
+	if err := record.UnmarshalJSONField(field, &list); err == nil {
+		return list
+	}
 	return anyStringList(record.Get(field))
 }
 

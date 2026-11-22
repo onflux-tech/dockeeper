@@ -67,7 +67,6 @@ func (s *BackupStore) CreatePolicy(input BackupPolicyInput) (string, error) {
 	return rec.Id, nil
 }
 
-// GetPolicy returns a policy by ID.
 func (s *BackupStore) GetPolicy(policyID string) (*core.Record, error) {
 	return s.app.FindRecordById(constants.CollBackupPolicies, policyID)
 }

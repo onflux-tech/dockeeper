@@ -482,6 +482,10 @@ func recordStringList(rec *core.Record, field string) []string {
 			return list
 		}
 	}
+	var list []string
+	if err := rec.UnmarshalJSONField(field, &list); err == nil {
+		return list
+	}
 	return nil
 }
 
