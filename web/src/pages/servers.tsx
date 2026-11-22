@@ -330,7 +330,14 @@ export default function ServersPage() {
 											<Badge variant={statusVariant(server.status)}>{server.status}</Badge>
 										</TableCell>
 										<TableCell className="font-medium">
-											{server.name}
+											<div className="flex items-center gap-2">
+												<span>{server.name}</span>
+												{server.orchestrator === "none" && (
+													<Badge variant="outline" className="border-warning text-warning">
+														host-only
+													</Badge>
+												)}
+											</div>
 											{server.description && (
 												<p className="text-xs text-muted-foreground truncate max-w-[200px]">
 													{server.description}

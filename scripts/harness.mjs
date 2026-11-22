@@ -82,6 +82,14 @@ function walk(dir) {
 	return files;
 }
 
+const trackedDocs = () => {
+	const output = execFileSync("git", ["ls-files", "--", "docs"], { cwd: ROOT, encoding: "utf8" });
+	return new Set(output.split("\n").filter(Boolean));
+};
+
+const walkDocs = () =>
+	walk(join(ROOT, "docs")).filter((file) => trackedDocs().has(rel(file)));
+
 export function parseFrontmatter(text) {
 	const normalized = normalize(text);
 	const match = normalized.match(FRONTMATTER);
@@ -336,7 +344,7 @@ function checkMakeRefs() {
 	const files = [
 		join(ROOT, "AGENTS.md"),
 		join(ROOT, "CLAUDE.md"),
-		...walk(join(ROOT, "docs")).filter((file) => file.endsWith(".md")),
+		...walkDocs().filter((file) => file.endsWith(".md")),
 		...walk(join(ROOT, "harness")).filter((file) => file.endsWith(".md")),
 	];
 	return files.flatMap((file) => makeRefErrors(read(file), targets, rel(file)));
@@ -370,7 +378,7 @@ function checkFileRefs() {
 	const files = [
 		join(ROOT, "AGENTS.md"),
 		join(ROOT, "CLAUDE.md"),
-		...walk(join(ROOT, "docs")).filter((file) => file.endsWith(".md")),
+		...walkDocs().filter((file) => file.endsWith(".md")),
 		...walk(join(ROOT, "harness")).filter((file) => file.endsWith(".md")),
 	];
 	return files.flatMap((file) => fileRefErrors(read(file), rel(file)));
@@ -400,7 +408,7 @@ function checkSensitive() {
 		join(ROOT, ".mcp.json"),
 		join(ROOT, ".claude/settings.json"),
 		join(ROOT, ".opencode/opencode.json"),
-		...walk(join(ROOT, "docs")),
+		...walkDocs(),
 		...walk(join(ROOT, "harness")),
 	].filter((file) => file.endsWith(".md") || file.endsWith(".json"));
 	const errors = [];

@@ -22,6 +22,7 @@ import type {
 	AlertRuleRecord,
 	ServerRecord,
 	ContainerRecord,
+	HostAppRecord,
 	NotificationChannelRecord,
 } from "@/types/pocketbase";
 
@@ -34,6 +35,19 @@ const METRICS = [
 	{ value: "load_1m", label: "Load 1m" },
 	{ value: "load_5m", label: "Load 5m" },
 	{ value: "mem_used", label: "Memory Used (bytes)" },
+] as const;
+
+const HOST_APP_METRICS = [
+	{ value: "cpu_percent", label: "App CPU %" },
+	{ value: "mem_bytes", label: "App Memory (bytes)" },
+	{ value: "restarts", label: "Restarts" },
+] as const;
+
+const CONNECTIVITY_METRICS = [
+	{ value: "connectivity_internet_ok", label: "Internet OK (1/0)" },
+	{ value: "connectivity_dns_ok", label: "DNS OK (1/0)" },
+	{ value: "connectivity_gateway_ok", label: "Gateway OK (1/0)" },
+	{ value: "connectivity_internet_ms", label: "Internet latency (ms)" },
 ] as const;
 
 const OPERATORS = [
@@ -51,6 +65,11 @@ const EVENT_TYPES = [
 	{ value: "container.oom_killed", label: "Container OOM Killed" },
 	{ value: "server.offline", label: "Server Offline" },
 	{ value: "server.online", label: "Server Online" },
+	{ value: "host_app.action", label: "Host App Action" },
+	{ value: "host_app.health.degraded", label: "Host App Degraded" },
+	{ value: "host_app.health.recovered", label: "Host App Recovered" },
+	{ value: "server.connectivity.degraded", label: "Connectivity Degraded" },
+	{ value: "server.connectivity.recovered", label: "Connectivity Recovered" },
 ] as const;
 
 interface RuleDialogProps {
@@ -58,6 +77,7 @@ interface RuleDialogProps {
 	onOpenChange: (open: boolean) => void;
 	servers: ServerRecord[];
 	containers: ContainerRecord[];
+	hostApps: HostAppRecord[];
 	channels: NotificationChannelRecord[];
 	editRule?: AlertRuleRecord | null;
 }
@@ -67,6 +87,7 @@ export function RuleDialog({
 	onOpenChange,
 	servers,
 	containers,
+	hostApps,
 	channels,
 	editRule,
 }: RuleDialogProps) {
@@ -78,7 +99,7 @@ export function RuleDialog({
 	const [operator, setOperator] = useState<string>(editRule?.operator ?? "gt");
 	const [threshold, setThreshold] = useState(editRule ? String(editRule.threshold) : "80");
 	const [duration, setDuration] = useState(editRule ? String(editRule.duration) : "60");
-	const [targetType, setTargetType] = useState<"server" | "container">(
+	const [targetType, setTargetType] = useState<"server" | "container" | "host_app">(
 		editRule?.target_type ?? "server",
 	);
 	const [targetId, setTargetId] = useState(editRule?.target_id ?? "");
@@ -102,7 +123,14 @@ export function RuleDialog({
 	const updateMut = useUpdateRule();
 	const isPending = createMut.isPending || updateMut.isPending;
 
-	const targets = targetType === "server" ? servers : containers;
+	const targets: Array<ServerRecord | ContainerRecord | HostAppRecord> =
+		targetType === "server" ? servers : targetType === "container" ? containers : hostApps;
+	const metricOptions =
+		targetType === "host_app"
+			? HOST_APP_METRICS
+			: targetType === "server"
+				? [...METRICS, ...CONNECTIVITY_METRICS]
+				: METRICS;
 
 	const handleToggleChannel = (id: string) => {
 		setSelectedChannels((prev) =>
@@ -223,8 +251,9 @@ export function RuleDialog({
 									<Select
 										value={targetType}
 										onValueChange={(v) => {
-											setTargetType(v as "server" | "container");
+											setTargetType(v as "server" | "container" | "host_app");
 											setTargetId("");
+											setMetric("cpu_percent");
 										}}
 									>
 										<SelectTrigger>
@@ -233,6 +262,7 @@ export function RuleDialog({
 										<SelectContent>
 											<SelectItem value="server">Server</SelectItem>
 											<SelectItem value="container">Container</SelectItem>
+											<SelectItem value="host_app">Host App</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>
@@ -245,9 +275,11 @@ export function RuleDialog({
 										<SelectContent>
 											{targets.map((t) => (
 												<SelectItem key={t.id} value={t.id}>
-													{"hostname" in t
-														? (t as ServerRecord).hostname
-														: (t as ContainerRecord).name}
+													{targetType === "host_app"
+														? `${(t as HostAppRecord).source}/${(t as HostAppRecord).name}`
+														: "hostname" in t
+															? (t as ServerRecord).hostname
+															: (t as ContainerRecord).name}
 												</SelectItem>
 											))}
 										</SelectContent>
@@ -263,7 +295,7 @@ export function RuleDialog({
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											{METRICS.map((m) => (
+											{metricOptions.map((m) => (
 												<SelectItem key={m.value} value={m.value}>
 													{m.label}
 												</SelectItem>
@@ -332,7 +364,7 @@ export function RuleDialog({
 							<div className="space-y-1.5">
 								<label className="text-xs font-medium">Scope</label>
 								<Input
-									placeholder="all, server:<id>, container:<id>"
+									placeholder="all, server:<id>, container:<id>, host_app:<server>:<source>:<name>, connectivity:<server>"
 									value={scope}
 									onChange={(e) => setScope(e.target.value)}
 								/>

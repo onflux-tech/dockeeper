@@ -7,6 +7,7 @@ import {
 	HeartPulse,
 	Home,
 	Layers,
+	LayoutGrid,
 	Network,
 	Rocket,
 	ScrollText,
@@ -36,6 +37,7 @@ export const navigation: NavGroup[] = [
 		items: [
 			{ label: "Dashboard", href: "/", icon: Home },
 			{ label: "Servers", href: "/servers", icon: Server, capability: "servers.view" },
+			{ label: "Apps", href: "/apps", icon: LayoutGrid, capability: "host.apps.view" },
 		],
 	},
 	{
@@ -64,7 +66,7 @@ export const navigation: NavGroup[] = [
 			},
 			{ label: "Alerts", href: "/alerts", icon: Bell, capability: "alerts.view" },
 			{ label: "Backups", href: "/backups", icon: Archive, capability: "backups.view" },
-			{ label: "Traefik", href: "/traefik", icon: Globe, capability: "traefik.view" },
+			{ label: "Proxies", href: "/proxies", icon: Globe, capability: "proxies.view" },
 		],
 	},
 	{

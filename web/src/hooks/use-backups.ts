@@ -55,7 +55,13 @@ export function useBackupRecords(policyId?: string, serverId?: string) {
 
 interface CreatePolicyInput {
 	server_id: string;
-	volume: string;
+	volume?: string;
+	target_type: "volume" | "host_app";
+	app_source?: string;
+	app_name?: string;
+	paths?: string[];
+	exclude?: string[];
+	max_bytes?: number;
 	schedule: string;
 	retention_days: number;
 	s3_bucket: string;

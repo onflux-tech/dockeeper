@@ -13,6 +13,8 @@ export const CAP_DOMAINS: { domain: string; caps: string[] }[] = [
 	{ domain: "Users", caps: ["users.view", "users.manage"] },
 	{ domain: "Audit", caps: ["audit.view"] },
 	{ domain: "Traefik", caps: ["traefik.view"] },
+	{ domain: "Proxies", caps: ["proxies.view"] },
+	{ domain: "Host Apps", caps: ["host.apps.view", "host.apps.manage"] },
 	{ domain: "Events", caps: ["events.view"] },
 	{ domain: "Batch", caps: ["batch.view", "batch.manage"] },
 	{ domain: "Tags", caps: ["tags.view", "tags.manage"] },

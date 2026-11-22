@@ -55,8 +55,18 @@ export function useHealthCheckLogs(checkId: string, page = 1, perPage = 50) {
 
 export interface CreateHealthCheckInput {
 	name: string;
-	container: string;
+	container?: string;
 	server: string;
+	target_type?: "container" | "host_app";
+	app_source?: string;
+	app_name?: string;
+	check_type?: "http" | "tcp" | "process";
+	host?: string;
+	scheme?: string;
+	method?: string;
+	expected_body?: string;
+	headers?: Record<string, string>;
+	tls_skip_verify?: boolean;
 	url_path?: string;
 	port: number;
 	expected_status?: number;

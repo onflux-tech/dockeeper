@@ -54,8 +54,11 @@ export function RecordsTable({ records, isLoading }: RecordsTableProps) {
 	const [confirmText, setConfirmText] = useState("");
 	const restoreMut = useRestoreBackup();
 
+	const confirmPhrase =
+		restoreTarget?.target_type === "host_app" ? `RESTORE ${restoreTarget.app_name}` : "RESTORE";
+
 	const handleRestore = () => {
-		if (!restoreTarget || confirmText !== "RESTORE") return;
+		if (!restoreTarget || confirmText !== confirmPhrase) return;
 		restoreMut.mutate(restoreTarget.id, {
 			onSuccess: () => {
 				setRestoreTarget(null);
@@ -83,7 +86,7 @@ export function RecordsTable({ records, isLoading }: RecordsTableProps) {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Volume</TableHead>
+							<TableHead>Target</TableHead>
 							<TableHead>Status</TableHead>
 							<TableHead>Size</TableHead>
 							<TableHead>S3 Key</TableHead>
@@ -95,7 +98,9 @@ export function RecordsTable({ records, isLoading }: RecordsTableProps) {
 					<TableBody>
 						{records.map((rec) => (
 							<TableRow key={rec.id}>
-								<TableCell className="font-medium">{rec.volume_name}</TableCell>
+								<TableCell className="font-medium">
+									{rec.target_label || rec.volume_name || "—"}
+								</TableCell>
 								<TableCell>
 									<div className="flex items-center gap-1.5">
 										{rec.status === "running" && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -146,26 +151,41 @@ export function RecordsTable({ records, isLoading }: RecordsTableProps) {
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Restore Backup</AlertDialogTitle>
+						<AlertDialogTitle>
+							Restore {restoreTarget?.target_type === "host_app" ? "App Backup" : "Backup"}
+						</AlertDialogTitle>
 						<AlertDialogDescription asChild>
 							<div className="space-y-3">
 								<p>
-									This will restore the volume{" "}
-									<span className="font-mono font-semibold">{restoreTarget?.volume_name}</span> from
-									backup. The current volume data will be{" "}
-									<span className="font-semibold text-destructive">overwritten</span>.
+									{restoreTarget?.target_type === "host_app" ? (
+										<>
+											This will stop{" "}
+											<span className="font-mono font-semibold">{restoreTarget?.app_name}</span>,
+											restore{" "}
+											<span className="font-mono font-semibold">{restoreTarget?.target_label}</span>{" "}
+											and start it again. The current files under the recipe paths will be{" "}
+											<span className="font-semibold text-destructive">overwritten</span>.
+										</>
+									) : (
+										<>
+											This will restore the volume{" "}
+											<span className="font-mono font-semibold">{restoreTarget?.volume_name}</span>{" "}
+											from backup. The current volume data will be{" "}
+											<span className="font-semibold text-destructive">overwritten</span>.
+										</>
+									)}
 								</p>
 								<p className="text-xs">
 									S3 key: <span className="font-mono">{restoreTarget?.s3_key}</span>
 								</p>
 								<div className="space-y-1.5">
 									<label className="text-xs font-medium">
-										Type <span className="font-mono">RESTORE</span> to confirm
+										Type <span className="font-mono">{confirmPhrase}</span> to confirm
 									</label>
 									<Input
 										value={confirmText}
 										onChange={(e) => setConfirmText(e.target.value)}
-										placeholder="RESTORE"
+										placeholder={confirmPhrase}
 										className="font-mono"
 									/>
 								</div>
@@ -175,7 +195,7 @@ export function RecordsTable({ records, isLoading }: RecordsTableProps) {
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
-							disabled={confirmText !== "RESTORE" || restoreMut.isPending}
+							disabled={confirmText !== confirmPhrase || restoreMut.isPending}
 							onClick={(e) => {
 								e.preventDefault();
 								handleRestore();

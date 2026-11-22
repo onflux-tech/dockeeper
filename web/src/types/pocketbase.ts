@@ -16,7 +16,7 @@ export interface ServerRecord extends BaseRecord {
 	docker_version: string;
 	agent_version: string;
 	status: "online" | "offline" | "error" | "pending";
-	orchestrator: "docker" | "podman" | "kubernetes";
+	orchestrator: "docker" | "podman" | "kubernetes" | "none";
 	last_seen: string;
 	enrolled_at: string;
 	labels: unknown;
@@ -30,6 +30,25 @@ export interface ServerRecord extends BaseRecord {
 	current_ram: number;
 	current_disk: number;
 	uptime_seconds: number;
+	connectivity_status: "healthy" | "degraded" | "unknown";
+	connectivity_checked_at: string;
+	connectivity_latency_ms: number;
+	connectivity_details: ConnectivityDetails | null;
+	view_scope: "auto" | "server" | "docker" | "both";
+}
+
+export interface ConnectivityProbeDetail {
+	ok: boolean;
+	ms: number;
+	method?: string;
+}
+
+export interface ConnectivityDetails {
+	internet?: ConnectivityProbeDetail;
+	dns?: ConnectivityProbeDetail;
+	gateway?: ConnectivityProbeDetail;
+	http?: { ok: number; total: number; latency_ms: number };
+	error?: string;
 }
 
 export interface ContainerRecord extends BaseRecord {
@@ -200,6 +219,12 @@ export interface UpdatePolicyRecord extends BaseRecord {
 export interface BackupPolicyRecord extends BaseRecord {
 	volume: string;
 	server: string;
+	target_type: "volume" | "host_app";
+	app_source: "systemd" | "pm2" | "process" | "";
+	app_name: string;
+	paths: string[];
+	exclude: string[];
+	max_bytes: number;
 	schedule: string;
 	retention_days: number;
 	s3_bucket: string;
@@ -211,6 +236,11 @@ export interface BackupRecordRecord extends BaseRecord {
 	policy: string;
 	volume_name: string;
 	server: string;
+	target_type: "volume" | "host_app";
+	app_source: "systemd" | "pm2" | "process" | "";
+	app_name: string;
+	target_label: string;
+	manifest: Record<string, unknown> | null;
 	s3_key: string;
 	size: number;
 	status: "pending" | "running" | "success" | "failed";
@@ -226,7 +256,7 @@ export interface AlertRuleRecord extends BaseRecord {
 	operator: "gt" | "lt" | "gte" | "lte" | "eq";
 	threshold: number;
 	duration: number;
-	target_type: "server" | "container";
+	target_type: "server" | "container" | "host_app";
 	target_id: string;
 	event_type: string;
 	scope: string;
@@ -307,13 +337,49 @@ export interface TraefikRouteRecord extends BaseRecord {
 	status: string;
 }
 
+export interface ProxyInstanceRecord extends BaseRecord {
+	server: string;
+	kind: "traefik" | "nginx" | "caddy" | "haproxy" | "envoy";
+	source: "systemd" | "docker" | "process";
+	app: string;
+	version: string;
+	config_path: string;
+	admin_url: string;
+	status: "healthy" | "degraded" | "unknown";
+	last_seen: string;
+	routes_count?: number;
+}
+
+export interface ProxyRouteRecord extends BaseRecord {
+	instance: string;
+	server: string;
+	name: string;
+	hosts: string[];
+	paths: string[];
+	upstreams: string[];
+	tls: boolean;
+	middlewares: string[];
+	status: "healthy" | "degraded" | "unknown";
+	provider: string;
+}
+
 export interface HealthCheckRecord extends BaseRecord {
 	name: string;
 	container: string;
 	server: string;
+	target_type: "container" | "host_app";
+	app_source: "systemd" | "pm2" | "process";
+	app_name: string;
+	check_type: "http" | "tcp" | "process";
+	host: string;
+	scheme: "http" | "https";
+	method: string;
 	url_path: string;
 	port: number;
 	expected_status: number;
+	expected_body: string;
+	headers: Record<string, string> | null;
+	tls_skip_verify: boolean;
 	interval_seconds: number;
 	timeout_seconds: number;
 	failure_threshold: number;
@@ -324,6 +390,7 @@ export interface HealthCheckRecord extends BaseRecord {
 	enabled: boolean;
 	status: "healthy" | "unhealthy" | "unknown";
 	consecutive_failures: number;
+	consecutive_successes: number;
 	last_check_at: string;
 	next_check_at: string;
 }
@@ -366,6 +433,49 @@ export interface TagRecord extends BaseRecord {
 	resource_id: string;
 }
 
+export interface HostAppRecord extends BaseRecord {
+	server: string;
+	source: "systemd" | "pm2" | "process";
+	name: string;
+	unit: string;
+	pm_id: string;
+	status: "running" | "stopped" | "failed" | "unknown";
+	pids: number[];
+	ports: number[];
+	cpu_percent: number;
+	mem_bytes: number;
+	disk_read_bytes: number;
+	disk_write_bytes: number;
+	restarts: number;
+	uptime_seconds: number;
+	user: string;
+	cwd: string;
+	exec_path: string;
+	log_path: string;
+	last_seen: string;
+}
+
+export interface HostProcessRecord extends BaseRecord {
+	server: string;
+	pid: number;
+	name: string;
+	app: string;
+	cpu_percent: number;
+	mem_bytes: number;
+	threads: number;
+	last_seen: string;
+}
+
+export interface HostAppMetricRecord extends BaseRecord {
+	server: string;
+	app: string;
+	source: string;
+	timestamp: string;
+	cpu_percent: number;
+	mem_bytes: number;
+	restarts: number;
+}
+
 // ── Collection name → record type map ───────────────────────────────────────
 
 export interface Collections {
@@ -396,6 +506,9 @@ export interface Collections {
 	health_check_logs: HealthCheckLogRecord;
 	batch_jobs: BatchJobRecord;
 	tags: TagRecord;
+	host_apps: HostAppRecord;
+	host_processes: HostProcessRecord;
+	host_app_metrics_raw: HostAppMetricRecord;
 }
 
 /** All valid collection names. */

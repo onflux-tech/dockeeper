@@ -44,6 +44,9 @@ type Client struct {
 	volHandler     *grpchandlers.VolumeHandler
 	healthHandler  *grpchandlers.HealthHandler
 	updateHandler  *grpchandlers.UpdateHandler
+	hostActions    *executor.HostActionExecutor
+	hostHealth     *grpchandlers.HostHealthHandler
+	appBackup      *executor.AppBackupExecutor
 
 	// Dependencies for streaming operations.
 	exec executor.Executor
@@ -59,12 +62,15 @@ func NewClient(
 	conn *grpc.ClientConn,
 	exec executor.Executor,
 	orch collector.OrchestratorClient,
+	hostState *collector.HostInventoryState,
 	logger *slog.Logger,
 	onShutdown func(),
 	dataDir string,
 ) *Client {
 	cmds := grpchandlers.NewCommandsHandler(exec, logger)
 	cmds.SetShutdownCallback(onShutdown)
+
+	hostActions := executor.NewHostActionExecutor(logger, executor.WithInventory(hostState.Apps))
 
 	c := &Client{
 		serverID: serverID,
@@ -80,6 +86,9 @@ func NewClient(
 		volHandler:     grpchandlers.NewVolumeHandler(exec, logger),
 		healthHandler:  grpchandlers.NewHealthHandler(logger),
 		updateHandler:  grpchandlers.NewUpdateHandler(exec, logger, dataDir),
+		hostActions:    hostActions,
+		hostHealth:     grpchandlers.NewHostHealthHandler(logger, grpchandlers.WithHostInventory(hostState.Apps)),
+		appBackup:      executor.NewAppBackupExecutor(logger, hostActions),
 
 		exec:       exec,
 		orch:       orch,
@@ -332,6 +341,24 @@ func (c *Client) dispatchCommand(ctx context.Context, cmd *agentpb.ChannelComman
 			result.Result = errorResult(err)
 		} else {
 			result.Result = &agentpb.ChannelCommandResult_CheckImageDigest{CheckImageDigest: resp}
+		}
+
+	case *agentpb.ChannelCommand_HostAppAction:
+		request := req.HostAppAction
+		exitCode, output, err := c.hostActions.Execute(ctx, request.GetSource(), request.GetName(), request.GetAction())
+		actionResult := &agentpb.HostAppActionResult{
+			Success:  err == nil,
+			ExitCode: int32(exitCode),
+			Output:   output,
+		}
+		if err != nil {
+			actionResult.Error = err.Error()
+		}
+		result.Result = &agentpb.ChannelCommandResult_HostAppAction{HostAppAction: actionResult}
+
+	case *agentpb.ChannelCommand_HostHealthCheck:
+		result.Result = &agentpb.ChannelCommandResult_HostHealthCheck{
+			HostHealthCheck: c.hostHealth.Execute(ctx, req.HostHealthCheck),
 		}
 
 	default:

@@ -8,6 +8,30 @@ export const changelog: ChangelogEntry[] = [
 		summary: "Work in progress.",
 		changes: [
 			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Kept the agent online on hosts without Docker, reporting systemd units, PM2 apps, processes and listening ports every 15 seconds.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Persisted the host inventory and per-app metrics, pruning rows that disappear from the latest report.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Added a read-only Host tab for host-only servers with live applications, top processes and system metrics.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Added a global Applications page with server, source, status and search filters.",
+			},
+			{
 				type: "fix",
 				area: "web",
 				description:
@@ -24,6 +48,78 @@ export const changelog: ChangelogEntry[] = [
 				area: "web",
 				description:
 					"Let each server's disk chart switch between all disks summed and a single mountpoint, remembering the choice per server.",
+			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Start, stop and restart systemd units and PM2 apps from the manager, running PM2 with the owning user's credentials.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Added host app actions with RBAC (host.apps.manage), an in-flight lock, audit entries and optimistic status updates.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Generalized health checks to host applications with HTTP, TCP and process checks, and applied success thresholds to container checks as well.",
+			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Probed internet, DNS and gateway every minute and reported connectivity state with latency history.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Stored connectivity history, flagged degraded servers, and allowed alerts on host app metrics and connectivity probes.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Enabled host app actions from the Host tab and Applications page, added connectivity and health cards, host app health checks and a per-server view scope.",
+			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Backed up absolute paths of systemd units and PM2 apps with a manifest, exclusions and size limits, restoring with a safety archive, stop/start and rollback.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Let backup policies target a volume or a host app, required a typed RESTORE confirmation for app restores and published backup completed, failed and restored events.",
+			},
+			{
+				type: "feat",
+				area: "agent",
+				description:
+					"Collected nginx, Caddy, HAProxy, Envoy and Traefik instances and routes every minute without requiring Docker.",
+			},
+			{
+				type: "feat",
+				area: "manager",
+				description:
+					"Stored proxy instances and routes per server and exposed a read-only Proxies API guarded by proxies.view.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Added the Proxies page, replaced the Traefik menu item and redirected /traefik to /proxies.",
+			},
+			{
+				type: "feat",
+				area: "web",
+				description:
+					"Added volume or host app targets to backup policies, typed app restore confirmation and a backups card on the Host tab.",
 			},
 		],
 	},

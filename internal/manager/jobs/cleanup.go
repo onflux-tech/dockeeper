@@ -38,6 +38,8 @@ func CleanupOldMetrics(app core.App) {
 	}{
 		{"server_metrics_raw", time.Duration(rawHours) * time.Hour},
 		{"container_metrics_raw", time.Duration(rawHours) * time.Hour},
+		{"host_app_metrics_raw", time.Duration(rawHours) * time.Hour},
+		{"server_connectivity_raw", time.Duration(rawHours) * time.Hour},
 		{"server_metrics_hourly", time.Duration(hourlyDays) * 24 * time.Hour},
 		{"container_metrics_hourly", time.Duration(hourlyDays) * 24 * time.Hour},
 		{"server_metrics_daily", time.Duration(dailyDays) * 24 * time.Hour},

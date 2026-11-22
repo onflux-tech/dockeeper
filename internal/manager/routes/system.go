@@ -124,7 +124,6 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 		serverIP := server.GetString("ip_address")
 		serverOS := server.GetString("os")
 		serverArch := server.GetString("arch")
-		agentVersion := server.GetString("agent_version")
 		if serverIP == "" {
 			return e.JSON(http.StatusBadRequest, map[string]string{"error": "server has no IP address"})
 		}
@@ -133,20 +132,6 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 		}
 		if serverArch == "" {
 			serverArch = "amd64"
-		}
-
-		release, _, err := svc.CheckForUpdate()
-		if err != nil {
-			return e.JSON(http.StatusBadGateway, map[string]string{"error": err.Error()})
-		}
-		if release == nil {
-			return e.JSON(http.StatusOK, map[string]string{"message": "no release found"})
-		}
-
-		// Compare the AGENT's version against the latest release, not the manager's.
-		agentNeedsUpdate := services.IsNewerThan(agentVersion, release.TagName)
-		if !agentNeedsUpdate {
-			return e.JSON(http.StatusOK, map[string]string{"message": "agent already up to date"})
 		}
 
 		// SSE progress stream.
@@ -168,16 +153,37 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 			flusher.Flush()
 		}
 
-		sendSSE("progress", map[string]any{
-			"step":    "downloading",
-			"message": fmt.Sprintf("Downloading agent %s for %s/%s...", release.TagName, serverOS, serverArch),
-		})
-
-		// Download the agent binary for the target OS/arch.
-		binaryData, checksum, err := svc.DownloadAsset(release, "agent", serverOS, serverArch)
-		if err != nil {
-			sendSSE("error", map[string]any{"message": err.Error()})
-			return nil
+		var (
+			binaryData []byte
+			checksum   string
+			version    = svc.CurrentVersion()
+		)
+		binaryData, checksum, err = readLocalAgentBinary(serverOS, serverArch)
+		if err == nil {
+			sendSSE("progress", map[string]any{
+				"step":    "downloading",
+				"message": fmt.Sprintf("Using bundled agent binary for %s/%s...", serverOS, serverArch),
+			})
+		} else {
+			release, _, releaseErr := svc.CheckForUpdate()
+			if releaseErr != nil {
+				sendSSE("error", map[string]any{"message": releaseErr.Error()})
+				return nil
+			}
+			if release == nil {
+				sendSSE("error", map[string]any{"message": "no agent binary available"})
+				return nil
+			}
+			sendSSE("progress", map[string]any{
+				"step":    "downloading",
+				"message": fmt.Sprintf("Downloading agent %s for %s/%s...", release.TagName, serverOS, serverArch),
+			})
+			binaryData, checksum, err = svc.DownloadAsset(release, "agent", serverOS, serverArch)
+			if err != nil {
+				sendSSE("error", map[string]any{"message": err.Error()})
+				return nil
+			}
+			version = release.TagName
 		}
 
 		sendSSE("progress", map[string]any{
@@ -189,15 +195,15 @@ func handleAgentUpdate(app core.App, svc *services.SelfUpdateService) func(e *co
 		// may be canceled by proxies or browsers before the transfer completes.
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
-		if err := svc.UpdateAgent(ctx, serverID, release.TagName, binaryData, checksum); err != nil {
+		if err := svc.UpdateAgent(ctx, serverID, version, binaryData, checksum); err != nil {
 			sendSSE("error", map[string]any{"message": err.Error()})
 			return nil
 		}
 
 		sendSSE("complete", map[string]any{
 			"step":    "done",
-			"message": "Agent updated to " + release.TagName + ". Agent will restart automatically.",
-			"version": release.TagName,
+			"message": "Agent updated to " + version + ". Agent will restart automatically.",
+			"version": version,
 		})
 		return nil
 	}

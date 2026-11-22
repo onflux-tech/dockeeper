@@ -3,6 +3,7 @@ package services
 import (
 	"container/heap"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -221,18 +222,23 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 	}
 
 	serverID := rec.GetString("server")
-	containerID := rec.GetString("container")
+	targetType := rec.GetString("target_type")
+	if targetType == "" {
+		targetType = "container"
+	}
 
-	// Verify container is running.
-	containerRec, err := s.app.FindRecordById(constants.CollContainers, containerID)
-	if err != nil {
-		slog.Warn("health check: container not found", "check_id", checkID, "container_id", containerID)
+	timeoutSec := rec.GetInt("timeout_seconds")
+	if timeoutSec <= 0 {
+		timeoutSec = 5
+	}
+
+	command, failure, skip := s.buildCheckCommand(rec, timeoutSec)
+	if skip {
 		s.reschedule(checkID, rec.GetInt("interval_seconds"))
 		return
 	}
-
-	if containerRec.GetString("status") != "running" {
-		slog.Debug("health check: container not running, skipping", "check_id", checkID)
+	if failure != "" {
+		s.handleFailure(ctx, rec, checkID, 0, 0, failure)
 		s.reschedule(checkID, rec.GetInt("interval_seconds"))
 		return
 	}
@@ -246,29 +252,10 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 		return
 	}
 
-	timeoutSec := rec.GetInt("timeout_seconds")
-	if timeoutSec <= 0 {
-		timeoutSec = 5
-	}
-
 	grpcCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSec+5)*time.Second)
 	defer cancel()
 
-	cmd := &agentpb.ChannelCommand{
-		RequestId: channel.NewRequestID(),
-		Priority:  3, // LOW
-		Command: &agentpb.ChannelCommand_HealthCheck{
-			HealthCheck: &agentpb.ExecuteHealthCheckRequest{
-				ContainerId:    containerRec.GetString("container_id"),
-				UrlPath:        rec.GetString("url_path"),
-				Port:           int32(rec.GetInt("port")),
-				TimeoutMs:      int32(timeoutSec * 1000),
-				ExpectedStatus: int32(rec.GetInt("expected_status")),
-			},
-		},
-	}
-
-	result, err := ch.SendCommand(grpcCtx, cmd)
+	result, err := ch.SendCommand(grpcCtx, command)
 	now := time.Now().UTC()
 
 	if err != nil {
@@ -277,8 +264,8 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 		return
 	}
 
-	resp := result.GetHealthCheck()
-	if resp == nil {
+	success, statusCode, responseMs, errMsg, ok := checkResult(targetType, result)
+	if !ok {
 		if cmdErr := result.GetError(); cmdErr != nil {
 			s.handleFailure(ctx, rec, checkID, 0, 0, fmt.Sprintf("agent error: %s", cmdErr.GetMessage()))
 		} else {
@@ -289,20 +276,127 @@ func (s *HealthScheduler) executeCheck(ctx context.Context, checkID string) {
 	}
 
 	// Log the result.
-	_ = s.store.LogCheckResult(checkID, int(resp.GetStatusCode()), resp.GetResponseTimeMs(), resp.GetSuccess(), resp.GetError(), now)
+	_ = s.store.LogCheckResult(checkID, statusCode, responseMs, success, errMsg, now)
 
-	if resp.GetSuccess() {
+	if success {
 		s.handleSuccess(rec, checkID)
 	} else {
-		s.handleFailure(ctx, rec, checkID, int(resp.GetStatusCode()), resp.GetResponseTimeMs(), resp.GetError())
+		s.handleFailure(ctx, rec, checkID, statusCode, responseMs, errMsg)
 	}
 
 	s.reschedule(checkID, rec.GetInt("interval_seconds"))
 }
 
+func (s *HealthScheduler) buildCheckCommand(rec *core.Record, timeoutSec int) (*agentpb.ChannelCommand, string, bool) {
+	switch rec.GetString("target_type") {
+	case "container":
+		containerRec, err := s.app.FindRecordById(constants.CollContainers, rec.GetString("container"))
+		if err != nil {
+			slog.Warn("health check: container not found", "check_id", rec.Id, "container_id", rec.GetString("container"))
+			return nil, "", true
+		}
+		if containerRec.GetString("status") != "running" {
+			slog.Debug("health check: container not running, skipping", "check_id", rec.Id)
+			return nil, "", true
+		}
+		return buildContainerHealthCommand(rec, containerRec.GetString("container_id"), timeoutSec), "", false
+	case "host_app":
+		if _, err := s.app.FindFirstRecordByFilter(
+			constants.CollHostApps,
+			"server = {:server} && source = {:source} && name = {:name}",
+			map[string]any{"server": rec.GetString("server"), "source": rec.GetString("app_source"), "name": rec.GetString("app_name")},
+		); err != nil {
+			return nil, "host app not found", false
+		}
+		return buildHostHealthCommand(rec, timeoutSec), "", false
+	default:
+		return nil, "unknown target type: " + rec.GetString("target_type"), false
+	}
+}
+
+func buildContainerHealthCommand(rec *core.Record, dockerContainerID string, timeoutSec int) *agentpb.ChannelCommand {
+	return &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  3, // LOW
+		Command: &agentpb.ChannelCommand_HealthCheck{
+			HealthCheck: &agentpb.ExecuteHealthCheckRequest{
+				ContainerId:    dockerContainerID,
+				UrlPath:        rec.GetString("url_path"),
+				Port:           int32(rec.GetInt("port")),
+				TimeoutMs:      int32(timeoutSec * 1000),
+				ExpectedStatus: int32(rec.GetInt("expected_status")),
+			},
+		},
+	}
+}
+
+func buildHostHealthCommand(rec *core.Record, timeoutSec int) *agentpb.ChannelCommand {
+	checkType := rec.GetString("check_type")
+	if checkType == "" {
+		checkType = "http"
+	}
+	return &agentpb.ChannelCommand{
+		RequestId: channel.NewRequestID(),
+		Priority:  3, // LOW
+		Command: &agentpb.ChannelCommand_HostHealthCheck{
+			HostHealthCheck: &agentpb.HostHealthCheckCommand{
+				Source:         rec.GetString("app_source"),
+				Name:           rec.GetString("app_name"),
+				CheckType:      checkType,
+				Host:           rec.GetString("host"),
+				Port:           uint32(rec.GetInt("port")),
+				Scheme:         rec.GetString("scheme"),
+				Method:         rec.GetString("method"),
+				Path:           rec.GetString("url_path"),
+				TimeoutMs:      uint32(timeoutSec * 1000),
+				ExpectedStatus: int32(rec.GetInt("expected_status")),
+				ExpectedBody:   rec.GetString("expected_body"),
+				Headers:        healthCheckHeaders(rec),
+				TlsSkipVerify:  rec.GetBool("tls_skip_verify"),
+			},
+		},
+	}
+}
+
+func checkResult(targetType string, result *agentpb.ChannelCommandResult) (bool, int, int64, string, bool) {
+	if targetType == "host_app" {
+		resp := result.GetHostHealthCheck()
+		if resp == nil {
+			return false, 0, 0, "", false
+		}
+		return resp.GetSuccess(), int(resp.GetStatusCode()), int64(resp.GetResponseTimeMs()), resp.GetError(), true
+	}
+
+	resp := result.GetHealthCheck()
+	if resp == nil {
+		return false, 0, 0, "", false
+	}
+	return resp.GetSuccess(), int(resp.GetStatusCode()), resp.GetResponseTimeMs(), resp.GetError(), true
+}
+
+func healthCheckHeaders(rec *core.Record) map[string]string {
+	raw := rec.Get("headers")
+	if raw == nil {
+		return nil
+	}
+	encoded, err := json.Marshal(raw)
+	if err != nil {
+		return nil
+	}
+	var headers map[string]string
+	if err := json.Unmarshal(encoded, &headers); err != nil {
+		return nil
+	}
+	return headers
+}
+
 func (s *HealthScheduler) handleSuccess(rec *core.Record, checkID string) {
-	consecutiveFailures := rec.GetInt("consecutive_failures")
 	currentStatus := rec.GetString("status")
+	successThreshold := rec.GetInt("success_threshold")
+	if successThreshold <= 0 {
+		successThreshold = 1
+	}
+	consecutiveSuccesses := rec.GetInt("consecutive_successes") + 1
 
 	now := time.Now().UTC()
 	interval := rec.GetInt("interval_seconds")
@@ -311,22 +405,15 @@ func (s *HealthScheduler) handleSuccess(rec *core.Record, checkID string) {
 	}
 	nextCheck := now.Add(time.Duration(interval) * time.Second)
 
-	if consecutiveFailures > 0 || currentStatus != "healthy" {
-		// Transition to healthy after reaching success threshold.
-		_ = s.store.UpdateCheckStatus(checkID, "healthy", 0, now, nextCheck)
+	if consecutiveSuccesses < successThreshold {
+		_ = s.store.UpdateCheckStatus(checkID, currentStatus, 0, consecutiveSuccesses, now, nextCheck)
+		return
+	}
 
-		if currentStatus == "unhealthy" {
-			s.bus.Publish(events.Event{
-				Type:        events.HealthRecovered,
-				Severity:    events.SeverityInfo,
-				ServerID:    rec.GetString("server"),
-				ContainerID: rec.GetString("container"),
-				Details:     map[string]any{"check_name": rec.GetString("name")},
-				Timestamp:   now,
-			})
-		}
-	} else {
-		_ = s.store.UpdateCheckStatus(checkID, "healthy", 0, now, nextCheck)
+	_ = s.store.UpdateCheckStatus(checkID, "healthy", 0, 0, now, nextCheck)
+	if currentStatus == "unhealthy" {
+		eventType, severity := healthEventTypes(rec, true)
+		s.publishHealthEvent(eventType, severity, rec, now, nil)
 	}
 }
 
@@ -347,28 +434,73 @@ func (s *HealthScheduler) handleFailure(ctx context.Context, rec *core.Record, c
 	_ = s.store.LogCheckResult(checkID, statusCode, responseTimeMs, false, errMsg, now)
 
 	if consecutiveFailures >= failureThreshold {
-		_ = s.store.UpdateCheckStatus(checkID, "unhealthy", consecutiveFailures, now, nextCheck)
+		_ = s.store.UpdateCheckStatus(checkID, "unhealthy", consecutiveFailures, 0, now, nextCheck)
 
-		s.bus.Publish(events.Event{
-			Type:        events.HealthDegraded,
-			Severity:    events.SeverityWarning,
-			ServerID:    rec.GetString("server"),
-			ContainerID: rec.GetString("container"),
-			Details: map[string]any{
-				"check_name":           rec.GetString("name"),
-				"consecutive_failures": consecutiveFailures,
-				"error":                errMsg,
-			},
-			Timestamp: now,
+		eventType, severity := healthEventTypes(rec, false)
+		s.publishHealthEvent(eventType, severity, rec, now, map[string]any{
+			"consecutive_failures": consecutiveFailures,
+			"error":                errMsg,
 		})
 
 		// Auto-restart logic.
 		if rec.GetBool("auto_restart") {
-			s.tryRestart(ctx, rec, checkID, consecutiveFailures)
+			if rec.GetString("target_type") == "host_app" {
+				slog.Warn("health check: auto_restart is not supported for host apps", "check_id", checkID)
+			} else {
+				s.tryRestart(ctx, rec, checkID, consecutiveFailures)
+			}
 		}
 	} else {
-		_ = s.store.UpdateCheckStatus(checkID, rec.GetString("status"), consecutiveFailures, now, nextCheck)
+		_ = s.store.UpdateCheckStatus(checkID, rec.GetString("status"), consecutiveFailures, 0, now, nextCheck)
 	}
+}
+
+func healthEventTypes(rec *core.Record, recovered bool) (events.EventType, events.Severity) {
+	if rec.GetString("target_type") == "host_app" {
+		if recovered {
+			return events.HostAppHealthRecovered, events.SeverityInfo
+		}
+		return events.HostAppHealthDegraded, events.SeverityWarning
+	}
+	if recovered {
+		return events.HealthRecovered, events.SeverityInfo
+	}
+	return events.HealthDegraded, events.SeverityWarning
+}
+
+func (s *HealthScheduler) publishHealthEvent(eventType events.EventType, severity events.Severity, rec *core.Record, at time.Time, details map[string]any) {
+	if s.bus == nil {
+		return
+	}
+	if details == nil {
+		details = make(map[string]any)
+	}
+	details["check_name"] = rec.GetString("name")
+
+	event := events.Event{
+		Type:      eventType,
+		Severity:  severity,
+		ServerID:  rec.GetString("server"),
+		Details:   details,
+		Timestamp: at,
+	}
+	if server, err := s.app.FindRecordById(constants.CollServers, event.ServerID); err == nil {
+		event.ServerName = server.GetString("name")
+		if event.ServerName == "" {
+			event.ServerName = server.GetString("hostname")
+		}
+	}
+	if rec.GetString("target_type") == "host_app" {
+		details["source"] = rec.GetString("app_source")
+		details["name"] = rec.GetString("app_name")
+		event.ContainerName = rec.GetString("app_name")
+	} else {
+		event.ContainerID = rec.GetString("container")
+		if container, err := s.app.FindRecordById(constants.CollContainers, event.ContainerID); err == nil {
+			event.ContainerName = container.GetString("name")
+		}
+	}
+	s.bus.Publish(event)
 }
 
 func (s *HealthScheduler) tryRestart(ctx context.Context, rec *core.Record, checkID string, consecutiveFailures int) {

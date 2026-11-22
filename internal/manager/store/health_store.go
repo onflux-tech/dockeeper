@@ -72,6 +72,8 @@ func (s *HealthStore) CreateCheck(fields map[string]any) (string, error) {
 
 	// Apply defaults for unset fields.
 	defaults := map[string]any{
+		"target_type":            "container",
+		"check_type":             "http",
 		"url_path":               "/",
 		"expected_status":        200,
 		"interval_seconds":       30,
@@ -84,6 +86,7 @@ func (s *HealthStore) CreateCheck(fields map[string]any) (string, error) {
 		"enabled":                true,
 		"status":                 "unknown",
 		"consecutive_failures":   0,
+		"consecutive_successes":  0,
 	}
 	for k, v := range defaults {
 		if rec.Get(k) == nil || rec.Get(k) == "" || rec.Get(k) == 0 {
@@ -121,14 +124,15 @@ func (s *HealthStore) DeleteCheck(id string) error {
 	return s.app.Delete(rec)
 }
 
-// UpdateCheckStatus updates status, consecutive failures, and timing fields.
-func (s *HealthStore) UpdateCheckStatus(id, status string, consecutiveFailures int, lastCheckAt, nextCheckAt time.Time) error {
+// UpdateCheckStatus updates status, consecutive counters, and timing fields.
+func (s *HealthStore) UpdateCheckStatus(id, status string, consecutiveFailures, consecutiveSuccesses int, lastCheckAt, nextCheckAt time.Time) error {
 	rec, err := s.app.FindRecordById(constants.CollHealthChecks, id)
 	if err != nil {
 		return fmt.Errorf("check not found: %w", err)
 	}
 	rec.Set("status", status)
 	rec.Set("consecutive_failures", consecutiveFailures)
+	rec.Set("consecutive_successes", consecutiveSuccesses)
 	rec.Set("last_check_at", lastCheckAt.Format(time.RFC3339))
 	rec.Set("next_check_at", nextCheckAt.Format(time.RFC3339))
 	return s.app.Save(rec)

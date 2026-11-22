@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/pocketbase/dbx"
@@ -77,26 +78,50 @@ func handleListPolicies(e *core.RequestEvent, app core.App) error {
 
 func handleCreatePolicy(e *core.RequestEvent, backupStore *store.BackupStore) error {
 	var body struct {
-		ServerID      string `json:"server_id"`
-		Volume        string `json:"volume"`
-		Schedule      string `json:"schedule"`
-		RetentionDays int    `json:"retention_days"`
-		S3Bucket      string `json:"s3_bucket"`
-		S3Prefix      string `json:"s3_prefix"`
-		Enabled       bool   `json:"enabled"`
+		ServerID      string   `json:"server_id"`
+		Volume        string   `json:"volume"`
+		TargetType    string   `json:"target_type"`
+		AppSource     string   `json:"app_source"`
+		AppName       string   `json:"app_name"`
+		Paths         []string `json:"paths"`
+		Exclude       []string `json:"exclude"`
+		MaxBytes      int64    `json:"max_bytes"`
+		Schedule      string   `json:"schedule"`
+		RetentionDays int      `json:"retention_days"`
+		S3Bucket      string   `json:"s3_bucket"`
+		S3Prefix      string   `json:"s3_prefix"`
+		Enabled       bool     `json:"enabled"`
 	}
-	if err := e.BindBody(&body); err != nil || body.ServerID == "" || body.Volume == "" || body.Schedule == "" {
-		return e.JSON(http.StatusBadRequest, map[string]string{"error": "server_id, volume, and schedule are required"})
+	if err := e.BindBody(&body); err != nil || body.ServerID == "" || body.Schedule == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "server_id and schedule are required"})
+	}
+
+	if body.TargetType == "" {
+		body.TargetType = "volume"
+	}
+	if err := services.ValidateBackupPolicy(body.TargetType, body.Volume, body.AppSource, body.AppName, body.Paths); err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
 	if body.RetentionDays <= 0 {
 		body.RetentionDays = 30
 	}
 
-	id, err := backupStore.CreatePolicy(
-		body.ServerID, body.Volume, body.Schedule,
-		body.RetentionDays, body.S3Bucket, body.S3Prefix, body.Enabled,
-	)
+	id, err := backupStore.CreatePolicy(store.BackupPolicyInput{
+		ServerID:      body.ServerID,
+		Volume:        body.Volume,
+		TargetType:    body.TargetType,
+		AppSource:     body.AppSource,
+		AppName:       body.AppName,
+		Paths:         body.Paths,
+		Exclude:       body.Exclude,
+		MaxBytes:      body.MaxBytes,
+		Schedule:      body.Schedule,
+		RetentionDays: body.RetentionDays,
+		S3Bucket:      body.S3Bucket,
+		S3Prefix:      body.S3Prefix,
+		Enabled:       body.Enabled,
+	})
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -112,10 +137,17 @@ func handleUpdatePolicy(e *core.RequestEvent, backupStore *store.BackupStore) er
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid body"})
 	}
 
+	existing, err := backupStore.GetPolicy(policyID)
+	if err != nil {
+		return e.JSON(http.StatusNotFound, map[string]string{"error": "policy not found"})
+	}
+
 	// Only allow updating known fields.
 	allowed := map[string]bool{
 		"schedule": true, "retention_days": true, "s3_bucket": true,
 		"s3_prefix": true, "enabled": true, "volume": true,
+		"target_type": true, "app_source": true, "app_name": true,
+		"paths": true, "exclude": true, "max_bytes": true,
 	}
 	fields := make(map[string]any)
 	for k, v := range body {
@@ -124,11 +156,69 @@ func handleUpdatePolicy(e *core.RequestEvent, backupStore *store.BackupStore) er
 		}
 	}
 
+	targetType := existing.GetString("target_type")
+	volume := existing.GetString("volume")
+	appSource := existing.GetString("app_source")
+	appName := existing.GetString("app_name")
+	paths := recordStringList(existing, "paths")
+	if value, ok := fields["target_type"].(string); ok {
+		targetType = value
+	}
+	if value, ok := fields["volume"].(string); ok {
+		volume = value
+	}
+	if value, ok := fields["app_source"].(string); ok {
+		appSource = value
+	}
+	if value, ok := fields["app_name"].(string); ok {
+		appName = value
+	}
+	if value, ok := fields["paths"]; ok {
+		paths = anyStringList(value)
+	}
+	if err := services.ValidateBackupPolicy(targetType, volume, appSource, appName, paths); err != nil {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
 	if err := backupStore.UpdatePolicy(policyID, fields); err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	return e.JSON(http.StatusOK, map[string]string{"status": "updated"})
+}
+
+func recordStringList(record *core.Record, field string) []string {
+	var list []string
+	if err := record.UnmarshalJSONField(field, &list); err == nil {
+		return list
+	}
+	return anyStringList(record.Get(field))
+}
+
+func anyStringList(value any) []string {
+	switch typed := value.(type) {
+	case []string:
+		return typed
+	case []any:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text, ok := item.(string); ok {
+				out = append(out, text)
+			}
+		}
+		return out
+	case []byte:
+		var list []string
+		if err := json.Unmarshal(typed, &list); err == nil {
+			return list
+		}
+	case string:
+		var list []string
+		if err := json.Unmarshal([]byte(typed), &list); err == nil {
+			return list
+		}
+	}
+	return nil
 }
 
 func handleDeletePolicy(e *core.RequestEvent, backupStore *store.BackupStore) error {

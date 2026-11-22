@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Archive, Plus, Pencil, Trash2, Play, Loader2, Search, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,14 +47,17 @@ import { RecordsTable } from "@/components/backups/records-table";
 import type {
 	ServerRecord,
 	VolumeRecord,
+	HostAppRecord,
 	BackupPolicyRecord,
 	BackupRecordRecord,
 } from "@/types/pocketbase";
 
 export default function BackupsPage() {
+	const [searchParams] = useSearchParams();
 	const [policiesPage, setPoliciesPage] = useState(1);
 	const [recordsPage, setRecordsPage] = useState(1);
-	const [serverFilter, setServerFilter] = useState<string>("all");
+	const [serverFilter, setServerFilter] = useState<string>(searchParams.get("server") ?? "all");
+	const [targetTypeFilter, setTargetTypeFilter] = useState<string>("all");
 	const [search, setSearch] = useState("");
 	const [policyOpen, setPolicyOpen] = useState(false);
 	const [editPolicy, setEditPolicy] = useState<BackupPolicyRecord | null>(null);
@@ -67,6 +71,10 @@ export default function BackupsPage() {
 		perPage: 500,
 		...(serverId ? { filter: `server = '${serverId}'` } : {}),
 	});
+	const { data: hostAppsResult } = useCollection("host_apps", {
+		perPage: 500,
+		...(serverId ? { filter: `server = '${serverId}'` } : {}),
+	});
 
 	useRealtime("backup_policies");
 	useRealtime("backup_records");
@@ -77,7 +85,8 @@ export default function BackupsPage() {
 		sort: "-created",
 		filter: andFilters([
 			serverId ? eqFilter("server", serverId) : "",
-			containsAnyFilter(["volume", "schedule", "s3_bucket"], search),
+			targetTypeFilter !== "all" ? eqFilter("target_type", targetTypeFilter) : "",
+			containsAnyFilter(["volume", "app_name", "schedule", "s3_bucket"], search),
 		]),
 	});
 	const { data: recordsResult, isLoading: recordsLoading } = useCollection("backup_records", {
@@ -87,6 +96,7 @@ export default function BackupsPage() {
 		filter: andFilters([
 			selectedPolicyId ? eqFilter("policy", selectedPolicyId) : "",
 			!selectedPolicyId && serverId ? eqFilter("server", serverId) : "",
+			targetTypeFilter !== "all" ? eqFilter("target_type", targetTypeFilter) : "",
 		]),
 	});
 
@@ -98,6 +108,10 @@ export default function BackupsPage() {
 	const volumes = useMemo(
 		() => (volumesResult?.items ?? []) as VolumeRecord[],
 		[volumesResult?.items],
+	);
+	const hostApps = useMemo(
+		() => (hostAppsResult?.items ?? []) as HostAppRecord[],
+		[hostAppsResult?.items],
 	);
 	const policies = useMemo(
 		() => (policiesResult?.items ?? []) as BackupPolicyRecord[],
@@ -180,6 +194,23 @@ export default function BackupsPage() {
 						))}
 					</SelectContent>
 				</Select>
+				<Select
+					value={targetTypeFilter}
+					onValueChange={(v) => {
+						setTargetTypeFilter(v);
+						setPoliciesPage(1);
+						setRecordsPage(1);
+					}}
+				>
+					<SelectTrigger className="w-40">
+						<SelectValue placeholder="All targets" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">All targets</SelectItem>
+						<SelectItem value="volume">Volumes</SelectItem>
+						<SelectItem value="host_app">Host apps</SelectItem>
+					</SelectContent>
+				</Select>
 				<div className="relative w-64">
 					<Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
@@ -215,7 +246,7 @@ export default function BackupsPage() {
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Volume</TableHead>
+									<TableHead>Target</TableHead>
 									<TableHead>Schedule</TableHead>
 									<TableHead>Retention</TableHead>
 									<TableHead>S3 Bucket</TableHead>
@@ -238,7 +269,11 @@ export default function BackupsPage() {
 											setRecordsPage(1);
 										}}
 									>
-										<TableCell className="font-medium">{policy.volume}</TableCell>
+										<TableCell className="font-medium">
+											{policy.target_type === "host_app"
+												? `${policy.app_source}/${policy.app_name}`
+												: policy.volume}
+										</TableCell>
 										<TableCell>
 											<div className="flex flex-col">
 												<span className="font-mono text-xs">{policy.schedule}</span>
@@ -371,6 +406,7 @@ export default function BackupsPage() {
 					}}
 					serverID={editPolicy?.server ?? serverFilter}
 					volumes={volumes}
+					hostApps={hostApps}
 					editPolicy={editPolicy}
 				/>
 			)}

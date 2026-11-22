@@ -22,6 +22,7 @@ type GRPCClient struct {
 	exec       agentpb.AgentExecServiceClient
 	logs       agentpb.AgentLogsServiceClient
 	traefik    agentpb.AgentTraefikServiceClient
+	host       agentpb.AgentHostServiceClient
 	cmdChannel agentpb.AgentCommandChannelServiceClient
 	dataStream agentpb.AgentDataStreamServiceClient
 	execStream agentpb.AgentExecStreamServiceClient
@@ -52,6 +53,7 @@ func NewGRPCClient(addr string, tlsCfg *tls.Config) (*GRPCClient, error) {
 		exec:       agentpb.NewAgentExecServiceClient(conn),
 		logs:       agentpb.NewAgentLogsServiceClient(conn),
 		traefik:    agentpb.NewAgentTraefikServiceClient(conn),
+		host:       agentpb.NewAgentHostServiceClient(conn),
 		cmdChannel: agentpb.NewAgentCommandChannelServiceClient(conn),
 		dataStream: agentpb.NewAgentDataStreamServiceClient(conn),
 		execStream: agentpb.NewAgentExecStreamServiceClient(conn),
@@ -73,4 +75,5 @@ func (c *GRPCClient) Commands() agentpb.AgentCommandsServiceClient     { return 
 func (c *GRPCClient) Exec() agentpb.AgentExecServiceClient             { return c.exec }
 func (c *GRPCClient) Logs() agentpb.AgentLogsServiceClient             { return c.logs }
 func (c *GRPCClient) Traefik() agentpb.AgentTraefikServiceClient       { return c.traefik }
+func (c *GRPCClient) Host() agentpb.AgentHostServiceClient             { return c.host }
 func (c *GRPCClient) Conn() *grpc.ClientConn                           { return c.conn }

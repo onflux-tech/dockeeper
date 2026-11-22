@@ -313,22 +313,33 @@ func (e *AlertEngine) isUpdateInProgress(scope string) bool {
 //   - max_temperature: max celsius from temperatures JSON array
 //   - partition_usage_<mountpoint>: percent usage from partitions JSON array
 func (e *AlertEngine) queryMetrics(targetType, targetID, metric string, durationSec int) ([]float64, error) {
-	cutoff := time.Now().UTC().Add(-time.Duration(durationSec) * time.Second).Format(time.RFC3339)
+	cutoff := time.Now().UTC().Add(-time.Duration(durationSec) * time.Second).Format("2006-01-02 15:04:05.000Z")
 
-	var collection string
-	var filterField string
 	switch targetType {
 	case "server":
-		collection = constants.CollServerMetricsRaw
-		filterField = "server"
+		if strings.HasPrefix(metric, "connectivity_") {
+			filter := fmt.Sprintf("server = '%s' && timestamp >= '%s'", targetID, cutoff)
+			return e.collectMetricValues(constants.CollServerConnectivityRaw, filter, metric, extractConnectivityMetric)
+		}
+		filter := fmt.Sprintf("server = '%s' && timestamp >= '%s'", targetID, cutoff)
+		return e.collectMetricValues(constants.CollServerMetricsRaw, filter, metric, extractMetricValue)
 	case "container":
-		collection = constants.CollContainerMetricsRaw
-		filterField = "container"
+		filter := fmt.Sprintf("container = '%s' && timestamp >= '%s'", targetID, cutoff)
+		return e.collectMetricValues(constants.CollContainerMetricsRaw, filter, metric, extractMetricValue)
+	case "host_app":
+		hostApp, err := e.app.FindRecordById(constants.CollHostApps, targetID)
+		if err != nil {
+			return nil, fmt.Errorf("host app %s: %w", targetID, err)
+		}
+		filter := fmt.Sprintf("server = '%s' && source = '%s' && app = '%s' && timestamp >= '%s'",
+			hostApp.GetString("server"), hostApp.GetString("source"), hostApp.GetString("name"), cutoff)
+		return e.collectMetricValues(constants.CollHostAppMetricsRaw, filter, metric, extractMetricValue)
 	default:
 		return nil, fmt.Errorf("unknown target type: %s", targetType)
 	}
+}
 
-	filter := fmt.Sprintf("%s = '%s' && timestamp >= '%s'", filterField, targetID, cutoff)
+func (e *AlertEngine) collectMetricValues(collection, filter, metric string, extract func(*core.Record, string) (float64, bool)) ([]float64, error) {
 	records, err := e.app.FindRecordsByFilter(collection, filter, "-timestamp", 200, 0)
 	if err != nil {
 		return nil, err
@@ -336,13 +347,33 @@ func (e *AlertEngine) queryMetrics(targetType, targetID, metric string, duration
 
 	values := make([]float64, 0, len(records))
 	for _, rec := range records {
-		val, ok := extractMetricValue(rec, metric)
-		if ok {
+		if val, ok := extract(rec, metric); ok {
 			values = append(values, val)
 		}
 	}
 
 	return values, nil
+}
+
+func extractConnectivityMetric(rec *core.Record, metric string) (float64, bool) {
+	boolValue := func(value bool) float64 {
+		if value {
+			return 1
+		}
+		return 0
+	}
+	switch metric {
+	case "connectivity_internet_ok":
+		return boolValue(rec.GetBool("internet_ok")), true
+	case "connectivity_dns_ok":
+		return boolValue(rec.GetBool("dns_ok")), true
+	case "connectivity_gateway_ok":
+		return boolValue(rec.GetBool("gateway_ok")), true
+	case "connectivity_internet_ms":
+		return rec.GetFloat("internet_ms"), true
+	default:
+		return 0, false
+	}
 }
 
 // extractMetricValue reads a metric value from a record, handling both direct
@@ -476,6 +507,12 @@ func (e *AlertEngine) resolveTargetName(targetType, targetID string) string {
 		return rec.GetString("hostname")
 	case "container":
 		rec, err := e.app.FindRecordById(constants.CollContainers, targetID)
+		if err != nil {
+			return targetID
+		}
+		return rec.GetString("name")
+	case "host_app":
+		rec, err := e.app.FindRecordById(constants.CollHostApps, targetID)
 		if err != nil {
 			return targetID
 		}

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
@@ -156,6 +157,7 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 	var body struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
+		ViewScope   string `json:"view_scope"`
 	}
 	if err := e.BindBody(&body); err != nil {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
@@ -165,6 +167,9 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 	if body.Name == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "name is required"})
 	}
+	if body.ViewScope != "" && !validViewScope(body.ViewScope) {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid view_scope"})
+	}
 
 	record, err := app.FindRecordById(constants.CollServers, serverID)
 	if err != nil {
@@ -173,6 +178,9 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 
 	record.Set("name", body.Name)
 	record.Set("description", body.Description)
+	if body.ViewScope != "" {
+		record.Set("view_scope", body.ViewScope)
+	}
 
 	if err := app.Save(record); err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -185,13 +193,24 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 	auditStore.Log("server.update", userID, "server", record.Id, e.RealIP(), map[string]any{
 		"name":        body.Name,
 		"description": body.Description,
+		"view_scope":  body.ViewScope,
 	})
 
 	return e.JSON(http.StatusOK, map[string]any{
 		"id":          record.Id,
 		"name":        body.Name,
 		"description": body.Description,
+		"view_scope":  record.GetString("view_scope"),
 	})
+}
+
+func validViewScope(scope string) bool {
+	switch scope {
+	case "auto", "server", "docker", "both":
+		return true
+	default:
+		return false
+	}
 }
 
 // agentBinaryCache prevents concurrent downloads of the same agent binary.
@@ -236,6 +255,21 @@ func handleAgentDownload(e *core.RequestEvent) error {
 	e.Response.Header().Set("Content-Disposition", "attachment; filename=dockeeper-agent")
 	http.ServeFile(e.Response, e.Request, filePath)
 	return nil
+}
+
+func readLocalAgentBinary(goos, goarch string) ([]byte, string, error) {
+	filename := fmt.Sprintf("dockeeper-agent-%s-%s", goos, goarch)
+	for _, path := range []string{
+		fmt.Sprintf("/app/agents/%s", filename),
+		fmt.Sprintf("./bin/%s", filename),
+	} {
+		data, err := os.ReadFile(path)
+		if err == nil && len(data) > 1024 {
+			sum := sha256.Sum256(data)
+			return data, hex.EncodeToString(sum[:]), nil
+		}
+	}
+	return nil, "", fmt.Errorf("agent binary %s not found", filename)
 }
 
 // downloadAgentFromGitHub fetches the latest agent binary from GitHub Releases.

@@ -72,12 +72,19 @@ func (h *EnrollmentHandler) Enroll(ctx context.Context, req *agentpb.EnrollReque
 	}
 
 	server.Set("hostname", info.GetHostname())
+	if server.GetString("view_scope") == "" {
+		server.Set("view_scope", "auto")
+	}
 	server.Set("ip_address", ipAddress)
 	server.Set("os", info.GetOs())
 	server.Set("arch", info.GetArch())
 	server.Set("docker_version", info.GetDockerVersion())
 	server.Set("agent_version", info.GetAgentVersion())
-	server.Set("orchestrator", info.GetOrchestrator())
+	orchestrator := info.GetOrchestrator()
+	if orchestrator == "" {
+		orchestrator = "none"
+	}
+	server.Set("orchestrator", orchestrator)
 	server.Set("status", "online")
 	server.Set("last_seen", time.Now().UTC())
 	server.Set("enrolled_at", time.Now().UTC())

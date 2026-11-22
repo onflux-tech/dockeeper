@@ -20,6 +20,15 @@ const (
 	ServerEnrolled EventType = "server.enrolled"
 	ServerRemoved  EventType = "server.removed"
 
+	ServerHostInventory EventType = "server.host_inventory"
+
+	HostAppAction          EventType = "host_app.action"
+	HostAppHealthDegraded  EventType = "host_app.health.degraded"
+	HostAppHealthRecovered EventType = "host_app.health.recovered"
+
+	ServerConnectivityDegraded  EventType = "server.connectivity.degraded"
+	ServerConnectivityRecovered EventType = "server.connectivity.recovered"
+
 	// Compose events.
 	ComposeDeployed EventType = "compose.deployed"
 	ComposeStopped  EventType = "compose.stopped"
@@ -28,6 +37,7 @@ const (
 	// System events.
 	BackupCompleted EventType = "backup.completed"
 	BackupFailed    EventType = "backup.failed"
+	BackupRestored  EventType = "backup.restored"
 
 	// Image events.
 	ImagePulled          EventType = "image.pulled"
@@ -89,7 +99,8 @@ func SeverityFor(t EventType) Severity {
 	switch t {
 	case ContainerCrashed, ServerOffline, ComposeFailed, BackupFailed, ContainerUpdateFailed, HealthGaveUp, BatchFailed, SystemUpdateFailed:
 		return SeverityCritical
-	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved, ContainerUpdateRolledback, HealthDegraded, HealthRestart, BatchStarted, ContainerStateDrift:
+	case ContainerStopped, ContainerRestarting, ComposeStopped, ServerRemoved, ContainerUpdateRolledback, HealthDegraded, HealthRestart, BatchStarted, ContainerStateDrift,
+		HostAppAction, HostAppHealthDegraded, ServerConnectivityDegraded:
 		return SeverityWarning
 	default:
 		return SeverityInfo

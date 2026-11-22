@@ -193,8 +193,42 @@ func (t *TraefikCollector) resolveAPIURL(ctx context.Context, c *agentpb.Contain
 	return "http://127.0.0.1:8080"
 }
 
-// resolveContainerIP inspects the container to find an IP address in any network.
-func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID string) string {
+func DetectTraefikAPIURL(ctx context.Context, orch OrchestratorClient, logger *slog.Logger) string {
+	if orch == nil {
+		return ""
+	}
+
+	containers, err := orch.ListContainerSummaries(ctx)
+	if err != nil {
+		return ""
+	}
+
+	for _, c := range containers {
+		if !strings.Contains(strings.ToLower(c.GetImage()), "traefik") {
+			continue
+		}
+		if portsJSON := c.GetPortsJson(); portsJSON != "" {
+			var ports []map[string]any
+			if err := json.Unmarshal([]byte(portsJSON), &ports); err == nil {
+				for _, p := range ports {
+					privatePort, _ := p["PrivatePort"].(float64)
+					publicPort, _ := p["PublicPort"].(float64)
+					if int(privatePort) == 8080 && int(publicPort) != 0 {
+						return fmt.Sprintf("http://127.0.0.1:%d", int(publicPort))
+					}
+				}
+			}
+		}
+		if ip := containerIP(ctx, orch, logger, c.GetContainerId()); ip != "" {
+			return fmt.Sprintf("http://%s:8080", ip)
+		}
+		return "http://127.0.0.1:8080"
+	}
+
+	return ""
+}
+
+func containerIP(ctx context.Context, orch OrchestratorClient, logger *slog.Logger, containerID string) string {
 	if containerID == "" {
 		return ""
 	}
@@ -202,9 +236,9 @@ func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID s
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	info, err := t.orch.InspectContainer(ctx, containerID)
+	info, err := orch.InspectContainer(ctx, containerID)
 	if err != nil {
-		t.logger.Debug("traefik: inspect container failed", "container", containerID, "error", err)
+		logger.Debug("traefik: inspect container failed", "container", containerID, "error", err)
 		return ""
 	}
 
@@ -212,7 +246,7 @@ func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID s
 		IPAddress string `json:"IPAddress"`
 	}
 	if err := json.Unmarshal([]byte(info.GetNetworksJson()), &networks); err != nil {
-		t.logger.Debug("traefik: parse container networks failed", "container", containerID, "error", err)
+		logger.Debug("traefik: parse container networks failed", "container", containerID, "error", err)
 		return ""
 	}
 
@@ -222,6 +256,10 @@ func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID s
 		}
 	}
 	return ""
+}
+
+func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID string) string {
+	return containerIP(ctx, t.orch, t.logger, containerID)
 }
 
 // fetchRoutes tries the Traefik API first, then falls back to Docker labels.
@@ -312,6 +350,10 @@ func (t *TraefikCollector) fetchFromLabels(ctx context.Context) ([]*agentpb.Trae
 
 // parseLabelsInto extracts Traefik router labels from a JSON labels string.
 func (t *TraefikCollector) parseLabelsInto(labelsJSON string, routeMap map[string]*agentpb.TraefikRouteInfo) {
+	parseTraefikLabels(labelsJSON, routeMap)
+}
+
+func parseTraefikLabels(labelsJSON string, routeMap map[string]*agentpb.TraefikRouteInfo) {
 	if labelsJSON == "" {
 		return
 	}
@@ -362,6 +404,10 @@ func (t *TraefikCollector) parseLabelsInto(labelsJSON string, routeMap map[strin
 
 // parseSwarmServiceLabels reads Traefik labels from Docker Swarm services.
 func (t *TraefikCollector) parseSwarmServiceLabels(ctx context.Context, routeMap map[string]*agentpb.TraefikRouteInfo) {
+	collectSwarmTraefikLabels(ctx, t.logger, routeMap)
+}
+
+func collectSwarmTraefikLabels(ctx context.Context, logger *slog.Logger, routeMap map[string]*agentpb.TraefikRouteInfo) {
 	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
 	if err != nil {
 		return
@@ -372,14 +418,40 @@ func (t *TraefikCollector) parseSwarmServiceLabels(ctx context.Context, routeMap
 		Filters: filters.NewArgs(filters.Arg("label", "traefik.enable=true")),
 	})
 	if err != nil {
-		t.logger.Debug("traefik: failed to list Swarm services", "error", err)
+		logger.Debug("traefik: failed to list Swarm services", "error", err)
 		return
 	}
 
 	for _, svc := range services {
 		labelsJSON, _ := json.Marshal(svc.Spec.Labels)
-		t.parseLabelsInto(string(labelsJSON), routeMap)
+		parseTraefikLabels(string(labelsJSON), routeMap)
 	}
+}
+
+// TraefikLabelRoutes reads Traefik router labels from containers and, when that
+// yields nothing, from Swarm services. It is the fallback used when the Traefik
+// API is not reachable, e.g. a Swarm deployment without the API port published.
+func TraefikLabelRoutes(ctx context.Context, orch OrchestratorClient, logger *slog.Logger) []*agentpb.TraefikRouteInfo {
+	routeMap := make(map[string]*agentpb.TraefikRouteInfo)
+
+	if orch != nil {
+		if containers, err := orch.ListContainers(ctx); err == nil {
+			for _, c := range containers {
+				parseTraefikLabels(c.GetLabelsJson(), routeMap)
+			}
+		}
+	}
+	if len(routeMap) == 0 {
+		collectSwarmTraefikLabels(ctx, logger, routeMap)
+	}
+
+	routes := make([]*agentpb.TraefikRouteInfo, 0, len(routeMap))
+	for _, r := range routeMap {
+		if r.Rule != "" {
+			routes = append(routes, r)
+		}
+	}
+	return filterRoutes(routes)
 }
 
 // filterRoutes removes internal/catch-all routes that are not useful to display.

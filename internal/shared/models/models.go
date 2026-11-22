@@ -4,30 +4,35 @@ import "github.com/pocketbase/pocketbase/tools/types"
 
 // Server represents a monitored server running a Dockeeper agent.
 type Server struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	Description   string         `json:"description"`
-	Hostname      string         `json:"hostname"`
-	IPAddress     string         `json:"ip_address"`
-	OS            string         `json:"os"`
-	Arch          string         `json:"arch"`
-	DockerVersion string         `json:"docker_version"`
-	AgentVersion  string         `json:"agent_version"`
-	Status        string         `json:"status"`       // online | offline | error
-	Orchestrator  string         `json:"orchestrator"` // docker | podman | kubernetes
-	LastSeen      types.DateTime `json:"last_seen"`
-	EnrolledAt    types.DateTime `json:"enrolled_at"`
-	Labels        types.JSONRaw  `json:"labels"`
-	CertExpiresAt types.DateTime `json:"cert_expires_at"`
-	CPUModel      string         `json:"cpu_model"`
-	CPUCores      float64        `json:"cpu_cores"`
-	MemTotal      float64        `json:"mem_total"`
-	CurrentCPU    float64        `json:"current_cpu"`
-	CurrentRAM    float64        `json:"current_ram"`
-	CurrentDisk   float64        `json:"current_disk"`
-	UptimeSeconds float64        `json:"uptime_seconds"`
-	Created       types.DateTime `json:"created"`
-	Updated       types.DateTime `json:"updated"`
+	ID                    string         `json:"id"`
+	Name                  string         `json:"name"`
+	Description           string         `json:"description"`
+	Hostname              string         `json:"hostname"`
+	IPAddress             string         `json:"ip_address"`
+	OS                    string         `json:"os"`
+	Arch                  string         `json:"arch"`
+	DockerVersion         string         `json:"docker_version"`
+	AgentVersion          string         `json:"agent_version"`
+	Status                string         `json:"status"`       // online | offline | error
+	Orchestrator          string         `json:"orchestrator"` // docker | podman | kubernetes
+	LastSeen              types.DateTime `json:"last_seen"`
+	EnrolledAt            types.DateTime `json:"enrolled_at"`
+	Labels                types.JSONRaw  `json:"labels"`
+	CertExpiresAt         types.DateTime `json:"cert_expires_at"`
+	CPUModel              string         `json:"cpu_model"`
+	CPUCores              float64        `json:"cpu_cores"`
+	MemTotal              float64        `json:"mem_total"`
+	CurrentCPU            float64        `json:"current_cpu"`
+	CurrentRAM            float64        `json:"current_ram"`
+	CurrentDisk           float64        `json:"current_disk"`
+	UptimeSeconds         float64        `json:"uptime_seconds"`
+	ConnectivityStatus    string         `json:"connectivity_status"`
+	ConnectivityCheckedAt types.DateTime `json:"connectivity_checked_at"`
+	ConnectivityLatencyMS int            `json:"connectivity_latency_ms"`
+	ConnectivityDetails   types.JSONRaw  `json:"connectivity_details"`
+	ViewScope             string         `json:"view_scope"`
+	Created               types.DateTime `json:"created"`
+	Updated               types.DateTime `json:"updated"`
 }
 
 // Container represents a Docker/Podman container on a server.
@@ -212,10 +217,15 @@ type UpdatePolicy struct {
 	Updated            types.DateTime `json:"updated"`
 }
 
-// BackupPolicy defines scheduled backup rules for a volume.
 type BackupPolicy struct {
 	ID            string         `json:"id"`
 	Volume        string         `json:"volume"`
+	TargetType    string         `json:"target_type"` // volume | host_app
+	AppSource     string         `json:"app_source"`
+	AppName       string         `json:"app_name"`
+	Paths         types.JSONRaw  `json:"paths"`
+	Exclude       types.JSONRaw  `json:"exclude"`
+	MaxBytes      int64          `json:"max_bytes"`
 	Server        string         `json:"server"`
 	Schedule      string         `json:"schedule"`
 	RetentionDays int            `json:"retention_days"`
@@ -231,6 +241,11 @@ type BackupRecord struct {
 	ID          string         `json:"id"`
 	Policy      string         `json:"policy"`
 	VolumeName  string         `json:"volume_name"`
+	TargetType  string         `json:"target_type"`
+	AppSource   string         `json:"app_source"`
+	AppName     string         `json:"app_name"`
+	TargetLabel string         `json:"target_label"`
+	Manifest    types.JSONRaw  `json:"manifest"`
 	Server      string         `json:"server"`
 	S3Key       string         `json:"s3_key"`
 	Size        float64        `json:"size"`
@@ -241,6 +256,37 @@ type BackupRecord struct {
 	Created     types.DateTime `json:"created"`
 }
 
+type ProxyInstance struct {
+	ID         string         `json:"id"`
+	Server     string         `json:"server"`
+	Kind       string         `json:"kind"`   // traefik | nginx | caddy | haproxy | envoy
+	Source     string         `json:"source"` // systemd | docker | process
+	App        string         `json:"app"`
+	Version    string         `json:"version"`
+	ConfigPath string         `json:"config_path"`
+	AdminURL   string         `json:"admin_url"`
+	Status     string         `json:"status"`
+	LastSeen   types.DateTime `json:"last_seen"`
+	Created    types.DateTime `json:"created"`
+	Updated    types.DateTime `json:"updated"`
+}
+
+type ProxyRoute struct {
+	ID          string         `json:"id"`
+	Instance    string         `json:"instance"`
+	Server      string         `json:"server"`
+	Name        string         `json:"name"`
+	Hosts       types.JSONRaw  `json:"hosts"`
+	Paths       types.JSONRaw  `json:"paths"`
+	Upstreams   types.JSONRaw  `json:"upstreams"`
+	TLS         bool           `json:"tls"`
+	Middlewares types.JSONRaw  `json:"middlewares"`
+	Status      string         `json:"status"`
+	Provider    string         `json:"provider"`
+	Created     types.DateTime `json:"created"`
+	Updated     types.DateTime `json:"updated"`
+}
+
 // AlertRule defines a condition that triggers a notification.
 type AlertRule struct {
 	ID            string         `json:"id"`
@@ -249,7 +295,7 @@ type AlertRule struct {
 	Operator      string         `json:"operator"` // gt | lt | gte | lte | eq
 	Threshold     float64        `json:"threshold"`
 	Duration      int            `json:"duration"`
-	TargetType    string         `json:"target_type"` // server | container
+	TargetType    string         `json:"target_type"` // server | container | host_app
 	TargetID      string         `json:"target_id"`
 	Channels      []string       `json:"channels"`
 	Enabled       bool           `json:"enabled"`
@@ -331,6 +377,80 @@ type TraefikRoute struct {
 	Status      string         `json:"status"`
 	Created     types.DateTime `json:"created"`
 	Updated     types.DateTime `json:"updated"`
+}
+
+type HostApp struct {
+	ID             string         `json:"id"`
+	Server         string         `json:"server"`
+	Source         string         `json:"source"`
+	Name           string         `json:"name"`
+	Unit           string         `json:"unit"`
+	PMID           string         `json:"pm_id"`
+	Status         string         `json:"status"`
+	PIDs           types.JSONRaw  `json:"pids"`
+	Ports          types.JSONRaw  `json:"ports"`
+	CPUPercent     float64        `json:"cpu_percent"`
+	MemBytes       float64        `json:"mem_bytes"`
+	DiskReadBytes  float64        `json:"disk_read_bytes"`
+	DiskWriteBytes float64        `json:"disk_write_bytes"`
+	Restarts       int            `json:"restarts"`
+	UptimeSeconds  float64        `json:"uptime_seconds"`
+	User           string         `json:"user"`
+	Cwd            string         `json:"cwd"`
+	ExecPath       string         `json:"exec_path"`
+	LogPath        string         `json:"log_path"`
+	LastSeen       types.DateTime `json:"last_seen"`
+	Created        types.DateTime `json:"created"`
+	Updated        types.DateTime `json:"updated"`
+}
+
+type HostProcess struct {
+	ID         string         `json:"id"`
+	Server     string         `json:"server"`
+	PID        int            `json:"pid"`
+	Name       string         `json:"name"`
+	App        string         `json:"app"`
+	CPUPercent float64        `json:"cpu_percent"`
+	MemBytes   float64        `json:"mem_bytes"`
+	Threads    int            `json:"threads"`
+	LastSeen   types.DateTime `json:"last_seen"`
+	Created    types.DateTime `json:"created"`
+	Updated    types.DateTime `json:"updated"`
+}
+
+type HostPort struct {
+	Port     int    `json:"port"`
+	Protocol string `json:"protocol"`
+	Address  string `json:"address"`
+	PID      int    `json:"pid"`
+	App      string `json:"app"`
+}
+
+type HostAppMetric struct {
+	ID         string         `json:"id"`
+	Server     string         `json:"server"`
+	App        string         `json:"app"`
+	Source     string         `json:"source"`
+	Timestamp  types.DateTime `json:"timestamp"`
+	CPUPercent float64        `json:"cpu_percent"`
+	MemBytes   float64        `json:"mem_bytes"`
+	Restarts   int            `json:"restarts"`
+	Created    types.DateTime `json:"created"`
+}
+
+type ServerConnectivityRaw struct {
+	ID            string         `json:"id"`
+	Server        string         `json:"server"`
+	Timestamp     types.DateTime `json:"timestamp"`
+	InternetOK    bool           `json:"internet_ok"`
+	InternetMS    int            `json:"internet_ms"`
+	DNSOK         bool           `json:"dns_ok"`
+	DNSMS         int            `json:"dns_ms"`
+	GatewayOK     bool           `json:"gateway_ok"`
+	GatewayMS     int            `json:"gateway_ms"`
+	GatewayMethod string         `json:"gateway_method"`
+	Error         string         `json:"error"`
+	Created       types.DateTime `json:"created"`
 }
 
 // BatchJob represents a batch operation across multiple containers/servers.

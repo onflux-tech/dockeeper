@@ -94,6 +94,13 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 		dispatcher := services.NewRegistryCommandDispatcher(registry)
 		containerSvc := services.NewContainerService(app, dispatcher, auditStore)
 
+		// Host app actions.
+		hostActionSvc := services.NewHostActionService(app, services.NewRegistryHostDispatcher(registry), eventBus, auditStore)
+		routes.RegisterHostAppRoutes(se, hostActionSvc, rbac)
+
+		// Proxy inventory.
+		routes.RegisterProxyRoutes(se, app, rbac)
+
 		// Subscribe EventBus handlers (now that stores are available).
 		eventBus.Subscribe(events.NewDBHandler(app))
 		eventBus.Subscribe(events.NewAuditHandler(auditStore))
@@ -141,7 +148,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 
 		// Backup system routes + scheduler.
 		backupStore := store.NewBackupStore(app)
-		backupSvc := services.NewBackupService(app, backupStore, auditStore, registry)
+		backupSvc := services.NewBackupService(app, backupStore, auditStore, registry, eventBus)
 		routes.RegisterBackupRoutes(se, app, backupSvc, backupStore, rbac)
 		jobs.RegisterBackupJobs(app, backupSvc, backupStore)
 

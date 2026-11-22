@@ -77,9 +77,9 @@ export function useDeleteServer() {
 export function useUpdateServer() {
 	const qc = useQueryClient();
 	return useMutation<
-		{ id: string; name: string; description: string },
+		{ id: string; name: string; description: string; view_scope: string },
 		Error,
-		{ id: string; name: string; description: string }
+		{ id: string; name: string; description: string; view_scope: string }
 	>({
 		mutationFn: ({ id, ...body }) =>
 			fetchJson(`/api/dk/servers/${id}`, {
