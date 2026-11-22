@@ -30,6 +30,25 @@ export interface ServerRecord extends BaseRecord {
 	current_ram: number;
 	current_disk: number;
 	uptime_seconds: number;
+	connectivity_status: "healthy" | "degraded" | "unknown";
+	connectivity_checked_at: string;
+	connectivity_latency_ms: number;
+	connectivity_details: ConnectivityDetails | null;
+	view_scope: "auto" | "server" | "docker" | "both";
+}
+
+export interface ConnectivityProbeDetail {
+	ok: boolean;
+	ms: number;
+	method?: string;
+}
+
+export interface ConnectivityDetails {
+	internet?: ConnectivityProbeDetail;
+	dns?: ConnectivityProbeDetail;
+	gateway?: ConnectivityProbeDetail;
+	http?: { ok: number; total: number; latency_ms: number };
+	error?: string;
 }
 
 export interface ContainerRecord extends BaseRecord {
@@ -226,7 +245,7 @@ export interface AlertRuleRecord extends BaseRecord {
 	operator: "gt" | "lt" | "gte" | "lte" | "eq";
 	threshold: number;
 	duration: number;
-	target_type: "server" | "container";
+	target_type: "server" | "container" | "host_app";
 	target_id: string;
 	event_type: string;
 	scope: string;
@@ -311,9 +330,19 @@ export interface HealthCheckRecord extends BaseRecord {
 	name: string;
 	container: string;
 	server: string;
+	target_type: "container" | "host_app";
+	app_source: "systemd" | "pm2" | "process";
+	app_name: string;
+	check_type: "http" | "tcp" | "process";
+	host: string;
+	scheme: "http" | "https";
+	method: string;
 	url_path: string;
 	port: number;
 	expected_status: number;
+	expected_body: string;
+	headers: Record<string, string> | null;
+	tls_skip_verify: boolean;
 	interval_seconds: number;
 	timeout_seconds: number;
 	failure_threshold: number;
@@ -324,6 +353,7 @@ export interface HealthCheckRecord extends BaseRecord {
 	enabled: boolean;
 	status: "healthy" | "unhealthy" | "unknown";
 	consecutive_failures: number;
+	consecutive_successes: number;
 	last_check_at: string;
 	next_check_at: string;
 }

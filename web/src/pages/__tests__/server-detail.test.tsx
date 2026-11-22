@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 	agentVersion: "v0.9.0",
 	latest: "v0.9.0",
 	orchestrator: "docker",
+	viewScope: "auto",
 }));
 
 vi.mock("@/hooks/use-record", () => ({
@@ -18,6 +19,7 @@ vi.mock("@/hooks/use-record", () => ({
 			status: "online",
 			agent_version: mocks.agentVersion,
 			orchestrator: mocks.orchestrator,
+			view_scope: mocks.viewScope,
 		},
 		isLoading: false,
 	}),
@@ -33,6 +35,10 @@ vi.mock("@/hooks/use-realtime", () => ({
 
 vi.mock("@/hooks/use-server-metrics", () => ({
 	useServerMetrics: () => ({ data: [], isLoading: false }),
+}));
+
+vi.mock("@/hooks/use-health-checks", () => ({
+	useHealthChecks: () => ({ data: [], isLoading: false }),
 }));
 
 vi.mock("@/hooks/use-settings", () => ({
@@ -87,6 +93,7 @@ describe("ServerDetailPage agent update", () => {
 	it("replaces the containers table with the no runtime state", async () => {
 		const user = userEvent.setup();
 		mocks.orchestrator = "none";
+		mocks.viewScope = "docker";
 		renderPage();
 		await user.click(screen.getByRole("tab", { name: /Containers/ }));
 		expect(screen.getByText("No container runtime")).toBeInTheDocument();
@@ -94,13 +101,23 @@ describe("ServerDetailPage agent update", () => {
 
 	it("hides the host tab and keeps the container count on docker servers", () => {
 		mocks.orchestrator = "docker";
+		mocks.viewScope = "auto";
 		renderPage();
 		expect(screen.queryByRole("tab", { name: "Host" })).not.toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Containers (0)" })).toBeInTheDocument();
 	});
 
+	it("hides the containers tab when view_scope is server", () => {
+		mocks.orchestrator = "docker";
+		mocks.viewScope = "server";
+		renderPage();
+		expect(screen.queryByRole("tab", { name: "Containers" })).not.toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Host" })).toBeInTheDocument();
+	});
+
 	it("omits the misleading container count when there is no runtime", () => {
 		mocks.orchestrator = "none";
+		mocks.viewScope = "both";
 		renderPage();
 		expect(screen.getByRole("tab", { name: "Containers" })).toBeInTheDocument();
 		expect(screen.queryByRole("tab", { name: /Containers \(/ })).not.toBeInTheDocument();

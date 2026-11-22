@@ -56,6 +56,7 @@ import type {
 	NotificationChannelRecord,
 	ServerRecord,
 	ContainerRecord,
+	HostAppRecord,
 } from "@/types/pocketbase";
 
 const OPERATOR_SYMBOLS: Record<string, string> = {
@@ -90,6 +91,7 @@ export default function AlertsPage() {
 
 	// Data
 	const { data: serversResult } = useCollection("servers", { perPage: 100 });
+	const { data: hostAppsResult } = useCollection("host_apps", { perPage: 500 });
 	const { data: containersResult } = useCollection("containers", {
 		perPage: 500,
 	});
@@ -127,6 +129,10 @@ export default function AlertsPage() {
 	const testChannelMut = useTestChannel();
 
 	const servers = (serversResult?.items ?? []) as ServerRecord[];
+	const hostApps = useMemo(
+		() => (hostAppsResult?.items ?? []) as HostAppRecord[],
+		[hostAppsResult?.items],
+	);
 	const containers = useMemo(
 		() => (containersResult?.items ?? []) as ContainerRecord[],
 		[containersResult?.items],
@@ -531,6 +537,7 @@ export default function AlertsPage() {
 				}}
 				servers={servers}
 				containers={containers}
+				hostApps={hostApps}
 				channels={channels}
 				editRule={editRule}
 			/>

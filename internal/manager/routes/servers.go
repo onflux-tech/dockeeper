@@ -156,6 +156,7 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 	var body struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
+		ViewScope   string `json:"view_scope"`
 	}
 	if err := e.BindBody(&body); err != nil {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
@@ -165,6 +166,9 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 	if body.Name == "" {
 		return e.JSON(http.StatusBadRequest, map[string]string{"error": "name is required"})
 	}
+	if body.ViewScope != "" && !validViewScope(body.ViewScope) {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "invalid view_scope"})
+	}
 
 	record, err := app.FindRecordById(constants.CollServers, serverID)
 	if err != nil {
@@ -173,6 +177,9 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 
 	record.Set("name", body.Name)
 	record.Set("description", body.Description)
+	if body.ViewScope != "" {
+		record.Set("view_scope", body.ViewScope)
+	}
 
 	if err := app.Save(record); err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -185,13 +192,24 @@ func handleUpdateServer(e *core.RequestEvent, app core.App, auditStore *store.Au
 	auditStore.Log("server.update", userID, "server", record.Id, e.RealIP(), map[string]any{
 		"name":        body.Name,
 		"description": body.Description,
+		"view_scope":  body.ViewScope,
 	})
 
 	return e.JSON(http.StatusOK, map[string]any{
 		"id":          record.Id,
 		"name":        body.Name,
 		"description": body.Description,
+		"view_scope":  record.GetString("view_scope"),
 	})
+}
+
+func validViewScope(scope string) bool {
+	switch scope {
+	case "auto", "server", "docker", "both":
+		return true
+	default:
+		return false
+	}
 }
 
 // agentBinaryCache prevents concurrent downloads of the same agent binary.

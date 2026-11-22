@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const fixtures = vi.hoisted(() => ({
 	apps: [
@@ -27,7 +28,15 @@ const fixtures = vi.hoisted(() => ({
 			last_seen: "",
 		},
 	],
-	servers: [{ id: "srv1", name: "TakeFlow PROD", hostname: "takeflow" }],
+	servers: [
+		{
+			id: "srv1",
+			name: "TakeFlow PROD",
+			hostname: "takeflow",
+			status: "online",
+			view_scope: "auto",
+		},
+	],
 }));
 
 vi.mock("@/hooks/use-collection", () => ({
@@ -60,10 +69,13 @@ import AppsPage from "../apps";
 
 describe("AppsPage", () => {
 	it("renders an app with its server name", () => {
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 		render(
-			<MemoryRouter>
-				<AppsPage />
-			</MemoryRouter>,
+			<QueryClientProvider client={queryClient}>
+				<MemoryRouter>
+					<AppsPage />
+				</MemoryRouter>
+			</QueryClientProvider>,
 		);
 		expect(screen.getByText("api-takeflow")).toBeInTheDocument();
 		expect(screen.getByText("TakeFlow PROD")).toBeInTheDocument();

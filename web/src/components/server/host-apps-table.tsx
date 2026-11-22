@@ -1,6 +1,4 @@
-import { MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
@@ -10,12 +8,15 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { HostActionsMenu } from "@/components/server/host-actions-menu";
 import { formatCpuMem } from "@/lib/format";
 import type { HostAppRecord } from "@/types/pocketbase";
 
 interface HostAppsTableProps {
 	apps: HostAppRecord[];
 	isLoading: boolean;
+	serverID?: string;
+	serverOnline?: boolean;
 }
 
 const statusVariants: Record<HostAppRecord["status"], "default" | "secondary" | "destructive"> = {
@@ -25,7 +26,7 @@ const statusVariants: Record<HostAppRecord["status"], "default" | "secondary" | 
 	unknown: "secondary",
 };
 
-export function HostAppsTable({ apps, isLoading }: HostAppsTableProps) {
+export function HostAppsTable({ apps, isLoading, serverID, serverOnline }: HostAppsTableProps) {
 	if (isLoading) {
 		return (
 			<div className="rounded-md border">
@@ -94,15 +95,9 @@ export function HostAppsTable({ apps, isLoading }: HostAppsTableProps) {
 								</TableCell>
 								<TableCell className="text-xs text-muted-foreground">—</TableCell>
 								<TableCell>
-									<Button
-										variant="ghost"
-										size="icon"
-										className="h-8 w-8"
-										disabled
-										title="Read-only in this release"
-									>
-										<MoreHorizontal className="h-4 w-4" />
-									</Button>
+									{serverID ? (
+										<HostActionsMenu serverID={serverID} app={app} serverOnline={serverOnline} />
+									) : null}
 								</TableCell>
 							</TableRow>
 						))

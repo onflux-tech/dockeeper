@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router";
-import { LayoutGrid, MoreHorizontal, Search } from "lucide-react";
+import { LayoutGrid, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -12,6 +11,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HostActionsMenu } from "@/components/server/host-actions-menu";
 import {
 	Table,
 	TableBody,
@@ -46,22 +46,7 @@ export default function AppsPage() {
 		customFilters: { server: "server", source: "source", status: "status" },
 	});
 
-	const { data: appsResult, isLoading } = useCollection("host_apps", pbOptions);
 	const { data: serversResult } = useCollection("servers", { perPage: 200 });
-
-	const baseFilter = andFilters([
-		containsAnyFilter(["name", "unit", "pm_id"], filters.search || undefined),
-		eqFilter("server", filters.custom.server === "all" ? undefined : filters.custom.server),
-		eqFilter("source", filters.custom.source === "all" ? undefined : filters.custom.source),
-	]);
-	const statusCount = (status: string) => ({
-		perPage: 1,
-		filter: andFilters([baseFilter, eqFilter("status", status)]),
-		requestKey: null,
-	});
-	const { data: runningResult } = useCollection("host_apps", statusCount("running"));
-	const { data: stoppedResult } = useCollection("host_apps", statusCount("stopped"));
-	const { data: failedResult } = useCollection("host_apps", statusCount("failed"));
 
 	useRealtime("host_apps");
 	useRealtime("servers", 3000);
@@ -74,6 +59,41 @@ export default function AppsPage() {
 		}
 		return map;
 	}, [servers]);
+	const dockerScopedServers = useMemo(
+		() => servers.filter((server) => server.view_scope === "docker").map((server) => server.id),
+		[servers],
+	);
+	const onlineServers = useMemo(() => {
+		const map = new Map<string, boolean>();
+		for (const server of servers) {
+			map.set(server.id, server.status === "online");
+		}
+		return map;
+	}, [servers]);
+
+	const serverScopeFilter = andFilters(
+		dockerScopedServers.map((serverID) => `server != '${serverID}'`),
+	);
+	const listFilter = andFilters([pbOptions.filter, serverScopeFilter]);
+	const { data: appsResult, isLoading } = useCollection("host_apps", {
+		...pbOptions,
+		filter: listFilter,
+	});
+
+	const baseFilter = andFilters([
+		containsAnyFilter(["name", "unit", "pm_id"], filters.search || undefined),
+		eqFilter("server", filters.custom.server === "all" ? undefined : filters.custom.server),
+		eqFilter("source", filters.custom.source === "all" ? undefined : filters.custom.source),
+		serverScopeFilter,
+	]);
+	const statusCount = (status: string) => ({
+		perPage: 1,
+		filter: andFilters([baseFilter, eqFilter("status", status)]),
+		requestKey: null,
+	});
+	const { data: runningResult } = useCollection("host_apps", statusCount("running"));
+	const { data: stoppedResult } = useCollection("host_apps", statusCount("stopped"));
+	const { data: failedResult } = useCollection("host_apps", statusCount("failed"));
 
 	const apps = appsResult?.items ?? [];
 	const totalApps = appsResult?.totalItems ?? apps.length;
@@ -213,15 +233,11 @@ export default function AppsPage() {
 										{app.uptime_seconds > 0 ? formatUptime(app.uptime_seconds) : "—"}
 									</TableCell>
 									<TableCell>
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-8 w-8"
-											disabled
-											title="Read-only in this release"
-										>
-											<MoreHorizontal className="h-4 w-4" />
-										</Button>
+										<HostActionsMenu
+											serverID={app.server}
+											app={app}
+											serverOnline={onlineServers.get(app.server) ?? false}
+										/>
 									</TableCell>
 								</TableRow>
 							))

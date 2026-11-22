@@ -57,6 +57,7 @@ import {
 } from "@/hooks/use-health-checks";
 import type { HealthCheckRecord } from "@/types/pocketbase";
 import { relativeTime } from "@/lib/format";
+import { eqFilter } from "@/lib/pocketbase-filters";
 
 // ── Status helpers ────────────────────────────────────────
 
@@ -169,6 +170,11 @@ export default function HealthChecksPage() {
 										<span className="font-medium truncate">{check.name}</span>
 										<StatusBadge status={check.status} />
 										{!check.enabled && <Badge variant="secondary">Disabled</Badge>}
+										{check.target_type === "host_app" && (
+											<Badge variant="outline" className="text-[10px]">
+												{check.app_source}/{check.app_name}
+											</Badge>
+										)}
 									</div>
 									<div className="flex items-center gap-3 text-xs text-muted-foreground">
 										<span>Port {check.port}</span>
@@ -294,12 +300,27 @@ function HealthCheckDialog({
 	const createMut = useCreateHealthCheck();
 	const updateMut = useUpdateHealthCheck();
 
+	const isEdit = !!check;
+
 	const [name, setName] = useState(check?.name ?? "");
 	const [server, setServer] = useState(check?.server ?? "");
+	const [targetType, setTargetType] = useState<"container" | "host_app">(
+		check?.target_type ?? "container",
+	);
 	const [container, setContainer] = useState(check?.container ?? "");
+	const [appSource, setAppSource] = useState(check?.app_source ?? "systemd");
+	const [appName, setAppName] = useState(check?.app_name ?? "");
+	const [checkType, setCheckType] = useState<"http" | "tcp" | "process">(
+		check?.check_type ?? "http",
+	);
+	const [host, setHost] = useState(check?.host ?? "127.0.0.1");
+	const [scheme, setScheme] = useState(check?.scheme ?? "http");
+	const [method, setMethod] = useState(check?.method ?? "GET");
 	const [port, setPort] = useState(check?.port?.toString() ?? "80");
 	const [urlPath, setUrlPath] = useState(check?.url_path ?? "/");
 	const [expectedStatus, setExpectedStatus] = useState(check?.expected_status?.toString() ?? "200");
+	const [expectedBody, setExpectedBody] = useState(check?.expected_body ?? "");
+	const [tlsSkipVerify, setTlsSkipVerify] = useState(check?.tls_skip_verify ?? false);
 	const [interval, setInterval] = useState(check?.interval_seconds?.toString() ?? "30");
 	const [timeout, setTimeout] = useState(check?.timeout_seconds?.toString() ?? "5");
 	const [failureThreshold, setFailureThreshold] = useState(
@@ -315,56 +336,65 @@ function HealthCheckDialog({
 	);
 	const [enabled, setEnabled] = useState(check?.enabled ?? true);
 
-	// Reset form when check changes
-	const isEdit = !!check;
+	const { data: hostApps } = useCollection("host_apps", {
+		perPage: 200,
+		filter: eqFilter("server", server),
+		enabled: targetType === "host_app" && !!server,
+	});
+
+	const isHostApp = targetType === "host_app";
+	const isProcess = isHostApp && checkType === "process";
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+
+		const common = {
+			name,
+			url_path: urlPath,
+			port: Number(port) || 0,
+			expected_status: Number(expectedStatus),
+			interval_seconds: Number(interval),
+			timeout_seconds: Number(timeout),
+			failure_threshold: Number(failureThreshold),
+			success_threshold: Number(successThreshold),
+			auto_restart: isHostApp ? false : autoRestart,
+			max_restarts: Number(maxRestarts),
+			restart_window_minutes: Number(restartWindow),
+			enabled,
+		};
+
+		const hostFields = {
+			target_type: "host_app" as const,
+			app_source: appSource,
+			app_name: appName,
+			check_type: checkType,
+			host,
+			scheme,
+			method,
+			expected_body: expectedBody,
+			tls_skip_verify: tlsSkipVerify,
+		};
+
 		if (isEdit) {
 			updateMut.mutate(
 				{
 					id: check.id,
-					fields: {
-						name,
-						url_path: urlPath,
-						port: Number(port),
-						expected_status: Number(expectedStatus),
-						interval_seconds: Number(interval),
-						timeout_seconds: Number(timeout),
-						failure_threshold: Number(failureThreshold),
-						success_threshold: Number(successThreshold),
-						auto_restart: autoRestart,
-						max_restarts: Number(maxRestarts),
-						restart_window_minutes: Number(restartWindow),
-						enabled,
-					},
+					fields: isHostApp ? { ...common, ...hostFields } : common,
 				},
 				{ onSuccess: () => onOpenChange(false) },
 			);
-		} else {
-			const input: CreateHealthCheckInput = {
-				name,
-				container,
-				server,
-				url_path: urlPath,
-				port: Number(port),
-				expected_status: Number(expectedStatus),
-				interval_seconds: Number(interval),
-				timeout_seconds: Number(timeout),
-				failure_threshold: Number(failureThreshold),
-				success_threshold: Number(successThreshold),
-				auto_restart: autoRestart,
-				max_restarts: Number(maxRestarts),
-				restart_window_minutes: Number(restartWindow),
-				enabled,
-			};
-			createMut.mutate(input, { onSuccess: () => onOpenChange(false) });
+			return;
 		}
+
+		const input: CreateHealthCheckInput = isHostApp
+			? { ...common, server, ...hostFields }
+			: { ...common, server, container, target_type: "container", check_type: "http" };
+		createMut.mutate(input, { onSuccess: () => onOpenChange(false) });
 	};
 
 	const isPending = createMut.isPending || updateMut.isPending;
-
 	const filteredContainers = containers?.items?.filter((c) => !server || c.server === server);
+	const filteredApps = hostApps?.items?.filter((app) => !appSource || app.source === appSource);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -380,85 +410,238 @@ function HealthCheckDialog({
 
 					{!isEdit && (
 						<>
-							<div className="space-y-2">
-								<Label>Server</Label>
-								<Select value={server} onValueChange={setServer} required>
-									<SelectTrigger>
-										<SelectValue placeholder="Select server..." />
-									</SelectTrigger>
-									<SelectContent>
-										{servers?.items?.map((s) => (
-											<SelectItem key={s.id} value={s.id}>
-												{s.name || s.hostname}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+							<div className="grid grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label>Target Type</Label>
+									<Select
+										value={targetType}
+										onValueChange={(value) => {
+											setTargetType(value as "container" | "host_app");
+											setContainer("");
+											setAppName("");
+										}}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="container">Container</SelectItem>
+											<SelectItem value="host_app">Application</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-2">
+									<Label>Server</Label>
+									<Select value={server} onValueChange={setServer} required>
+										<SelectTrigger>
+											<SelectValue placeholder="Select server..." />
+										</SelectTrigger>
+										<SelectContent>
+											{servers?.items?.map((s) => (
+												<SelectItem key={s.id} value={s.id}>
+													{s.name || s.hostname}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
 							</div>
-							<div className="space-y-2">
-								<Label>Container</Label>
-								<Select value={container} onValueChange={setContainer} required>
-									<SelectTrigger>
-										<SelectValue placeholder="Select container..." />
-									</SelectTrigger>
-									<SelectContent>
-										{filteredContainers?.map((c) => (
-											<SelectItem key={c.id} value={c.id}>
-												{c.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
+
+							{isHostApp ? (
+								<div className="grid grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label>App Source</Label>
+										<Select
+											value={appSource}
+											onValueChange={(value) => {
+												setAppSource(value as "systemd" | "pm2" | "process");
+												setAppName("");
+											}}
+										>
+											<SelectTrigger>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="systemd">systemd</SelectItem>
+												<SelectItem value="pm2">PM2</SelectItem>
+												<SelectItem value="process">process</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+									<div className="space-y-2">
+										<Label>Application</Label>
+										<Select value={appName} onValueChange={setAppName} required>
+											<SelectTrigger>
+												<SelectValue placeholder="Select application..." />
+											</SelectTrigger>
+											<SelectContent>
+												{filteredApps?.map((app) => (
+													<SelectItem key={app.id} value={app.name}>
+														{app.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								</div>
+							) : (
+								<div className="space-y-2">
+									<Label>Container</Label>
+									<Select value={container} onValueChange={setContainer} required>
+										<SelectTrigger>
+											<SelectValue placeholder="Select container..." />
+										</SelectTrigger>
+										<SelectContent>
+											{filteredContainers?.map((c) => (
+												<SelectItem key={c.id} value={c.id}>
+													{c.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+							)}
 						</>
 					)}
 
-					<div className="grid grid-cols-2 gap-4">
+					{isHostApp && (
 						<div className="space-y-2">
-							<Label>Port</Label>
-							<Input
-								type="number"
-								min={1}
-								max={65535}
-								value={port}
-								onChange={(e) => setPort(e.target.value)}
-								required
-							/>
+							<Label>Check Type</Label>
+							<Select
+								value={checkType}
+								onValueChange={(value) => setCheckType(value as "http" | "tcp" | "process")}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="http">HTTP</SelectItem>
+									<SelectItem value="tcp">TCP</SelectItem>
+									<SelectItem value="process">Process</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
-						<div className="space-y-2">
-							<Label>URL Path</Label>
-							<Input value={urlPath} onChange={(e) => setUrlPath(e.target.value)} placeholder="/" />
-						</div>
-					</div>
+					)}
 
-					<div className="grid grid-cols-3 gap-4">
-						<div className="space-y-2">
-							<Label>Expected Status</Label>
-							<Input
-								type="number"
-								value={expectedStatus}
-								onChange={(e) => setExpectedStatus(e.target.value)}
-							/>
+					{!isProcess && (
+						<div className="grid grid-cols-2 gap-4">
+							<div className="space-y-2">
+								<Label>Port</Label>
+								<Input
+									type="number"
+									min={1}
+									max={65535}
+									value={port}
+									onChange={(e) => setPort(e.target.value)}
+									required
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label>URL Path</Label>
+								<Input
+									value={urlPath}
+									onChange={(e) => setUrlPath(e.target.value)}
+									placeholder="/"
+								/>
+							</div>
 						</div>
-						<div className="space-y-2">
-							<Label>Interval (s)</Label>
-							<Input
-								type="number"
-								min={5}
-								value={interval}
-								onChange={(e) => setInterval(e.target.value)}
-							/>
+					)}
+
+					{isHostApp && !isProcess && (
+						<div className="grid grid-cols-3 gap-4">
+							<div className="space-y-2">
+								<Label>Host</Label>
+								<Input
+									value={host}
+									onChange={(e) => setHost(e.target.value)}
+									placeholder="127.0.0.1"
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label>Scheme</Label>
+								<Select
+									value={scheme}
+									onValueChange={(value) => setScheme(value as "http" | "https")}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="http">http</SelectItem>
+										<SelectItem value="https">https</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="space-y-2">
+								<Label>Method</Label>
+								<Select value={method} onValueChange={setMethod}>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="GET">GET</SelectItem>
+										<SelectItem value="HEAD">HEAD</SelectItem>
+										<SelectItem value="POST">POST</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 						</div>
-						<div className="space-y-2">
-							<Label>Timeout (s)</Label>
-							<Input
-								type="number"
-								min={1}
-								value={timeout}
-								onChange={(e) => setTimeout(e.target.value)}
-							/>
-						</div>
-					</div>
+					)}
+
+					{!isProcess && (
+						<>
+							<div className="grid grid-cols-3 gap-4">
+								<div className="space-y-2">
+									<Label>Expected Status</Label>
+									<Input
+										type="number"
+										value={expectedStatus}
+										onChange={(e) => setExpectedStatus(e.target.value)}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label>Interval (s)</Label>
+									<Input
+										type="number"
+										min={5}
+										value={interval}
+										onChange={(e) => setInterval(e.target.value)}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label>Timeout (s)</Label>
+									<Input
+										type="number"
+										min={1}
+										value={timeout}
+										onChange={(e) => setTimeout(e.target.value)}
+									/>
+								</div>
+							</div>
+
+							{isHostApp && (
+								<>
+									<div className="space-y-2">
+										<Label>Expected Body Contains</Label>
+										<Input
+											value={expectedBody}
+											onChange={(e) => setExpectedBody(e.target.value)}
+											placeholder="Optional substring"
+										/>
+									</div>
+									<div className="flex items-center justify-between rounded-md border p-3">
+										<div>
+											<p className="text-sm font-medium">Skip TLS verification</p>
+											<p className="text-xs text-muted-foreground">
+												Accept self-signed certificates for HTTPS checks
+											</p>
+										</div>
+										<Switch checked={tlsSkipVerify} onCheckedChange={setTlsSkipVerify} />
+									</div>
+								</>
+							)}
+						</>
+					)}
 
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
@@ -481,37 +664,41 @@ function HealthCheckDialog({
 						</div>
 					</div>
 
-					<div className="flex items-center justify-between rounded-md border p-3">
-						<div>
-							<p className="text-sm font-medium">Auto-Restart</p>
-							<p className="text-xs text-muted-foreground">
-								Restart container on failure threshold
-							</p>
-						</div>
-						<Switch checked={autoRestart} onCheckedChange={setAutoRestart} />
-					</div>
+					{!isHostApp && (
+						<>
+							<div className="flex items-center justify-between rounded-md border p-3">
+								<div>
+									<p className="text-sm font-medium">Auto-Restart</p>
+									<p className="text-xs text-muted-foreground">
+										Restart container on failure threshold
+									</p>
+								</div>
+								<Switch checked={autoRestart} onCheckedChange={setAutoRestart} />
+							</div>
 
-					{autoRestart && (
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label>Max Restarts</Label>
-								<Input
-									type="number"
-									min={1}
-									value={maxRestarts}
-									onChange={(e) => setMaxRestarts(e.target.value)}
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label>Window (min)</Label>
-								<Input
-									type="number"
-									min={1}
-									value={restartWindow}
-									onChange={(e) => setRestartWindow(e.target.value)}
-								/>
-							</div>
-						</div>
+							{autoRestart && (
+								<div className="grid grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label>Max Restarts</Label>
+										<Input
+											type="number"
+											min={1}
+											value={maxRestarts}
+											onChange={(e) => setMaxRestarts(e.target.value)}
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label>Window (min)</Label>
+										<Input
+											type="number"
+											min={1}
+											value={restartWindow}
+											onChange={(e) => setRestartWindow(e.target.value)}
+										/>
+									</div>
+								</div>
+							)}
+						</>
 					)}
 
 					<div className="flex items-center justify-between rounded-md border p-3">
