@@ -62,7 +62,6 @@ export default function AppsPage() {
 	const { data: stoppedResult } = useCollection("host_apps", statusCount("stopped"));
 	const { data: failedResult } = useCollection("host_apps", statusCount("failed"));
 
-	useRealtime("host_apps");
 	useRealtime("servers", 3000);
 
 	const servers = useMemo(() => serversResult?.items ?? [], [serversResult]);
