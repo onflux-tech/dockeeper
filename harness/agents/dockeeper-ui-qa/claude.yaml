@@ -1,0 +1,9 @@
+description: "QA read-only de UI/UX do frontend web: valida layout, densidade, paginação, responsividade, estados, a11y e o fluxo principal contra a UI renderizada. Não edita; reporta defeitos com evidência."
+tools: Read, Grep, Glob, Bash, Skill
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: node "${CLAUDE_PROJECT_DIR}/.claude/hooks/subagent-guard.mjs"
+          timeout: 10

@@ -6,6 +6,7 @@ tmp/
 *.dll
 *.so
 *.dylib
+*.fig
 
 # Go
 *.test
@@ -44,6 +45,7 @@ release/
 
 # Specs (keep in repo but ignore local drafts)
 .specs/
+docs/superpowers/
 
 # Claude
 .claude/*
