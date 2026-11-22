@@ -73,6 +73,12 @@ func (c *Client) handleDataStreamSignal(ctx context.Context, signal *agentpb.Ope
 	case agentpb.DataStreamType_DATA_STREAM_TYPE_RESTORE:
 		streamErr = c.streamRestore(cancelCtx, signal.GetRestoreVolume(), stream, streamID)
 
+	case agentpb.DataStreamType_DATA_STREAM_TYPE_BACKUP_APP:
+		streamErr = c.streamBackupApp(cancelCtx, signal.GetBackupApp(), stream, streamID)
+
+	case agentpb.DataStreamType_DATA_STREAM_TYPE_RESTORE_APP:
+		streamErr = c.streamRestoreApp(cancelCtx, signal.GetRestoreApp(), stream, streamID)
+
 	case agentpb.DataStreamType_DATA_STREAM_TYPE_CONTAINER_UPDATE:
 		streamErr = c.streamContainerUpdate(cancelCtx, signal.GetContainerUpdate(), stream, streamID)
 
@@ -387,6 +393,60 @@ func (c *Client) streamRestore(ctx context.Context, req *agentpb.RestoreVolumeRe
 	}
 
 	if err := c.exec.RestoreVolume(ctx, req.GetMountpoint(), s3Cfg, sendProgress); err != nil {
+		return err
+	}
+
+	return stream.Send(&agentpb.OpenDataStreamRequest{
+		StreamId: streamID,
+		Payload: &agentpb.OpenDataStreamRequest_Complete{
+			Complete: &agentpb.DataStreamComplete{Summary: "restore complete"},
+		},
+	})
+}
+
+func (c *Client) streamBackupApp(ctx context.Context, req *agentpb.BackupAppRequest, stream agentpb.AgentDataStreamService_OpenDataStreamClient, streamID string) error {
+	sendProgress := func(p executor.BackupProgressInfo) {
+		_ = stream.Send(&agentpb.OpenDataStreamRequest{
+			StreamId: streamID,
+			Payload: &agentpb.OpenDataStreamRequest_Progress{
+				Progress: &agentpb.DataStreamProgress{
+					Status:  p.Status,
+					Message: p.Message,
+					Current: p.BytesProcessed,
+					Total:   p.TotalBytes,
+				},
+			},
+		})
+	}
+
+	if err := c.appBackup.Backup(ctx, req, sendProgress); err != nil {
+		return err
+	}
+
+	return stream.Send(&agentpb.OpenDataStreamRequest{
+		StreamId: streamID,
+		Payload: &agentpb.OpenDataStreamRequest_Complete{
+			Complete: &agentpb.DataStreamComplete{Summary: "backup complete"},
+		},
+	})
+}
+
+func (c *Client) streamRestoreApp(ctx context.Context, req *agentpb.RestoreAppRequest, stream agentpb.AgentDataStreamService_OpenDataStreamClient, streamID string) error {
+	sendProgress := func(p executor.BackupProgressInfo) {
+		_ = stream.Send(&agentpb.OpenDataStreamRequest{
+			StreamId: streamID,
+			Payload: &agentpb.OpenDataStreamRequest_Progress{
+				Progress: &agentpb.DataStreamProgress{
+					Status:  p.Status,
+					Message: p.Message,
+					Current: p.BytesProcessed,
+					Total:   p.TotalBytes,
+				},
+			},
+		})
+	}
+
+	if err := c.appBackup.Restore(ctx, req, sendProgress); err != nil {
 		return err
 	}
 

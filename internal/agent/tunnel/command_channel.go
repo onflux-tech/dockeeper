@@ -46,6 +46,7 @@ type Client struct {
 	updateHandler  *grpchandlers.UpdateHandler
 	hostActions    *executor.HostActionExecutor
 	hostHealth     *grpchandlers.HostHealthHandler
+	appBackup      *executor.AppBackupExecutor
 
 	// Dependencies for streaming operations.
 	exec executor.Executor
@@ -69,6 +70,8 @@ func NewClient(
 	cmds := grpchandlers.NewCommandsHandler(exec, logger)
 	cmds.SetShutdownCallback(onShutdown)
 
+	hostActions := executor.NewHostActionExecutor(logger, executor.WithInventory(hostState.Apps))
+
 	c := &Client{
 		serverID: serverID,
 		conn:     conn,
@@ -83,8 +86,9 @@ func NewClient(
 		volHandler:     grpchandlers.NewVolumeHandler(exec, logger),
 		healthHandler:  grpchandlers.NewHealthHandler(logger),
 		updateHandler:  grpchandlers.NewUpdateHandler(exec, logger, dataDir),
-		hostActions:    executor.NewHostActionExecutor(logger, executor.WithInventory(hostState.Apps)),
+		hostActions:    hostActions,
 		hostHealth:     grpchandlers.NewHostHealthHandler(logger, grpchandlers.WithHostInventory(hostState.Apps)),
+		appBackup:      executor.NewAppBackupExecutor(logger, hostActions),
 
 		exec:       exec,
 		orch:       orch,
