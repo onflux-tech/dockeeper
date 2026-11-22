@@ -22,27 +22,55 @@ func NewBackupStore(app core.App) *BackupStore {
 
 // ── Policies ─────────────────────────────────────────
 
+// BackupPolicyInput carries the target fields accepted by a backup policy.
+type BackupPolicyInput struct {
+	ServerID      string
+	Volume        string
+	TargetType    string
+	AppSource     string
+	AppName       string
+	Paths         []string
+	Exclude       []string
+	MaxBytes      int64
+	Schedule      string
+	RetentionDays int
+	S3Bucket      string
+	S3Prefix      string
+	Enabled       bool
+}
+
 // CreatePolicy creates a new backup policy.
-func (s *BackupStore) CreatePolicy(serverID, volumeName, schedule string, retentionDays int, s3Bucket, s3Prefix string, enabled bool) (string, error) {
+func (s *BackupStore) CreatePolicy(input BackupPolicyInput) (string, error) {
 	col, err := s.app.FindCachedCollectionByNameOrId(constants.CollBackupPolicies)
 	if err != nil {
 		return "", fmt.Errorf("collection %s: %w", constants.CollBackupPolicies, err)
 	}
 
 	rec := core.NewRecord(col)
-	rec.Set("server", serverID)
-	rec.Set("volume", volumeName)
-	rec.Set("schedule", schedule)
-	rec.Set("retention_days", retentionDays)
-	rec.Set("s3_bucket", s3Bucket)
-	rec.Set("s3_prefix", s3Prefix)
-	rec.Set("enabled", enabled)
+	rec.Set("server", input.ServerID)
+	rec.Set("volume", input.Volume)
+	rec.Set("target_type", input.TargetType)
+	rec.Set("app_source", input.AppSource)
+	rec.Set("app_name", input.AppName)
+	rec.Set("paths", input.Paths)
+	rec.Set("exclude", input.Exclude)
+	rec.Set("max_bytes", input.MaxBytes)
+	rec.Set("schedule", input.Schedule)
+	rec.Set("retention_days", input.RetentionDays)
+	rec.Set("s3_bucket", input.S3Bucket)
+	rec.Set("s3_prefix", input.S3Prefix)
+	rec.Set("enabled", input.Enabled)
 
 	if err := s.app.Save(rec); err != nil {
 		return "", fmt.Errorf("save policy: %w", err)
 	}
 
 	return rec.Id, nil
+}
+
+// GetPolicy returns a policy by ID.
+func (s *BackupStore) GetPolicy(policyID string) (*core.Record, error) {
+	return s.app.FindRecordById(constants.CollBackupPolicies, policyID)
 }
 
 // UpdatePolicy updates an existing backup policy fields.
@@ -105,6 +133,30 @@ func (s *BackupStore) CreateBackupRecord(policyID, volumeName, serverID string) 
 	rec.Set("policy", policyID)
 	rec.Set("volume_name", volumeName)
 	rec.Set("server", serverID)
+	rec.Set("status", "running")
+	rec.Set("started_at", time.Now().UTC().Format(time.RFC3339))
+
+	if err := s.app.Save(rec); err != nil {
+		return "", fmt.Errorf("save backup record: %w", err)
+	}
+
+	return rec.Id, nil
+}
+
+// CreateAppBackupRecord creates a new host app backup record with status "running".
+func (s *BackupStore) CreateAppBackupRecord(policyID, serverID, appSource, appName, targetLabel string) (string, error) {
+	col, err := s.app.FindCachedCollectionByNameOrId(constants.CollBackupRecords)
+	if err != nil {
+		return "", fmt.Errorf("collection %s: %w", constants.CollBackupRecords, err)
+	}
+
+	rec := core.NewRecord(col)
+	rec.Set("policy", policyID)
+	rec.Set("server", serverID)
+	rec.Set("target_type", "host_app")
+	rec.Set("app_source", appSource)
+	rec.Set("app_name", appName)
+	rec.Set("target_label", targetLabel)
 	rec.Set("status", "running")
 	rec.Set("started_at", time.Now().UTC().Format(time.RFC3339))
 

@@ -148,7 +148,7 @@ func Bootstrap(app *pocketbase.PocketBase, version, commit string, frontendFS em
 
 		// Backup system routes + scheduler.
 		backupStore := store.NewBackupStore(app)
-		backupSvc := services.NewBackupService(app, backupStore, auditStore, registry)
+		backupSvc := services.NewBackupService(app, backupStore, auditStore, registry, eventBus)
 		routes.RegisterBackupRoutes(se, app, backupSvc, backupStore, rbac)
 		jobs.RegisterBackupJobs(app, backupSvc, backupStore)
 

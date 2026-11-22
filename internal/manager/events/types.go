@@ -37,6 +37,7 @@ const (
 	// System events.
 	BackupCompleted EventType = "backup.completed"
 	BackupFailed    EventType = "backup.failed"
+	BackupRestored  EventType = "backup.restored"
 
 	// Image events.
 	ImagePulled          EventType = "image.pulled"
