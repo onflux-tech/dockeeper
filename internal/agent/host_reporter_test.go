@@ -14,8 +14,9 @@ import (
 )
 
 type fakeHostClient struct {
-	req *agentpb.ReportHostInventoryRequest
-	err error
+	req     *agentpb.ReportHostInventoryRequest
+	connReq *agentpb.ReportConnectivityRequest
+	err     error
 }
 
 func (f *fakeHostClient) ReportHostInventory(ctx context.Context, req *agentpb.ReportHostInventoryRequest, opts ...grpc.CallOption) (*agentpb.ReportHostInventoryResponse, error) {
@@ -27,6 +28,10 @@ func (f *fakeHostClient) ReportHostInventory(ctx context.Context, req *agentpb.R
 }
 
 func (f *fakeHostClient) ReportConnectivity(ctx context.Context, req *agentpb.ReportConnectivityRequest, opts ...grpc.CallOption) (*agentpb.ReportConnectivityResponse, error) {
+	f.connReq = req
+	if f.err != nil {
+		return nil, f.err
+	}
 	return &agentpb.ReportConnectivityResponse{}, nil
 }
 

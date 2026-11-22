@@ -151,6 +151,13 @@ func (a *Agent) Run(ctx context.Context) error {
 		return hostReporter.Report(ctx, inventory)
 	})
 
+	connectivityCollector := collector.NewConnectivityCollector(a.logger)
+	connectivityReporter := NewConnectivityReporter(a.client.Host(), a.cfg.ServerID, a.logger)
+	connectivityReporter.SetServerGoneCallback(triggerReEnrollment)
+	go connectivityCollector.Run(ctx, time.Minute, func(report *collector.ConnectivityReport) error {
+		return connectivityReporter.Report(ctx, report)
+	})
+
 	// Start reverse tunnel client — replaces the old agent gRPC server.
 	// The tunnel client opens a persistent CommandChannel to the manager
 	// and spawns on-demand DataStream/ExecStream sessions when signalled.
