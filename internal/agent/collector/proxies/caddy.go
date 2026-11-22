@@ -99,7 +99,7 @@ func caddyUpstreams(handle any) []string {
 		for _, rawServer := range servers {
 			server, _ := rawServer.(map[string]any)
 			if dial, ok := server["dial"].(string); ok && dial != "" {
-				upstreams = append(upstreams, dial)
+				upstreams = append(upstreams, redactUpstream(dial))
 			}
 		}
 	}

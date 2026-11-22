@@ -29,6 +29,7 @@ interface PolicyDialogProps {
 	volumes: VolumeRecord[];
 	hostApps: HostAppRecord[];
 	editPolicy?: BackupPolicyRecord | null;
+	initialTargetType?: "volume" | "host_app";
 }
 
 type AppSource = "systemd" | "pm2" | "process";
@@ -40,11 +41,12 @@ export function PolicyDialog({
 	volumes,
 	hostApps,
 	editPolicy,
+	initialTargetType,
 }: PolicyDialogProps) {
 	const isEdit = !!editPolicy;
 
 	const [targetType, setTargetType] = useState<"volume" | "host_app">(
-		editPolicy?.target_type ?? "volume",
+		editPolicy?.target_type ?? initialTargetType ?? "volume",
 	);
 	const [volume, setVolume] = useState(editPolicy?.volume ?? "");
 	const [appSource, setAppSource] = useState<AppSource>(

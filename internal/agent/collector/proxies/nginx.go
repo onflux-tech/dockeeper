@@ -103,7 +103,7 @@ func parseNginxDump(dump string) []*agentpb.ProxyRouteInfo {
 			locationUpstreams = nil
 		case strings.HasPrefix(line, "proxy_pass ") && locationDepth >= 0:
 			target := strings.TrimSuffix(strings.TrimPrefix(line, "proxy_pass "), ";")
-			locationUpstreams = append(locationUpstreams, resolveNginxUpstream(target, upstreams))
+			locationUpstreams = append(locationUpstreams, redactUpstream(resolveNginxUpstream(target, upstreams)))
 		case line == "}":
 			closingDepth := depth - 1
 			switch {

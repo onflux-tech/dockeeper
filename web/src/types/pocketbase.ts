@@ -347,6 +347,7 @@ export interface ProxyInstanceRecord extends BaseRecord {
 	admin_url: string;
 	status: "healthy" | "degraded" | "unknown";
 	last_seen: string;
+	routes_count?: number;
 }
 
 export interface ProxyRouteRecord extends BaseRecord {

@@ -94,6 +94,27 @@ func TestParseNginxDump(t *testing.T) {
 	require.Equal(t, []string{"http://127.0.0.1:8080"}, routes[1].Upstreams)
 }
 
+func TestParseNginxDumpRedactsCredentials(t *testing.T) {
+	routes := parseNginxDump(`http {
+	server {
+		server_name secure.example.com;
+		location / {
+			proxy_pass http://user:secret@10.0.0.5:8080;
+		}
+	}
+}`)
+	require.Len(t, routes, 1)
+	require.Equal(t, []string{"http://10.0.0.5:8080"}, routes[0].Upstreams)
+}
+
+func TestRedactUpstream(t *testing.T) {
+	require.Equal(t, "http://10.0.0.5:8080", redactUpstream("http://user:pass@10.0.0.5:8080"))
+	require.Equal(t, "http://10.0.0.5:8080/path?token=redacted", redactUpstream("http://10.0.0.5:8080/path?token=abc"))
+	require.Equal(t, "10.0.0.5:8080", redactUpstream("user:pass@10.0.0.5:8080"))
+	require.Equal(t, "127.0.0.1:3000", redactUpstream("127.0.0.1:3000"))
+	require.Equal(t, "api_cluster", redactUpstream("api_cluster"))
+}
+
 func TestParseCaddyJSON(t *testing.T) {
 	routes := parseCaddyJSON([]byte(caddyFixture))
 	require.Len(t, routes, 1)
@@ -146,6 +167,7 @@ func TestParseTraefik(t *testing.T) {
 	require.Equal(t, []string{"/api"}, routes[0].Paths)
 	require.Equal(t, []string{"http://127.0.0.1:3000"}, routes[0].Upstreams)
 	require.True(t, routes[0].Tls)
+	require.Equal(t, "healthy", routes[0].Status)
 }
 
 func TestCollectorDetectsNginx(t *testing.T) {

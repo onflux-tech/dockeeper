@@ -22,7 +22,6 @@ func NewBackupStore(app core.App) *BackupStore {
 
 // ── Policies ─────────────────────────────────────────
 
-// BackupPolicyInput carries the target fields accepted by a backup policy.
 type BackupPolicyInput struct {
 	ServerID      string
 	Volume        string
@@ -143,7 +142,6 @@ func (s *BackupStore) CreateBackupRecord(policyID, volumeName, serverID string) 
 	return rec.Id, nil
 }
 
-// CreateAppBackupRecord creates a new host app backup record with status "running".
 func (s *BackupStore) CreateAppBackupRecord(policyID, serverID, appSource, appName, targetLabel string) (string, error) {
 	col, err := s.app.FindCachedCollectionByNameOrId(constants.CollBackupRecords)
 	if err != nil {
@@ -168,7 +166,7 @@ func (s *BackupStore) CreateAppBackupRecord(policyID, serverID, appSource, appNa
 }
 
 // MarkBackupSuccess marks a backup record as successful.
-func (s *BackupStore) MarkBackupSuccess(recordID, s3Key string, size int64) error {
+func (s *BackupStore) MarkBackupSuccess(recordID, s3Key string, size int64, checksum string) error {
 	rec, err := s.app.FindRecordById(constants.CollBackupRecords, recordID)
 	if err != nil {
 		return fmt.Errorf("record not found: %w", err)
@@ -178,6 +176,13 @@ func (s *BackupStore) MarkBackupSuccess(recordID, s3Key string, size int64) erro
 	rec.Set("s3_key", s3Key)
 	rec.Set("size", size)
 	rec.Set("completed_at", time.Now().UTC().Format(time.RFC3339))
+	if checksum != "" {
+		rec.Set("manifest", map[string]any{
+			"checksum": checksum,
+			"size":     size,
+			"s3_key":   s3Key,
+		})
+	}
 
 	return s.app.Save(rec)
 }

@@ -78,7 +78,7 @@ func (c *Collector) Run(ctx context.Context, interval time.Duration, report func
 			return
 		}
 		if len(instances) == 0 {
-			return
+			instances = nil
 		}
 
 		encoded, err := proto.Marshal(&agentpb.ReportProxyInventoryRequest{Instances: instances})

@@ -56,7 +56,7 @@ func parseEnvoyConfigDump(dump map[string]any) []*agentpb.ProxyRouteInfo {
 						paths = append(paths, path)
 						routeAction, _ := route["route"].(map[string]any)
 						if cluster, ok := routeAction["cluster"].(string); ok && cluster != "" {
-							upstreams = append(upstreams, cluster)
+							upstreams = append(upstreams, redactUpstream(cluster))
 						}
 					}
 					if len(hosts) == 0 && len(upstreams) == 0 {

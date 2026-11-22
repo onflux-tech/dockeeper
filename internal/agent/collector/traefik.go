@@ -193,8 +193,6 @@ func (t *TraefikCollector) resolveAPIURL(ctx context.Context, c *agentpb.Contain
 	return "http://127.0.0.1:8080"
 }
 
-// DetectTraefikAPIURL finds a running Traefik container and resolves an API URL
-// reachable from the host: the published 8080 port first, then the container IP.
 func DetectTraefikAPIURL(ctx context.Context, orch OrchestratorClient, logger *slog.Logger) string {
 	if orch == nil {
 		return ""
@@ -260,7 +258,6 @@ func containerIP(ctx context.Context, orch OrchestratorClient, logger *slog.Logg
 	return ""
 }
 
-// resolveContainerIP inspects the container to find an IP address in any network.
 func (t *TraefikCollector) resolveContainerIP(ctx context.Context, containerID string) string {
 	return containerIP(ctx, t.orch, t.logger, containerID)
 }

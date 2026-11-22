@@ -57,6 +57,7 @@ export default function BackupsPage() {
 	const [policiesPage, setPoliciesPage] = useState(1);
 	const [recordsPage, setRecordsPage] = useState(1);
 	const [serverFilter, setServerFilter] = useState<string>(searchParams.get("server") ?? "all");
+	const [targetTypeFilter, setTargetTypeFilter] = useState<string>("all");
 	const [search, setSearch] = useState("");
 	const [policyOpen, setPolicyOpen] = useState(false);
 	const [editPolicy, setEditPolicy] = useState<BackupPolicyRecord | null>(null);
@@ -84,6 +85,7 @@ export default function BackupsPage() {
 		sort: "-created",
 		filter: andFilters([
 			serverId ? eqFilter("server", serverId) : "",
+			targetTypeFilter !== "all" ? eqFilter("target_type", targetTypeFilter) : "",
 			containsAnyFilter(["volume", "app_name", "schedule", "s3_bucket"], search),
 		]),
 	});
@@ -94,6 +96,7 @@ export default function BackupsPage() {
 		filter: andFilters([
 			selectedPolicyId ? eqFilter("policy", selectedPolicyId) : "",
 			!selectedPolicyId && serverId ? eqFilter("server", serverId) : "",
+			targetTypeFilter !== "all" ? eqFilter("target_type", targetTypeFilter) : "",
 		]),
 	});
 
@@ -189,6 +192,23 @@ export default function BackupsPage() {
 								{s.hostname}
 							</SelectItem>
 						))}
+					</SelectContent>
+				</Select>
+				<Select
+					value={targetTypeFilter}
+					onValueChange={(v) => {
+						setTargetTypeFilter(v);
+						setPoliciesPage(1);
+						setRecordsPage(1);
+					}}
+				>
+					<SelectTrigger className="w-40">
+						<SelectValue placeholder="All targets" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">All targets</SelectItem>
+						<SelectItem value="volume">Volumes</SelectItem>
+						<SelectItem value="host_app">Host apps</SelectItem>
 					</SelectContent>
 				</Select>
 				<div className="relative w-64">

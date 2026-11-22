@@ -30,7 +30,7 @@ func newProxyStoreTestApp(t *testing.T) (*tests.TestApp, string) {
 		&core.TextField{Name: "version"},
 		&core.TextField{Name: "config_path"},
 		&core.TextField{Name: "admin_url"},
-		&core.TextField{Name: "status"},
+		&core.SelectField{Name: "status", Values: []string{"healthy", "degraded", "unknown"}, MaxSelect: 1},
 		&core.DateField{Name: "last_seen"},
 	)
 	require.NoError(t, app.Save(instances))
@@ -45,7 +45,7 @@ func newProxyStoreTestApp(t *testing.T) (*tests.TestApp, string) {
 		&core.JSONField{Name: "upstreams"},
 		&core.BoolField{Name: "tls"},
 		&core.JSONField{Name: "middlewares"},
-		&core.TextField{Name: "status"},
+		&core.SelectField{Name: "status", Values: []string{"healthy", "degraded", "unknown"}, MaxSelect: 1},
 		&core.TextField{Name: "provider"},
 	)
 	require.NoError(t, app.Save(routes))
@@ -112,4 +112,34 @@ func TestProxyStoreIgnoresUnknownKinds(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, instances)
 	require.Zero(t, routes)
+}
+
+func TestProxyStoreNormalizesUnknownStatus(t *testing.T) {
+	app, serverID := newProxyStoreTestApp(t)
+	s := NewProxyStore(app)
+
+	instances, routes, err := s.Replace(serverID, []*agentpb.ProxyInstanceInfo{
+		{
+			Kind:   "traefik",
+			Source: "docker",
+			App:    "traefik",
+			Status: "enabled",
+			Routes: []*agentpb.ProxyRouteInfo{
+				{Name: "api@docker", Status: "enabled"},
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, instances)
+	require.Equal(t, 1, routes)
+
+	rows, err := app.FindRecordsByFilter("proxy_instances", "server = {:server}", "", 0, 0, map[string]any{"server": serverID})
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	require.Equal(t, "unknown", rows[0].GetString("status"))
+
+	routeRows, err := app.FindRecordsByFilter("proxy_routes", "server = {:server}", "", 0, 0, map[string]any{"server": serverID})
+	require.NoError(t, err)
+	require.Len(t, routeRows, 1)
+	require.Equal(t, "unknown", routeRows[0].GetString("status"))
 }

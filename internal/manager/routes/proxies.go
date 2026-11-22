@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/onflux-tech/dockeeper/internal/manager/middleware"
@@ -74,24 +75,39 @@ func listProxyRecords(e *core.RequestEvent, app core.App, collection string) err
 		sort = "-created"
 	}
 
-	records, err := app.FindRecordsByFilter(collection, strings.Join(filters, " && "), sort, 0, 0, params)
+	filter := strings.Join(filters, " && ")
+	if filter == "" {
+		filter = "1=1"
+	}
+	start := (page - 1) * perPage
+
+	records, err := app.FindRecordsByFilter(collection, filter, sort, perPage, start, params)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	totalItems := len(records)
-	start := (page - 1) * perPage
-	if start > totalItems {
-		start = totalItems
-	}
-	end := start + perPage
-	if end > totalItems {
-		end = totalItems
+	totalItems, err := app.CountRecords(collection, dbx.NewExp(filter, dbx.Params(params)))
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	totalPages := (totalItems + perPage - 1) / perPage
+	totalPages := (int(totalItems) + perPage - 1) / perPage
+
+	items := make([]any, 0, len(records))
+	for _, record := range records {
+		item := record.PublicExport()
+		if collection == constants.CollProxyInstances {
+			count, err := app.CountRecords(constants.CollProxyRoutes, dbx.NewExp("instance = {:instance}", dbx.Params{"instance": record.Id}))
+			if err != nil {
+				return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			}
+			item["routes_count"] = count
+		}
+		items = append(items, item)
+	}
+
 	return e.JSON(http.StatusOK, map[string]any{
-		"items":      records[start:end],
+		"items":      items,
 		"page":       page,
 		"perPage":    perPage,
 		"totalItems": totalItems,

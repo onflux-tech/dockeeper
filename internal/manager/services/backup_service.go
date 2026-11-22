@@ -22,6 +22,8 @@ import (
 
 var ErrInvalidBackupTarget = errors.New("invalid backup target")
 
+const backupOperationTimeout = 30 * time.Minute
+
 // BackupService orchestrates backup/restore operations.
 type BackupService struct {
 	app      core.App
@@ -105,8 +107,8 @@ func (s *BackupService) TriggerBackup(ctx context.Context, policyID, userID, ip 
 			})
 		} else {
 			// Get the size from S3.
-			size := s.getS3ObjectSize(bgCtx, s3Cfg, s3Bucket, s3Key)
-			_ = s.store.MarkBackupSuccess(recordID, s3Key, size)
+			size, _ := s.getS3ObjectInfo(bgCtx, s3Cfg, s3Bucket, s3Key)
+			_ = s.store.MarkBackupSuccess(recordID, s3Key, size, "")
 			slog.Info("backup succeeded", "policy", policyID, "volume", volumeName, "s3_key", s3Key)
 			s.publishBackupEvent(events.BackupCompleted, recordID, map[string]any{
 				"target_label": volumeName,
@@ -387,22 +389,22 @@ func (s *BackupService) executeRestore(ctx context.Context, serverID, volumeName
 	}
 }
 
-func (s *BackupService) getS3ObjectSize(ctx context.Context, s3Cfg *s3Settings, bucket, key string) int64 {
+func (s *BackupService) getS3ObjectInfo(ctx context.Context, s3Cfg *s3Settings, bucket, key string) (int64, string) {
 	client, err := minio.New(s3Cfg.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(s3Cfg.AccessKey, s3Cfg.SecretKey, ""),
 		Secure: s3Cfg.UseSSL,
 		Region: s3Cfg.Region,
 	})
 	if err != nil {
-		return 0
+		return 0, ""
 	}
 
 	info, err := client.StatObject(ctx, bucket, key, minio.StatObjectOptions{})
 	if err != nil {
-		return 0
+		return 0, ""
 	}
 
-	return info.Size
+	return info.Size, info.Metadata.Get("X-Amz-Meta-Manifest-Checksum")
 }
 
 func (s *BackupService) deleteS3Object(ctx context.Context, s3Cfg *s3Settings, bucket, key string) error {
@@ -544,7 +546,8 @@ func (s *BackupService) triggerAppBackup(policy *core.Record, userID, ip string)
 	s3Key := fmt.Sprintf("%s/%s/%s.tar.gz", strings.TrimSuffix(policy.GetString("s3_prefix"), "/"), sanitizeS3Key(appName), timestamp)
 
 	go func() {
-		bgCtx := context.Background()
+		bgCtx, cancel := context.WithTimeout(context.Background(), backupOperationTimeout)
+		defer cancel()
 		backupErr := s.executeAppBackup(bgCtx, serverID, appSource, appName, paths, exclude, maxBytes, s3Cfg, s3Bucket, s3Key)
 		if backupErr != nil {
 			slog.Error("app backup failed", "policy", policyID, "app", label, "error", backupErr)
@@ -555,8 +558,8 @@ func (s *BackupService) triggerAppBackup(policy *core.Record, userID, ip string)
 			})
 			return
 		}
-		size := s.getS3ObjectSize(bgCtx, s3Cfg, s3Bucket, s3Key)
-		_ = s.store.MarkBackupSuccess(recordID, s3Key, size)
+		size, checksum := s.getS3ObjectInfo(bgCtx, s3Cfg, s3Bucket, s3Key)
+		_ = s.store.MarkBackupSuccess(recordID, s3Key, size, checksum)
 		slog.Info("app backup succeeded", "policy", policyID, "app", label, "s3_key", s3Key)
 		s.publishBackupEvent(events.BackupCompleted, recordID, map[string]any{
 			"target_label": label,
@@ -630,7 +633,8 @@ func (s *BackupService) triggerAppRestore(rec *core.Record, userID, ip string) e
 	label := appSource + "/" + appName
 
 	go func() {
-		bgCtx := context.Background()
+		bgCtx, cancel := context.WithTimeout(context.Background(), backupOperationTimeout)
+		defer cancel()
 		restoreErr := s.executeAppRestore(bgCtx, serverID, recordID, appSource, appName, paths, s3Cfg, s3Bucket, s3Key)
 		if restoreErr != nil {
 			slog.Error("app restore failed", "record", recordID, "error", restoreErr)

@@ -58,7 +58,7 @@ func parseTraefik(routers []traefikRouter, services []traefikService) []*agentpb
 	for _, service := range services {
 		for _, server := range service.Servers {
 			if server.URL != "" {
-				serviceURLs[service.Name] = append(serviceURLs[service.Name], server.URL)
+				serviceURLs[service.Name] = append(serviceURLs[service.Name], redactUpstream(server.URL))
 			}
 		}
 	}
@@ -70,10 +70,7 @@ func parseTraefik(routers []traefikRouter, services []traefikService) []*agentpb
 		if len(paths) == 0 {
 			paths = []string{"/"}
 		}
-		status := router.Status
-		if status == "" {
-			status = "healthy"
-		}
+		status := traefikRouteStatus(router.Status)
 		routes = append(routes, &agentpb.ProxyRouteInfo{
 			Name:      router.Name,
 			Hosts:     hosts,
@@ -85,6 +82,17 @@ func parseTraefik(routers []traefikRouter, services []traefikService) []*agentpb
 		})
 	}
 	return routes
+}
+
+func traefikRouteStatus(status string) string {
+	switch status {
+	case "", "enabled":
+		return "healthy"
+	case "disabled":
+		return "degraded"
+	default:
+		return "unknown"
+	}
 }
 
 func ruleValues(rule, function string) []string {

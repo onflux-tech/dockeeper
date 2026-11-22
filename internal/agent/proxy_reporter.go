@@ -28,10 +28,6 @@ func (r *ProxyReporter) SetServerGoneCallback(fn func()) {
 }
 
 func (r *ProxyReporter) Report(ctx context.Context, instances []*agentpb.ProxyInstanceInfo) error {
-	if len(instances) == 0 {
-		return nil
-	}
-
 	req := &agentpb.ReportProxyInventoryRequest{
 		ServerId:    r.serverID,
 		Instances:   instances,

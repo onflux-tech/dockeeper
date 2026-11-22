@@ -163,6 +163,7 @@ export default function ProxiesPage() {
 										<TableHead>Server</TableHead>
 										<TableHead>Source / App</TableHead>
 										<TableHead>Version</TableHead>
+										<TableHead>Routes</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead>Last seen</TableHead>
 									</TableRow>
@@ -185,6 +186,9 @@ export default function ProxiesPage() {
 												</div>
 											</TableCell>
 											<TableCell className="font-mono text-xs">{instance.version || "—"}</TableCell>
+											<TableCell className="text-xs tabular-nums">
+												{instance.routes_count ?? 0}
+											</TableCell>
 											<TableCell>
 												<Badge variant={statusVariant[instance.status] ?? "secondary"}>
 													{instance.status}

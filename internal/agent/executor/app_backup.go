@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ const (
 	defaultAppBackupMax   = int64(20 << 30)
 	maxAppBackupPaths     = 20
 	appBackupTimeout      = 30 * time.Minute
+	defaultAppBackupDir   = "/var/lib/dockeeper/backups"
 )
 
 var (
@@ -65,15 +67,21 @@ func NewAppBackupExecutor(logger *slog.Logger, hostActions *HostActionExecutor) 
 	return &AppBackupExecutor{
 		logger:      logger,
 		hostActions: hostActions,
-		tempDir:     os.TempDir(),
+		tempDir:     defaultAppBackupDir,
 		version:     "dev",
 	}
 }
 
 func (e *AppBackupExecutor) Backup(ctx context.Context, req *agentpb.BackupAppRequest, progress func(BackupProgressInfo)) error {
+	ctx, cancel := context.WithTimeout(ctx, appBackupTimeout)
+	defer cancel()
+
 	paths := req.GetPaths()
 	if err := validateBackupPaths(paths); err != nil {
 		return err
+	}
+	if err := os.MkdirAll(e.tempDir, 0o700); err != nil {
+		return fmt.Errorf("create backup dir: %w", err)
 	}
 
 	maxBytes := int64(req.GetMaxBytes())
@@ -93,7 +101,7 @@ func (e *AppBackupExecutor) Backup(ctx context.Context, req *agentpb.BackupAppRe
 
 	progress(BackupProgressInfo{Status: "tarring", Message: "Creating archive from app paths"})
 
-	archive, signed, err := e.buildArchive(manifest, maxBytes)
+	archive, signed, err := e.buildArchive(ctx, manifest, maxBytes)
 	if err != nil {
 		return err
 	}
@@ -142,9 +150,15 @@ func (e *AppBackupExecutor) Backup(ctx context.Context, req *agentpb.BackupAppRe
 }
 
 func (e *AppBackupExecutor) Restore(ctx context.Context, req *agentpb.RestoreAppRequest, progress func(BackupProgressInfo)) error {
+	ctx, cancel := context.WithTimeout(ctx, appBackupTimeout)
+	defer cancel()
+
 	allowed := req.GetPaths()
 	if err := validateBackupPaths(allowed); err != nil {
 		return err
+	}
+	if err := os.MkdirAll(e.tempDir, 0o700); err != nil {
+		return fmt.Errorf("create backup dir: %w", err)
 	}
 
 	progress(BackupProgressInfo{Status: "downloading", Message: "Downloading archive from S3"})
@@ -170,7 +184,12 @@ func (e *AppBackupExecutor) Restore(ctx context.Context, req *agentpb.RestoreApp
 	if err != nil {
 		return fmt.Errorf("create restore file: %w", err)
 	}
-	defer func() { _ = os.Remove(archivePath) }()
+	success := false
+	defer func() {
+		if success {
+			_ = os.Remove(archivePath)
+		}
+	}()
 
 	if _, err := io.Copy(archiveFile, obj); err != nil {
 		_ = archiveFile.Close()
@@ -187,20 +206,29 @@ func (e *AppBackupExecutor) Restore(ctx context.Context, req *agentpb.RestoreApp
 	if err := validateManifest(&manifest, allowed); err != nil {
 		return err
 	}
+	if err := validateManifestIdentity(&manifest, req); err != nil {
+		return err
+	}
 
 	progress(BackupProgressInfo{Status: "extracting", Message: "Extracting archive", TotalBytes: info.Size})
 
-	safety, err := e.createSafetyArchive(manifest.Paths)
+	safety, safetyPaths, err := e.createSafetyArchive(ctx, manifest.Paths)
 	if err != nil {
 		return fmt.Errorf("create safety archive: %w", err)
 	}
 	if safety != "" {
-		defer func() { _ = os.Remove(safety) }()
+		defer func() {
+			if success {
+				_ = os.Remove(safety)
+			}
+		}()
 	}
 
+	source := req.GetAppSource()
+	manageApp := source == "systemd" || source == "pm2"
 	started := false
-	if e.hostActions != nil {
-		if _, _, err := e.hostActions.Execute(ctx, req.GetAppSource(), req.GetAppName(), "stop"); err != nil {
+	if manageApp && e.hostActions != nil {
+		if _, _, err := e.hostActions.Execute(ctx, source, req.GetAppName(), "stop"); err != nil {
 			return fmt.Errorf("stop app before restore: %w", err)
 		}
 		started = true
@@ -208,16 +236,18 @@ func (e *AppBackupExecutor) Restore(ctx context.Context, req *agentpb.RestoreApp
 
 	restoreErr := restoreArchive(archivePath, manifest.Paths)
 	if restoreErr != nil && safety != "" {
-		_ = restoreArchive(safety, manifest.Paths)
+		_ = restoreArchive(safety, safetyPaths)
 	}
 	if started {
-		if _, _, startErr := e.hostActions.Execute(ctx, req.GetAppSource(), req.GetAppName(), "start"); startErr != nil && restoreErr == nil {
+		if _, _, startErr := e.hostActions.Execute(ctx, source, req.GetAppName(), "start"); startErr != nil && restoreErr == nil {
 			restoreErr = fmt.Errorf("start app after restore: %w", startErr)
 		}
 	}
 	if restoreErr != nil {
 		return restoreErr
 	}
+
+	success = true
 
 	progress(BackupProgressInfo{
 		Status:         "done",
@@ -229,7 +259,7 @@ func (e *AppBackupExecutor) Restore(ctx context.Context, req *agentpb.RestoreApp
 	return nil
 }
 
-func (e *AppBackupExecutor) buildArchive(manifest Manifest, maxBytes int64) (string, Manifest, error) {
+func (e *AppBackupExecutor) buildArchive(ctx context.Context, manifest Manifest, maxBytes int64) (string, Manifest, error) {
 	if err := validateBackupPaths(manifest.Paths); err != nil {
 		return "", Manifest{}, err
 	}
@@ -264,6 +294,9 @@ func (e *AppBackupExecutor) buildArchive(manifest Manifest, maxBytes int64) (str
 	var written int64
 	for rootIndex, root := range manifest.Paths {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if walkErr != nil {
 				return walkErr
 			}
@@ -342,7 +375,7 @@ func (e *AppBackupExecutor) buildArchive(manifest Manifest, maxBytes int64) (str
 	return tmpPath, signed, nil
 }
 
-func (e *AppBackupExecutor) createSafetyArchive(paths []string) (string, error) {
+func (e *AppBackupExecutor) createSafetyArchive(ctx context.Context, paths []string) (string, []string, error) {
 	existing := make([]string, 0, len(paths))
 	for _, path := range paths {
 		if _, err := os.Stat(path); err == nil {
@@ -350,18 +383,18 @@ func (e *AppBackupExecutor) createSafetyArchive(paths []string) (string, error) 
 		}
 	}
 	if len(existing) == 0 {
-		return "", nil
+		return "", nil, nil
 	}
 	manifest := Manifest{
 		Paths:     existing,
 		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 		Version:   e.version,
 	}
-	archive, _, err := e.buildArchive(manifest, defaultAppBackupMax)
+	archive, _, err := e.buildArchive(ctx, manifest, defaultAppBackupMax)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return archive, nil
+	return archive, existing, nil
 }
 
 func readManifest(archivePath string) (Manifest, error) {
@@ -446,18 +479,37 @@ func restoreArchive(archivePath string, paths []string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
+			if err := validateRestoreTarget(paths, target); err != nil {
+				return err
+			}
 			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
 				return fmt.Errorf("mkdir %s: %w", target, err)
 			}
+			if err := restoreOwner(target, header, false); err != nil {
+				return err
+			}
 		case tar.TypeSymlink:
-			if !withinAnyPath(paths, filepath.Dir(target)) {
-				return fmt.Errorf("%w: %s", ErrUnsafePath, target)
+			if err := validateRestoreTarget(paths, target); err != nil {
+				return err
+			}
+			linkTarget := header.Linkname
+			if !filepath.IsAbs(linkTarget) {
+				linkTarget = filepath.Join(filepath.Dir(target), linkTarget)
+			}
+			if err := validateRestoreTarget(paths, filepath.Clean(linkTarget)); err != nil {
+				return err
 			}
 			_ = os.Remove(target)
 			if err := os.Symlink(header.Linkname, target); err != nil {
 				return fmt.Errorf("symlink %s: %w", target, err)
 			}
+			if err := restoreOwner(target, header, true); err != nil {
+				return err
+			}
 		case tar.TypeReg:
+			if err := validateRestoreTarget(paths, target); err != nil {
+				return err
+			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return fmt.Errorf("mkdir parent %s: %w", target, err)
 			}
@@ -472,7 +524,26 @@ func restoreArchive(archivePath string, paths []string) error {
 			if err := out.Close(); err != nil {
 				return fmt.Errorf("close %s: %w", target, err)
 			}
+			if err := restoreOwner(target, header, false); err != nil {
+				return err
+			}
 		}
+	}
+	return nil
+}
+
+func restoreOwner(target string, header *tar.Header, symlink bool) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	var err error
+	if symlink {
+		err = os.Lchown(target, header.Uid, header.Gid)
+	} else {
+		err = os.Chown(target, header.Uid, header.Gid)
+	}
+	if err != nil {
+		return fmt.Errorf("chown %s: %w", target, err)
 	}
 	return nil
 }
@@ -527,6 +598,19 @@ func validateManifest(manifest *Manifest, allowed []string) error {
 	return nil
 }
 
+func validateManifestIdentity(manifest *Manifest, req *agentpb.RestoreAppRequest) error {
+	if manifest.Server != "" && manifest.Server != req.GetServerId() {
+		return fmt.Errorf("%w: server mismatch", ErrInvalidManifest)
+	}
+	if manifest.App != "" && manifest.App != req.GetAppName() {
+		return fmt.Errorf("%w: app mismatch", ErrInvalidManifest)
+	}
+	if manifest.Source != "" && manifest.Source != req.GetAppSource() {
+		return fmt.Errorf("%w: source mismatch", ErrInvalidManifest)
+	}
+	return nil
+}
+
 func manifestChecksum(manifest Manifest) string {
 	manifest.Checksum = ""
 	encoded, _ := json.Marshal(manifest)
@@ -576,6 +660,47 @@ func withinAnyPath(paths []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func validateRestoreTarget(paths []string, target string) error {
+	if !withinAnyPath(paths, target) {
+		return fmt.Errorf("%w: %s", ErrUnsafePath, target)
+	}
+	if info, err := os.Lstat(target); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("%w: %s", ErrUnsafePath, target)
+	}
+	for _, root := range paths {
+		if target == root {
+			return nil
+		}
+	}
+
+	existing := target
+	for {
+		if _, err := os.Lstat(existing); err == nil {
+			break
+		}
+		parent := filepath.Dir(existing)
+		if parent == existing {
+			break
+		}
+		existing = parent
+	}
+
+	resolved, err := filepath.EvalSymlinks(existing)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrUnsafePath, target)
+	}
+	for _, root := range paths {
+		resolvedRoot := root
+		if r, err := filepath.EvalSymlinks(root); err == nil {
+			resolvedRoot = r
+		}
+		if isSubpath(resolvedRoot, resolved) || resolved == resolvedRoot {
+			return nil
+		}
+	}
+	return fmt.Errorf("%w: %s", ErrUnsafePath, target)
 }
 
 func protoS3Config(pb *agentpb.S3Config) S3Config {

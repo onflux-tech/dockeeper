@@ -24,6 +24,12 @@ var proxySources = map[string]bool{
 	"process": true,
 }
 
+var proxyStatuses = map[string]bool{
+	"healthy":  true,
+	"degraded": true,
+	"unknown":  true,
+}
+
 type ProxyStore struct {
 	app core.App
 }
@@ -129,7 +135,7 @@ func (s *ProxyStore) Replace(serverID string, instances []*agentpb.ProxyInstance
 }
 
 func defaultProxyStatus(status string) string {
-	if status == "" {
+	if !proxyStatuses[status] {
 		return "unknown"
 	}
 	return status

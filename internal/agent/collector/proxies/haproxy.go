@@ -93,7 +93,7 @@ func parseHAProxyConfig(config string) []*agentpb.ProxyRouteInfo {
 			if len(fields) < 3 {
 				continue
 			}
-			address := strings.Trim(fields[2], "\"'")
+			address := redactUpstream(strings.Trim(fields[2], "\"'"))
 			switch section {
 			case "backend":
 				backends[currentBackend] = append(backends[currentBackend], address)

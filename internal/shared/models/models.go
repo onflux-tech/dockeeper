@@ -217,7 +217,6 @@ type UpdatePolicy struct {
 	Updated            types.DateTime `json:"updated"`
 }
 
-// BackupPolicy defines scheduled backup rules for a volume or a host app.
 type BackupPolicy struct {
 	ID            string         `json:"id"`
 	Volume        string         `json:"volume"`
@@ -257,7 +256,6 @@ type BackupRecord struct {
 	Created     types.DateTime `json:"created"`
 }
 
-// ProxyInstance represents a detected proxy server on a host.
 type ProxyInstance struct {
 	ID         string         `json:"id"`
 	Server     string         `json:"server"`
@@ -273,7 +271,6 @@ type ProxyInstance struct {
 	Updated    types.DateTime `json:"updated"`
 }
 
-// ProxyRoute represents a normalized route exposed by a proxy instance.
 type ProxyRoute struct {
 	ID          string         `json:"id"`
 	Instance    string         `json:"instance"`
