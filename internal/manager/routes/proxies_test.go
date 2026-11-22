@@ -17,3 +17,8 @@ func TestProxyRouteInstanceFilterSingle(t *testing.T) {
 	require.Equal(t, "(instance = {:instance0})", filter)
 	require.Equal(t, map[string]any{"instance0": "inst1"}, params)
 }
+
+func TestProxyCountFilterTranslatesOperators(t *testing.T) {
+	filter := proxyCountFilter("server = {:server} && (instance = {:instance0} || instance = {:instance1})")
+	require.Equal(t, "server = {:server} AND (instance = {:instance0} OR instance = {:instance1})", filter)
+}

@@ -31,6 +31,10 @@ func RegisterProxyRoutes(se *core.ServeEvent, app core.App, rbac *middleware.RBA
 	}).BindFunc(rbac.RequireCapability(constants.CapProxiesView))
 }
 
+func proxyCountFilter(filter string) string {
+	return strings.NewReplacer("&&", "AND", "||", "OR").Replace(filter)
+}
+
 func proxyRouteInstanceFilter(instanceIDs []string) (string, map[string]any) {
 	clauses := make([]string, 0, len(instanceIDs))
 	params := make(map[string]any, len(instanceIDs))
@@ -126,7 +130,7 @@ func listProxyRecords(e *core.RequestEvent, app core.App, collection string) err
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	totalItems, err := app.CountRecords(collection, dbx.NewExp(filter, dbx.Params(params)))
+	totalItems, err := app.CountRecords(collection, dbx.NewExp(proxyCountFilter(filter), dbx.Params(params)))
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
