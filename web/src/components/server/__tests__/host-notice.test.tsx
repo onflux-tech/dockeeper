@@ -10,8 +10,8 @@ describe("HostNotice", () => {
 				<HostNotice />
 			</MemoryRouter>,
 		);
-		expect(screen.getByText("Host-only server")).toBeInTheDocument();
 		expect(screen.getByText(/No container runtime detected/)).toBeInTheDocument();
+		expect(screen.getByText(/monitored in host-only mode/)).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Why?" })).toHaveAttribute("href", "/docs");
 	});
 });
