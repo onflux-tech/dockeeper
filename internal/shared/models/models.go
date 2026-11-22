@@ -4,30 +4,35 @@ import "github.com/pocketbase/pocketbase/tools/types"
 
 // Server represents a monitored server running a Dockeeper agent.
 type Server struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	Description   string         `json:"description"`
-	Hostname      string         `json:"hostname"`
-	IPAddress     string         `json:"ip_address"`
-	OS            string         `json:"os"`
-	Arch          string         `json:"arch"`
-	DockerVersion string         `json:"docker_version"`
-	AgentVersion  string         `json:"agent_version"`
-	Status        string         `json:"status"`       // online | offline | error
-	Orchestrator  string         `json:"orchestrator"` // docker | podman | kubernetes
-	LastSeen      types.DateTime `json:"last_seen"`
-	EnrolledAt    types.DateTime `json:"enrolled_at"`
-	Labels        types.JSONRaw  `json:"labels"`
-	CertExpiresAt types.DateTime `json:"cert_expires_at"`
-	CPUModel      string         `json:"cpu_model"`
-	CPUCores      float64        `json:"cpu_cores"`
-	MemTotal      float64        `json:"mem_total"`
-	CurrentCPU    float64        `json:"current_cpu"`
-	CurrentRAM    float64        `json:"current_ram"`
-	CurrentDisk   float64        `json:"current_disk"`
-	UptimeSeconds float64        `json:"uptime_seconds"`
-	Created       types.DateTime `json:"created"`
-	Updated       types.DateTime `json:"updated"`
+	ID                    string         `json:"id"`
+	Name                  string         `json:"name"`
+	Description           string         `json:"description"`
+	Hostname              string         `json:"hostname"`
+	IPAddress             string         `json:"ip_address"`
+	OS                    string         `json:"os"`
+	Arch                  string         `json:"arch"`
+	DockerVersion         string         `json:"docker_version"`
+	AgentVersion          string         `json:"agent_version"`
+	Status                string         `json:"status"`       // online | offline | error
+	Orchestrator          string         `json:"orchestrator"` // docker | podman | kubernetes
+	LastSeen              types.DateTime `json:"last_seen"`
+	EnrolledAt            types.DateTime `json:"enrolled_at"`
+	Labels                types.JSONRaw  `json:"labels"`
+	CertExpiresAt         types.DateTime `json:"cert_expires_at"`
+	CPUModel              string         `json:"cpu_model"`
+	CPUCores              float64        `json:"cpu_cores"`
+	MemTotal              float64        `json:"mem_total"`
+	CurrentCPU            float64        `json:"current_cpu"`
+	CurrentRAM            float64        `json:"current_ram"`
+	CurrentDisk           float64        `json:"current_disk"`
+	UptimeSeconds         float64        `json:"uptime_seconds"`
+	ConnectivityStatus    string         `json:"connectivity_status"`
+	ConnectivityCheckedAt types.DateTime `json:"connectivity_checked_at"`
+	ConnectivityLatencyMS int            `json:"connectivity_latency_ms"`
+	ConnectivityDetails   types.JSONRaw  `json:"connectivity_details"`
+	ViewScope             string         `json:"view_scope"`
+	Created               types.DateTime `json:"created"`
+	Updated               types.DateTime `json:"updated"`
 }
 
 // Container represents a Docker/Podman container on a server.
@@ -249,7 +254,7 @@ type AlertRule struct {
 	Operator      string         `json:"operator"` // gt | lt | gte | lte | eq
 	Threshold     float64        `json:"threshold"`
 	Duration      int            `json:"duration"`
-	TargetType    string         `json:"target_type"` // server | container
+	TargetType    string         `json:"target_type"` // server | container | host_app
 	TargetID      string         `json:"target_id"`
 	Channels      []string       `json:"channels"`
 	Enabled       bool           `json:"enabled"`
@@ -390,6 +395,21 @@ type HostAppMetric struct {
 	MemBytes   float64        `json:"mem_bytes"`
 	Restarts   int            `json:"restarts"`
 	Created    types.DateTime `json:"created"`
+}
+
+type ServerConnectivityRaw struct {
+	ID            string         `json:"id"`
+	Server        string         `json:"server"`
+	Timestamp     types.DateTime `json:"timestamp"`
+	InternetOK    bool           `json:"internet_ok"`
+	InternetMS    int            `json:"internet_ms"`
+	DNSOK         bool           `json:"dns_ok"`
+	DNSMS         int            `json:"dns_ms"`
+	GatewayOK     bool           `json:"gateway_ok"`
+	GatewayMS     int            `json:"gateway_ms"`
+	GatewayMethod string         `json:"gateway_method"`
+	Error         string         `json:"error"`
+	Created       types.DateTime `json:"created"`
 }
 
 // BatchJob represents a batch operation across multiple containers/servers.
