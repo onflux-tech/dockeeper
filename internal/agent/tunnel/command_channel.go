@@ -45,6 +45,7 @@ type Client struct {
 	healthHandler  *grpchandlers.HealthHandler
 	updateHandler  *grpchandlers.UpdateHandler
 	hostActions    *executor.HostActionExecutor
+	hostHealth     *grpchandlers.HostHealthHandler
 
 	// Dependencies for streaming operations.
 	exec executor.Executor
@@ -83,6 +84,7 @@ func NewClient(
 		healthHandler:  grpchandlers.NewHealthHandler(logger),
 		updateHandler:  grpchandlers.NewUpdateHandler(exec, logger, dataDir),
 		hostActions:    executor.NewHostActionExecutor(logger, executor.WithInventory(hostState.Apps)),
+		hostHealth:     grpchandlers.NewHostHealthHandler(logger, grpchandlers.WithHostInventory(hostState.Apps)),
 
 		exec:       exec,
 		orch:       orch,
@@ -349,6 +351,11 @@ func (c *Client) dispatchCommand(ctx context.Context, cmd *agentpb.ChannelComman
 			actionResult.Error = err.Error()
 		}
 		result.Result = &agentpb.ChannelCommandResult_HostAppAction{HostAppAction: actionResult}
+
+	case *agentpb.ChannelCommand_HostHealthCheck:
+		result.Result = &agentpb.ChannelCommandResult_HostHealthCheck{
+			HostHealthCheck: c.hostHealth.Execute(ctx, req.HostHealthCheck),
+		}
 
 	default:
 		result.Result = &agentpb.ChannelCommandResult_Error{
