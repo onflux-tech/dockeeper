@@ -125,6 +125,17 @@ NO-GO MANTIDO | NO-GO REFUTADO | GO CONFIRMADO | GO REFUTADO
 - `NO-GO REFUTADO` exige todos os Critical e Important refutados e nenhum achado da lente; vira `GO`.
 - `GO REFUTADO` e achado Critical/Important da lente bloqueiam e vão para a triagem do usuário.
 
+## QA de UI
+
+O `/review` despacha o `dockeeper-ui-qa` em paralelo ao reviewer quando o diff toca `web/**`. Ele cobre a camada que lint, teste e leitura de código não veem: a tela renderizada.
+
+- **Escopo:** só as rotas afetadas pelo diff, em 1440×900, 1024×768, 768×1024 e 390×844.
+- **Checklist:** primeira dobra e hierarquia, ordem e largura das boxes, densidade e paginação de coleções, responsividade, estados, design system, a11y básica e o fluxo principal contra a API.
+- **Baseline:** componentes e tokens do repositório e a página equivalente já entregue; protótipo ou imagem de referência é intenção de layout, não pixel-diff.
+- **Evidência:** captura por viewport, rota, seletor e passos. Sem UI renderizada, o parecer é `INCONCLUSIVO`, nunca `GO`.
+- **Veredito:** `GO` ou `NO-GO`, com severidade por achado. `NO-GO` bloqueia o merge de frontend; `INCONCLUSIVO` volta para o usuário com o comando que faltou.
+- O UI QA não substitui `make lint-web`, `make test-web` nem os eixos do reviewer; ele não edita e não sugere patch.
+
 ## Depois da correção
 
 - Correção com prova própria (teste vermelho antes e verde depois) e gates verdes não pede review completo novo.

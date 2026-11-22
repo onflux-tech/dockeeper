@@ -9,6 +9,7 @@ argument-hint: [base]
    - PR de promoção: `git diff origin/production...origin/develop`.
    - Inclua no prompt: a base usada, os critérios de aceite e as mutações plausíveis (se existirem) e o contrato `docs/review.md`.
    - Não cole o diff no prompt; o agent busca.
+   - Se o diff toca `web/**`, despache também o `dockeeper-ui-qa` na mesma base, com as rotas afetadas, os viewports e o contrato de `docs/review.md`. Ele roda em paralelo ao reviewer.
 
 2. Com o relatório do reviewer em mãos, despache o subagent `dockeeper-refuter` na mesma base.
    - Cole no prompt apenas o relatório do reviewer, a base, os critérios de aceite e as mutações plausíveis.
@@ -20,5 +21,6 @@ argument-hint: [base]
    - `REFUTED` não é corrigido; fica registrado com a prova do refuter.
    - `GO REFUTADO` e achado Critical/Important da lente operacional bloqueiam.
    - Minor refutado não some: vai para o relatório e o usuário tria.
+   - Relatório do `dockeeper-ui-qa` entra separado. `NO-GO` de UI bloqueia o merge de frontend; `INCONCLUSIVO` volta para o usuário com o comando que faltou.
 
 4. Não edite durante o review. Reporte os achados e espere a decisão.
