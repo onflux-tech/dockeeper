@@ -31,6 +31,7 @@ type Collector struct {
 	runCommand    func(ctx context.Context, name string, args ...string) (string, error)
 	httpClient    *http.Client
 	traefikAPIURL func(ctx context.Context) string
+	labelRoutes   func(ctx context.Context) []*agentpb.TraefikRouteInfo
 }
 
 func New(logger *slog.Logger, hostApps func() []collector.HostApp, opts ...Option) *Collector {
@@ -49,6 +50,12 @@ func New(logger *slog.Logger, hostApps func() []collector.HostApp, opts ...Optio
 func WithTraefikAPIURL(fn func(ctx context.Context) string) Option {
 	return func(c *Collector) {
 		c.traefikAPIURL = fn
+	}
+}
+
+func WithTraefikLabelRoutes(fn func(ctx context.Context) []*agentpb.TraefikRouteInfo) Option {
+	return func(c *Collector) {
+		c.labelRoutes = fn
 	}
 }
 

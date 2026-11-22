@@ -35,22 +35,50 @@ func (c *Collector) collectTraefik(ctx context.Context, app *collector.HostApp, 
 
 	base := strings.TrimSuffix(apiURL, "/")
 	var routers []traefikRouter
-	if err := c.getJSON(ctx, base+"/api/http/routers", &routers); err != nil {
-		inst.Status = "unknown"
-		c.logger.Debug("proxies: traefik API failed", "error", err)
+	apiErr := c.getJSON(ctx, base+"/api/http/routers", &routers)
+	if apiErr == nil && len(routers) > 0 {
+		var services []traefikService
+		if err := c.getJSON(ctx, base+"/api/http/services", &services); err != nil {
+			c.logger.Debug("proxies: traefik services failed", "error", err)
+		}
+		inst.Routes = parseTraefik(routers, services)
 		return inst
 	}
 
-	var services []traefikService
-	if err := c.getJSON(ctx, base+"/api/http/services", &services); err != nil {
-		c.logger.Debug("proxies: traefik services failed", "error", err)
+	if c.labelRoutes != nil {
+		if routes := c.labelRoutes(ctx); len(routes) > 0 {
+			inst.Routes = convertTraefikRoutes(routes)
+			return inst
+		}
 	}
 
-	inst.Routes = parseTraefik(routers, services)
-	if len(inst.Routes) == 0 {
-		inst.Status = "unknown"
+	inst.Status = "unknown"
+	if apiErr != nil {
+		c.logger.Debug("proxies: traefik API failed", "error", apiErr)
 	}
 	return inst
+}
+
+func convertTraefikRoutes(routes []*agentpb.TraefikRouteInfo) []*agentpb.ProxyRouteInfo {
+	converted := make([]*agentpb.ProxyRouteInfo, 0, len(routes))
+	for _, route := range routes {
+		hosts := ruleValues(route.GetRule(), "Host")
+		paths := append(ruleValues(route.GetRule(), "PathPrefix"), ruleValues(route.GetRule(), "Path")...)
+		if len(paths) == 0 {
+			paths = []string{"/"}
+		}
+		status := traefikRouteStatus(route.GetStatus())
+		converted = append(converted, &agentpb.ProxyRouteInfo{
+			Name:        route.GetName(),
+			Hosts:       hosts,
+			Paths:       paths,
+			Tls:         route.GetTls(),
+			Middlewares: route.GetMiddlewares(),
+			Status:      status,
+			Provider:    route.GetProvider(),
+		})
+	}
+	return converted
 }
 
 func parseTraefik(routers []traefikRouter, services []traefikService) []*agentpb.ProxyRouteInfo {

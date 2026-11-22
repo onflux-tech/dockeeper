@@ -162,6 +162,8 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	proxyCollector := proxies.New(a.logger, hostState.Apps, proxies.WithTraefikAPIURL(func(ctx context.Context) string {
 		return collector.DetectTraefikAPIURL(ctx, orch, a.logger)
+	}), proxies.WithTraefikLabelRoutes(func(ctx context.Context) []*agentpb.TraefikRouteInfo {
+		return collector.TraefikLabelRoutes(ctx, orch, a.logger)
 	}))
 	proxyReporter := NewProxyReporter(a.client.Host(), a.cfg.ServerID, a.logger)
 	proxyReporter.SetServerGoneCallback(triggerReEnrollment)

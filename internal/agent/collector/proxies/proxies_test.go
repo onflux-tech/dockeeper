@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflux-tech/dockeeper/internal/agent/collector"
+	agentpb "github.com/onflux-tech/dockeeper/proto/gen/dockeeper/agent/v1"
 )
 
 const nginxFixture = `# configuration file /etc/nginx/nginx.conf:
@@ -188,4 +189,45 @@ func TestCollectorDetectsNginx(t *testing.T) {
 	require.Equal(t, "nginx", instances[0].Kind)
 	require.Equal(t, "systemd", instances[0].Source)
 	require.Len(t, instances[0].Routes, 2)
+}
+
+func TestCollectorTraefikFallsBackToLabels(t *testing.T) {
+	c := New(
+		slog.Default(),
+		func() []collector.HostApp { return nil },
+		WithTraefikAPIURL(func(context.Context) string { return "http://127.0.0.1:1" }),
+		WithTraefikLabelRoutes(func(context.Context) []*agentpb.TraefikRouteInfo {
+			return []*agentpb.TraefikRouteInfo{{
+				Name:     "app",
+				Rule:     "Host(`app.example.com`) && PathPrefix(`/api`)",
+				Provider: "docker",
+				Status:   "enabled",
+				Tls:      true,
+			}}
+		}),
+	)
+
+	instances, err := c.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, instances, 1)
+	require.Equal(t, "traefik", instances[0].Kind)
+	require.Equal(t, "healthy", instances[0].Status)
+	require.Len(t, instances[0].Routes, 1)
+	require.Equal(t, []string{"app.example.com"}, instances[0].Routes[0].Hosts)
+	require.Equal(t, []string{"/api"}, instances[0].Routes[0].Paths)
+	require.True(t, instances[0].Routes[0].Tls)
+}
+
+func TestCollectorTraefikWithoutAPIOrLabelsIsUnknown(t *testing.T) {
+	c := New(
+		slog.Default(),
+		func() []collector.HostApp { return nil },
+		WithTraefikAPIURL(func(context.Context) string { return "http://127.0.0.1:1" }),
+	)
+
+	instances, err := c.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, instances, 1)
+	require.Equal(t, "unknown", instances[0].Status)
+	require.Empty(t, instances[0].Routes)
 }

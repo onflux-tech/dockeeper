@@ -350,6 +350,10 @@ func (t *TraefikCollector) fetchFromLabels(ctx context.Context) ([]*agentpb.Trae
 
 // parseLabelsInto extracts Traefik router labels from a JSON labels string.
 func (t *TraefikCollector) parseLabelsInto(labelsJSON string, routeMap map[string]*agentpb.TraefikRouteInfo) {
+	parseTraefikLabels(labelsJSON, routeMap)
+}
+
+func parseTraefikLabels(labelsJSON string, routeMap map[string]*agentpb.TraefikRouteInfo) {
 	if labelsJSON == "" {
 		return
 	}
@@ -400,6 +404,10 @@ func (t *TraefikCollector) parseLabelsInto(labelsJSON string, routeMap map[strin
 
 // parseSwarmServiceLabels reads Traefik labels from Docker Swarm services.
 func (t *TraefikCollector) parseSwarmServiceLabels(ctx context.Context, routeMap map[string]*agentpb.TraefikRouteInfo) {
+	collectSwarmTraefikLabels(ctx, t.logger, routeMap)
+}
+
+func collectSwarmTraefikLabels(ctx context.Context, logger *slog.Logger, routeMap map[string]*agentpb.TraefikRouteInfo) {
 	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
 	if err != nil {
 		return
@@ -410,14 +418,40 @@ func (t *TraefikCollector) parseSwarmServiceLabels(ctx context.Context, routeMap
 		Filters: filters.NewArgs(filters.Arg("label", "traefik.enable=true")),
 	})
 	if err != nil {
-		t.logger.Debug("traefik: failed to list Swarm services", "error", err)
+		logger.Debug("traefik: failed to list Swarm services", "error", err)
 		return
 	}
 
 	for _, svc := range services {
 		labelsJSON, _ := json.Marshal(svc.Spec.Labels)
-		t.parseLabelsInto(string(labelsJSON), routeMap)
+		parseTraefikLabels(string(labelsJSON), routeMap)
 	}
+}
+
+// TraefikLabelRoutes reads Traefik router labels from containers and, when that
+// yields nothing, from Swarm services. It is the fallback used when the Traefik
+// API is not reachable, e.g. a Swarm deployment without the API port published.
+func TraefikLabelRoutes(ctx context.Context, orch OrchestratorClient, logger *slog.Logger) []*agentpb.TraefikRouteInfo {
+	routeMap := make(map[string]*agentpb.TraefikRouteInfo)
+
+	if orch != nil {
+		if containers, err := orch.ListContainers(ctx); err == nil {
+			for _, c := range containers {
+				parseTraefikLabels(c.GetLabelsJson(), routeMap)
+			}
+		}
+	}
+	if len(routeMap) == 0 {
+		collectSwarmTraefikLabels(ctx, logger, routeMap)
+	}
+
+	routes := make([]*agentpb.TraefikRouteInfo, 0, len(routeMap))
+	for _, r := range routeMap {
+		if r.Rule != "" {
+			routes = append(routes, r)
+		}
+	}
+	return filterRoutes(routes)
 }
 
 // filterRoutes removes internal/catch-all routes that are not useful to display.
