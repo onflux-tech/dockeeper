@@ -48,7 +48,7 @@ const REF_ALLOW = new Set([
 	"dist",
 	".claude/settings.local.json",
 ]);
-const REF_ALLOW_PREFIXES = ["web/dist", "web/node_modules", "bin/", "dk_data/", "dk-agent-data/", "tmp/", "dist/"];
+const REF_ALLOW_PREFIXES = ["web/dist", "web/node_modules", "bin/", "dk_data/", "dk-agent-data/", "tmp/", "dist/", "docs/superpowers/"];
 const PORT_DIRS = [
 	".claude/skills",
 	".claude/commands",

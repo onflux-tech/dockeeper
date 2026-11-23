@@ -5,7 +5,8 @@ argument-hint: [base]
 
 1. Despache o subagent `dockeeper-reviewer` para revisar o diff atual.
    - Sem argumento: working tree (`git status --short`, `git diff`, `git diff --cached` e untracked relevantes).
-   - PR de feature: `git merge-base origin/develop HEAD` e `git diff <merge-base>...HEAD`.
+   - Close pré-commit: `git merge-base origin/develop HEAD` e `git diff <merge-base>` mais untracked; `...HEAD` não vê a evolução no working tree.
+   - PR de feature já pushado: `git merge-base origin/develop HEAD` e `git diff <merge-base>...HEAD`.
    - PR de promoção: `git diff origin/production...origin/develop`.
    - Inclua no prompt: a base usada, os critérios de aceite e as mutações plausíveis (se existirem) e o contrato `docs/review.md`.
    - Não cole o diff no prompt; o agent busca.
@@ -22,5 +23,6 @@ argument-hint: [base]
    - `GO REFUTADO` e achado Critical/Important da lente operacional bloqueiam.
    - Minor refutado não some: vai para o relatório e o usuário tria.
    - Relatório do `dockeeper-ui-qa` entra separado. `NO-GO` de UI bloqueia o merge de frontend; `INCONCLUSIVO` volta para o usuário com o comando que faltou.
+   - Grave o relatório combinado (reviewer, refuter e UI QA quando houver) e o veredito em `tmp/<entrega>/review.md`. `<entrega>` vem do `process.md` ou do header do plano; sem nenhum, pergunte com a ask.
 
 4. Não edite durante o review. Reporte os achados e espere a decisão.

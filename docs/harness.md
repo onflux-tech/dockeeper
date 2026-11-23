@@ -16,13 +16,15 @@ Edite `harness/` e rode `make harness-sync`. Não edite as portas à mão; o hea
 
 ## Fluxo de evolução
 
-Ao fim de uma entrega, depois de `/verify` e `/review`:
+No processo completo, antes do `/review`:
 
 1. Liste o que a entrega ensinou.
 2. Aplique a tabela abaixo.
 3. Rode `make harness-sync`, `make harness-check` e `make harness-test`.
 4. Registre a mudança em `## Registro de evolução`.
-5. Commite fonte e portas juntas.
+5. Rode `make verify`.
+6. Rode `/review` no diff completo (commits mais working tree).
+7. Commite fonte e portas juntas, depois do `GO`.
 
 | O que a entrega ensinou | Destino | Quem decide |
 |---|---|---|
@@ -46,6 +48,7 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | review, push ou achado | `docs/review.md` |
 | release, tag ou GHCR | `docs/release.md` |
 | skill, command ou agent | este arquivo e `harness/README.md` |
+| processo, Gate 0, spec ou plano | `docs/process.md` |
 
 ## Registro de evolução
 
@@ -62,6 +65,7 @@ Ao fim de uma entrega, depois de `/verify` e `/review`:
 | 2026-11-21 | Guarda única: hook do Claude e plugin `.opencode/plugins/subagent-guard.js` aplicam a mesma `evaluate`; as `permissions` do OpenCode ficam só com a estrutura read-only e o Bash amplo. |
 | 2026-11-22 | Papel `dockeeper-ui-qa` e comando `/qa`: QA read-only da UI renderizada para diffs `web/**`, com viewports 1440/1024/768/390, hierarquia, densidade/paginação, estados, a11y e fluxo principal; despachado pelo `/review` em paralelo ao reviewer. |
 | 2026-11-22 | Regra de evidência obrigatória: toda mudança no diff precisa de teste e saída colada; ausência é achado Important, nunca `GO`. |
+| 2026-11-23 | Processo gateado: `dockeeper-process`, `/feature`, `/spec`, `dockeeper-spec-reviewer`, close com evolução antes do review, veredito em `tmp/<entrega>/review.md` e política de `tmp`. |
 
 ## Cadência
 

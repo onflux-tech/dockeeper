@@ -10,7 +10,8 @@ GO_PACKAGES = ./cmd/... ./internal/... ./migrations/...
 .PHONY: all build-manager build-agent build lint format test clean dev dev-manager dev-agent dev-all run proto-gen \
         dev-web build-web lint-web format-web test-web \
         build-all build-agent-dist docker-build docker-push release verify verify-fast pre-push hooks tools \
-        harness-sync harness-check harness-test changelog-draft changelog-check release-check
+        harness-sync harness-check harness-test changelog-draft changelog-check release-check \
+        tmp-report tmp-prune
 
 all: build
 
@@ -65,6 +66,21 @@ format-check:
 
 test:
 	$(GO) test -count=1 $(GO_PACKAGES)
+
+## ── Tmp ──────────────────────────────────────────────
+
+TMP_KEEP ?= gocache gotmp memory banners e2e
+
+tmp-report:
+	@du -sh tmp 2>/dev/null || true
+	@du -sh tmp/* 2>/dev/null | sort -h | tail -15 || true
+
+tmp-prune:
+	@if [ -d tmp ]; then \
+		find tmp/e2e -type f \( -name '*.exe' -o -name '*.log' \) -print -delete 2>/dev/null || true; \
+		rm -rf tmp/e2e/dockerfake tmp/e2e/dk-agent-data-backup; \
+		find tmp -mindepth 1 -maxdepth 1 $(addprefix ! -name ,$(TMP_KEEP)) -print -exec rm -rf {} +; \
+	fi
 
 clean:
 	rm -rf $(BIN_DIR) tmp web/dist

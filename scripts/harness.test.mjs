@@ -62,7 +62,7 @@ test("renderAgent separa claude e opencode", () => {
 });
 
 test("agentes reais passam no contrato read-only", () => {
-	for (const name of ["dockeeper-reviewer", "dockeeper-refuter"]) {
+	for (const name of ["dockeeper-reviewer", "dockeeper-refuter", "dockeeper-spec-reviewer"]) {
 		const opencode = readFileSync(new URL(`../harness/agents/${name}/opencode.yaml`, import.meta.url), "utf8");
 		const claude = readFileSync(new URL(`../harness/agents/${name}/claude.yaml`, import.meta.url), "utf8");
 		assert.deepEqual(readOnlyAgentErrors(name, opencode), []);
@@ -100,6 +100,9 @@ test("subagent-guard libera leitura ampla e teste focado", () => {
 	assert.equal(evaluateSubagentShell("gh api repos/onflux-tech/dockeeper"), null);
 	assert.equal(evaluateSubagentShell("git status && git diff --stat"), null);
 	assert.equal(evaluateSubagentShell("go test ./internal/agent/collector/ -run 'TestDiscovery' -count=1"), null);
+	assert.equal(evaluateSubagentShell("git diff 2>/dev/null"), null);
+	assert.equal(evaluateSubagentShell("git status 2>&1"), null);
+	assert.equal(evaluateSubagentShell("cat AGENTS.md >/dev/null"), null);
 });
 
 test("subagent-guard nega mutação, suíte, pipe de teste e destrutivo", () => {
@@ -149,6 +152,10 @@ test("subagent-guard nega mutação, suíte, pipe de teste e destrutivo", () => 
 	assert.match(evaluateSubagentShell("python -c 'print(1)'"), /script inline/);
 	assert.match(evaluateSubagentShell("git push"), /git de escrita/);
 	assert.match(evaluateSubagentShell("--no-verify"), /destrutivo/);
+	assert.match(evaluateSubagentShell("git diff > tmp/x"), /redirecionamento/);
+	assert.match(evaluateSubagentShell("cat f >> tmp/x"), /redirecionamento/);
+	assert.match(evaluateSubagentShell("git diff 2> tmp/x"), /redirecionamento/);
+	assert.match(evaluateSubagentShell("git diff &> tmp/x"), /redirecionamento/);
 });
 
 test("plugin OpenCode aplica o guard só nos agentes de review", async () => {
@@ -161,15 +168,24 @@ test("plugin OpenCode aplica o guard só nos agentes de review", async () => {
 			},
 		},
 		session: {
-			get: async ({ sessionID }) => ({ agent: sessionID === "review" ? "dockeeper-refuter" : "build" }),
+			get: async ({ sessionID }) => {
+				if (sessionID === "broken") throw new Error("no session");
+				return { agent: sessionID === "review" ? "dockeeper-refuter" : "build" };
+			},
 		},
 	};
 	await plugin.setup(ctx);
 	const run = (sessionID, command) => hooks["execute.before"]({ tool: "shell", sessionID, input: { command } });
+	const runWithAgent = (agent, command) => hooks["execute.before"]({ tool: "shell", agent, input: { command } });
 	await assert.rejects(() => run("review", "git stash"), /git de escrita/);
 	await assert.rejects(() => run("review", 'bash -c "git branch -D main"'), /git de escrita/);
+	await assert.rejects(() => run("review", "git diff > tmp/x"), /redirecionamento/);
+	await assert.rejects(() => run("broken", "git status"), /falha fechado/);
+	await assert.rejects(() => runWithAgent("dockeeper-spec-reviewer", "git diff > tmp/x"), /redirecionamento/);
 	await run("review", "git status --short");
+	await run("review", "git diff 2>/dev/null | head");
 	await run("main", "git stash");
+	await runWithAgent("build", "git stash");
 });
 
 test("porta gerada do subagent-guard é JS válido", () => {

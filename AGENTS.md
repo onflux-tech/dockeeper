@@ -10,10 +10,18 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 - Comunicação em pt-BR. Código, commits, nomes de arquivo e mensagens de ferramenta ficam em inglês.
 - Comece pelo resultado; não narre ação rotineira.
 
+## Processo
+
+- **Gate 0 antes de qualquer edição.** Use a tool de ask/question com uma pergunta e quatro opções: **Processo completo (Recomendado)**, **Caminho rápido**, **Só diagnóstico** e **Já tenho spec/plano**. Sem resposta, sem edição. Se a ask não estiver disponível ou falhar (run não interativo), pare e reporte; não assuma a escolha nem edite. Pergunta pura e diagnóstico não disparam; a primeira edição sempre dispara.
+- **O processo completo** é brainstorming, spec, revisão da spec, grill condicional, plano, revisão do plano, execução, review e close. A spec sempre é escrita; o Execution Handoff do `writing-plans` é suprimido até a revisão do plano; o implement para nos commits; o close faz a evolução do harness, `make verify` e `/review` antes do commit.
+- **O caminho rápido** é só para docs/config/harness puro sem mudança de comportamento, permissões ou comandos, correção de um arquivo ou UI dentro do padrão. Migration, proto, RBAC, backup/restore, stream, auth ou contrato não provado escalam para o completo; docs/config/harness puro é isento do limite de 8 arquivos/5 tasks.
+- **A escolha é durável** no header do plano (`Process: full`) ou em `tmp/<YYYY-MM-DD>-<slug>/process.md` (`Process: fast`); o despacho de subagente leva `process`, `spec`, `plan` e `task`, com `spec`/`plan` como `none` no caminho rápido; o close lê o process e `tmp/<entrega>/review.md`.
+- Contrato completo, fases e fórmula do review: `docs/process.md`.
+
 ## Execução
 
 - Quando houver um plano de implementação aprovado para uma issue, feature ou refactor amplo, pergunte via ask/question como executar: **Nativo (Recomendado)** na sessão principal ou **Subagent-driven** (superpowers).
-- Mudanças pontuais de config, docs, dependências ou harness não passam por essa pergunta; execute nativo.
+- Mudanças pontuais de config, docs, dependências ou harness não passam por essa pergunta; o Gate 0 do processo continua valendo, e o nativo só começa depois da escolha.
 - A escolha não altera os gates: `make verify-fast` antes de commitar e `make verify` antes de push ou release.
 - Trabalho novo sai de `develop` em branch própria e entra por PR; não commite direto em `develop` nem em `production`.
 
@@ -116,21 +124,25 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 
 - `context7` (MCP) para documentação atual das bibliotecas; configurado em `.opencode/opencode.json` e `.mcp.json`.
 - Harness: fonte em `harness/`; `make harness-sync` gera `.claude/` e `.opencode/`; `make harness-check` falha em drift. Não edite as portas à mão.
-- Skills locais: `dockeeper-migration`, `dockeeper-e2e`, `dockeeper-release`, `dockeeper-implement` e `dockeeper-close`.
+- Skills locais: `dockeeper-migration`, `dockeeper-e2e`, `dockeeper-release`, `dockeeper-implement`, `dockeeper-close` e `dockeeper-process`.
+- Spec: `dockeeper-spec-reviewer` em `.claude/agents/` e `.opencode/agents/`; `/spec` em `.claude/commands/` e `.opencode/commands/`. Entrada do processo completo: `/feature`.
 - Review: `dockeeper-reviewer`, `dockeeper-refuter` e `dockeeper-ui-qa` em `.claude/agents/` e `.opencode/agents/`; `/verify`, `/review` e `/qa` em `.claude/commands/` e `.opencode/commands/`.
 - Memória entre sessões, browser e busca web ficam na configuração global de cada harness, não no repositório.
 
 ## Review
 
 - `/verify` roda o gate (`make verify` ou `make verify-fast`) e cola a saída real.
+- No processo completo, `/spec` revisa a spec e o plano antes da implementação; `PRONTO` é o gate antes do plano e antes do `dockeeper-implement`.
 - `/review` despacha `dockeeper-reviewer` e depois `dockeeper-refuter` no mesmo diff; nenhum dos dois edita ou re-roda a suíte. Achado `REFUTED` não é corrigido; achado `UPHELD` ou `INCONCLUSIVO` continua valendo. A lente operacional do refuter pode abrir achado novo, que bloqueia como qualquer Important.
+- O close roda a evolução do harness e o changelog antes do `/review`; no processo completo, o review cobre `git diff <merge-base>` mais untracked e só `GO` ou `GO CONFIRMADO` libera commit, push e PR. No caminho rápido de docs/config/harness, a saída verde de `harness-check` e `harness-test` mais a leitura focada libera o commit, sem `/review`.
 - Diff que toca `web/**` também passa pelo `dockeeper-ui-qa`, em paralelo ao reviewer: rotas afetadas em 1440, 1024, 768 e 390, densidade/paginação, estados, a11y e o fluxo contra a API. `NO-GO` de UI bloqueia o merge de frontend.
 - Toda mudança no diff precisa de teste que a exercite e evidência colada (comando, saída, exit code). Sem isso, não é `GO`.
 - Contrato, eixos, evidência, refutação e formato: `docs/review.md`.
 
 ## Notas internas
 
-- Notas locais ficam em `tmp/` (ignorado) e não são versionadas. O código vence qualquer nota.
+- Notas e evidências locais ficam em `tmp/<YYYY-MM-DD>-<slug>/` (ignorado) e não são versionadas. Nada solto no topo de `tmp/`; segredo não entra em `tmp/`.
+- A evidência durável vai para o PR ou o issue; a pasta da entrega é apagada depois do merge. `make tmp-prune` mantém `gocache`, `gotmp`, `memory`, `banners` e `e2e`, mas remove binários, logs e estado de teste dentro de `e2e`; `make tmp-report` mostra o que ocupa espaço. Banner final é `docs/assets/banner.png`; `tmp/banners` é scratch.
 
 ## Ponteiros
 
@@ -142,6 +154,7 @@ Leia só o documento que o gatilho pedir; não abra `docs/` inteiro.
 | `docs/gotchas.md` | antes de tocar migration, proto, RBAC, embed, TLS, self-update, Docker socket ou EventBus | falhas silenciosas e como evitá-las |
 | `docs/migrations.md` | antes de criar ou alterar collection, campo, índice ou relação | checklist de migration |
 | `docs/harness.md` | antes de mudar skill, command, agent ou gate | fonte, portas, evolução e check |
+| `docs/process.md` | antes de iniciar pedido que muda código, schema, config, infra ou harness | Gate 0, fases, caminho rápido e registros |
 | `docs/review.md` | antes de review, PR ou correção de achado | eixos, evidência, formato e veredito |
 | `docs/e2e.md` | antes de validar localmente ou em staging | runbook e formato de evidência |
 | `docs/release.md` | antes de tag, release ou deploy | GoReleaser, GHCR, versão e CI |

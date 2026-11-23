@@ -4,14 +4,21 @@ Contrato de review pós-implementação. Vale para o agente principal, para o `d
 
 ## Quando
 
-- Antes de abrir ou atualizar o PR, depois de `make verify`.
-- Em mudança de código; docs, config e harness puros não pedem review completo.
+- No processo completo, depois da evolução do harness e do changelog, com `make verify` verde.
+- Antes de abrir ou atualizar o PR.
+- Em mudança de código; docs, config e harness puros não pedem review completo. Se a mudança alterar comportamento, permissões ou comandos, o review é completo.
 - Em issue, feature ou refactor amplo, o review acontece antes de declarar pronto.
+- O relatório consolidado e o veredito vão para `tmp/<entrega>/review.md`; o PR é a evidência durável.
+
+## Review leve
+
+Para docs, config e harness sem mudança de comportamento, permissões ou comandos: rode `make harness-check` e `make harness-test` e faça uma leitura focada do diff; não despache reviewer, refuter nem UI QA. A evidência é a saída dos comandos e a leitura; a saída verde libera o commit. Qualquer mudança de comportamento, permissões ou comandos volta ao review completo.
 
 ## Base do diff
 
 - Working tree por padrão: `git status --short`, `git diff`, `git diff --cached` e untracked relevantes.
-- PR de feature: `git merge-base origin/develop HEAD` e `git diff <merge-base>...HEAD`.
+- Close pré-commit: `git merge-base origin/develop HEAD` e `git diff <merge-base>` mais untracked; o `...HEAD` não vê a evolução no working tree.
+- PR de feature já pushado: `git merge-base origin/develop HEAD` e `git diff <merge-base>...HEAD`.
 - PR de promoção: `git diff origin/production...origin/develop`.
 - Range de commits: base explícita no despacho. Use `git merge-base <base> HEAD` e `git diff <merge-base>...HEAD`; nunca `HEAD~1`.
 - O revisor busca o diff sozinho. Não cole o diff no prompt.
@@ -50,9 +57,9 @@ Toda afirmação sobre gate precisa de comando, saída e exit code. Sem isso, é
 - Não canalize teste para `tail`/`head`/`grep`; redirecione para arquivo e leia.
 - Uma suíte por vez.
 - Warning em saída de teste ou build é achado.
-- Reviewer e refuter têm Bash amplo para leitura: git read-only, `gh`, `cat`, `rg`, pipes de leitura e comandos compostos. Mutações de git, suíte de teste, pipe de teste, flags que escrevem e comandos destrutivos são bloqueados pelo harness.
-- No OpenCode, o plugin `.opencode/plugins/subagent-guard.js` aplica a mesma função `evaluate` do hook; as `permissions` só liberam leitura e Bash e negam `edit`/`write`.
-- Os dois harnesses bloqueiam git de escrita, suíte, pipe de teste, flags de escrita, destrutivos, `gh` de mutação, script inline e wrappers como `sudo`/`env`/`bash -c`.
+- Reviewer e refuter têm Bash amplo para leitura: git read-only, `gh`, `cat`, `rg`, pipes de leitura e comandos compostos. Mutações de git, suíte de teste, pipe de teste, flags que escrevem, redirecionamento de escrita e comandos destrutivos são bloqueados pelo harness.
+- No OpenCode, o plugin `.opencode/plugins/subagent-guard.js` aplica a mesma função `evaluate` do hook; as `permissions` só liberam leitura e Bash e negam `edit`/`write`. Se o plugin não conseguir confirmar o agente da sessão, ele falha fechado.
+- Os dois harnesses bloqueiam git de escrita, suíte, pipe de teste, flags de escrita, redirecionamento de escrita, destrutivos, `gh` de mutação, script inline e wrappers como `sudo`/`env`/`bash -c`.
 - A guarda é best-effort: nega os caminhos conhecidos; o read-only estrutural (tools sem `Write`/`Edit`) e o contrato do corpo são a barreira.
 - Falha pré-existente só com baseline: `git stash`, rodar, `git stash pop`, rodar, as duas saídas coladas.
 - Saída sem alvo identificado é `INCONCLUSIVA`, não PASS.
