@@ -22,6 +22,8 @@ Sem resposta, não edite. Leia só o necessário para classificar. Pergunta pura
 - **Só diagnóstico:** analise e reporte, sem editar. Se o usuário pedir a correção depois, o gate volta.
 - **Já tenho spec/plano:** peça os paths e comece na revisão da spec/plano ou na execução, sem refazer o brainstorming.
 
+A entrada `/feature` já é a escolha do processo completo: não repita o Gate 0; comece no brainstorming.
+
 ## Processo completo
 
 1. `brainstorming`: explore, escolha a abordagem e escreva a spec em `docs/superpowers/specs/`. A spec é sempre escrita; o caminho Bounded de versões antigas do skill não vale.
