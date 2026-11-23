@@ -10,8 +10,9 @@ description: "Use ao fechar uma entrega do dockeeper: evolução do harness, cha
 2. Liste o que a entrega ensinou e aplique a tabela de `docs/harness.md`: gotcha, convenção, lente de review ou procedimento repetido.
 3. Edite a fonte em `harness/`, nunca a porta, e rode `make harness-sync`, `make harness-check` e `make harness-test`.
 4. Atualize o Registro de evolução em `docs/harness.md`. Atualize o changelog do produto (`web/src/data/changelog.ts`) só se a entrega mudar o produto.
-5. Rode `make verify`. Para docs, config ou harness sem mudança de comportamento, permissões ou comandos, o light review de `docs/review.md` vale; mudança de comportamento, permissões ou comandos exige o review completo.
-6. Rode `/review` na base `git merge-base origin/develop HEAD`, com `git diff <merge-base>` mais untracked, porque a evolução ainda está no working tree. Grave reviewer, refuter e UI QA (quando `web/**`) e o veredito em `tmp/<entrega>/review.md`.
+5. Rode `make verify`.
+6. No processo completo, rode `/review` na base `git merge-base origin/develop HEAD`, com `git diff <merge-base>` mais untracked, porque a evolução ainda está no working tree. Grave reviewer, refuter e UI QA (quando `web/**`) e o veredito em `tmp/<entrega>/review.md`.
 7. Triague: `UPHELD` e `INCONCLUSIVO` continuam; `REFUTED` não é corrigido. Corrija, rode `make verify` de novo e recheque os achados afetados. Só `GO` ou `GO CONFIRMADO` libera o commit.
-8. Commite fonte e portas juntas, em inglês, conventional, imperativo. Peça autorização, faça push da branch e abra o PR para `develop`. Squash merge só com autorização; promoção é o fluxo do `dockeeper-release`.
-9. Depois do merge, apague `tmp/<entrega>/` ou rode `make tmp-prune`.
+8. No caminho rápido de docs/config/harness sem mudança de comportamento, permissões ou comandos, use o light review de `docs/review.md`: a saída verde do `make verify` (que inclui `harness-check` e `harness-test`) e a leitura focada liberam o commit; não há `/review`, refuter, UI QA nem `GO`. Mudança de comportamento, permissões ou comandos volta ao passo 6.
+9. Commite fonte e portas juntas, em inglês, conventional, imperativo. Peça autorização, faça push da branch e abra o PR para `develop`. Squash merge só com autorização; promoção é o fluxo do `dockeeper-release`.
+10. Depois do merge, apague `tmp/<entrega>/`. `make tmp-prune` é limpeza global, só quando não houver outra entrega em andamento.

@@ -12,7 +12,7 @@ Fonte única de instrução para Claude Code e OpenCode. O `CLAUDE.md` importa e
 
 ## Processo
 
-- **Gate 0 antes de qualquer edição.** Use a tool de ask/question com uma pergunta e quatro opções: **Processo completo (Recomendado)**, **Caminho rápido**, **Só diagnóstico** e **Já tenho spec/plano**. Sem resposta, sem edição. Pergunta pura e diagnóstico não disparam; a primeira edição sempre dispara.
+- **Gate 0 antes de qualquer edição.** Use a tool de ask/question com uma pergunta e quatro opções: **Processo completo (Recomendado)**, **Caminho rápido**, **Só diagnóstico** e **Já tenho spec/plano**. Sem resposta, sem edição. Se a ask não estiver disponível ou falhar (run não interativo), pare e reporte; não assuma a escolha nem edite. Pergunta pura e diagnóstico não disparam; a primeira edição sempre dispara.
 - **O processo completo** é brainstorming, spec, revisão da spec, grill condicional, plano, revisão do plano, execução, review e close. A spec sempre é escrita; o Execution Handoff do `writing-plans` é suprimido até a revisão do plano; o implement para nos commits; o close faz a evolução do harness, `make verify` e `/review` antes do commit.
 - **O caminho rápido** é só para docs/config/harness puro sem mudança de comportamento, permissões ou comandos, correção de um arquivo ou UI dentro do padrão. Migration, proto, RBAC, backup/restore, stream, auth ou contrato não provado escalam para o completo; docs/config/harness puro é isento do limite de 8 arquivos/5 tasks.
 - **A escolha é durável** no header do plano (`Process: full`) ou em `tmp/<YYYY-MM-DD>-<slug>/process.md` (`Process: fast`); o despacho de subagente leva `process`, `spec`, `plan` e `task`, com `spec`/`plan` como `none` no caminho rápido; o close lê o process e `tmp/<entrega>/review.md`.
@@ -134,7 +134,7 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 - `/verify` roda o gate (`make verify` ou `make verify-fast`) e cola a saída real.
 - No processo completo, `/spec` revisa a spec e o plano antes da implementação; `PRONTO` é o gate antes do plano e antes do `dockeeper-implement`.
 - `/review` despacha `dockeeper-reviewer` e depois `dockeeper-refuter` no mesmo diff; nenhum dos dois edita ou re-roda a suíte. Achado `REFUTED` não é corrigido; achado `UPHELD` ou `INCONCLUSIVO` continua valendo. A lente operacional do refuter pode abrir achado novo, que bloqueia como qualquer Important.
-- O close roda a evolução do harness e o changelog antes do `/review`; o review cobre `git diff <merge-base>` mais untracked e só `GO` ou `GO CONFIRMADO` libera commit, push e PR.
+- O close roda a evolução do harness e o changelog antes do `/review`; no processo completo, o review cobre `git diff <merge-base>` mais untracked e só `GO` ou `GO CONFIRMADO` libera commit, push e PR. No caminho rápido de docs/config/harness, a saída verde de `harness-check` e `harness-test` mais a leitura focada libera o commit, sem `/review`.
 - Diff que toca `web/**` também passa pelo `dockeeper-ui-qa`, em paralelo ao reviewer: rotas afetadas em 1440, 1024, 768 e 390, densidade/paginação, estados, a11y e o fluxo contra a API. `NO-GO` de UI bloqueia o merge de frontend.
 - Toda mudança no diff precisa de teste que a exercite e evidência colada (comando, saída, exit code). Sem isso, não é `GO`.
 - Contrato, eixos, evidência, refutação e formato: `docs/review.md`.

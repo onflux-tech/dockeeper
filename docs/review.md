@@ -12,7 +12,7 @@ Contrato de review pós-implementação. Vale para o agente principal, para o `d
 
 ## Review leve
 
-Para docs, config e harness sem mudança de comportamento, permissões ou comandos: rode `make harness-check`, `make harness-test` (ou `make verify-fast`) e faça uma leitura focada do diff; não despache reviewer, refuter nem UI QA. A evidência é a saída dos comandos e a leitura. Qualquer mudança de comportamento, permissões ou comandos volta ao review completo.
+Para docs, config e harness sem mudança de comportamento, permissões ou comandos: rode `make harness-check` e `make harness-test` e faça uma leitura focada do diff; não despache reviewer, refuter nem UI QA. A evidência é a saída dos comandos e a leitura; a saída verde libera o commit. Qualquer mudança de comportamento, permissões ou comandos volta ao review completo.
 
 ## Base do diff
 
@@ -57,9 +57,9 @@ Toda afirmação sobre gate precisa de comando, saída e exit code. Sem isso, é
 - Não canalize teste para `tail`/`head`/`grep`; redirecione para arquivo e leia.
 - Uma suíte por vez.
 - Warning em saída de teste ou build é achado.
-- Reviewer e refuter têm Bash amplo para leitura: git read-only, `gh`, `cat`, `rg`, pipes de leitura e comandos compostos. Mutações de git, suíte de teste, pipe de teste, flags que escrevem e comandos destrutivos são bloqueados pelo harness.
-- No OpenCode, o plugin `.opencode/plugins/subagent-guard.js` aplica a mesma função `evaluate` do hook; as `permissions` só liberam leitura e Bash e negam `edit`/`write`.
-- Os dois harnesses bloqueiam git de escrita, suíte, pipe de teste, flags de escrita, destrutivos, `gh` de mutação, script inline e wrappers como `sudo`/`env`/`bash -c`.
+- Reviewer e refuter têm Bash amplo para leitura: git read-only, `gh`, `cat`, `rg`, pipes de leitura e comandos compostos. Mutações de git, suíte de teste, pipe de teste, flags que escrevem, redirecionamento de escrita e comandos destrutivos são bloqueados pelo harness.
+- No OpenCode, o plugin `.opencode/plugins/subagent-guard.js` aplica a mesma função `evaluate` do hook; as `permissions` só liberam leitura e Bash e negam `edit`/`write`. Se o plugin não conseguir confirmar o agente da sessão, ele falha fechado.
+- Os dois harnesses bloqueiam git de escrita, suíte, pipe de teste, flags de escrita, redirecionamento de escrita, destrutivos, `gh` de mutação, script inline e wrappers como `sudo`/`env`/`bash -c`.
 - A guarda é best-effort: nega os caminhos conhecidos; o read-only estrutural (tools sem `Write`/`Edit`) e o contrato do corpo são a barreira.
 - Falha pré-existente só com baseline: `git stash`, rodar, `git stash pop`, rodar, as duas saídas coladas.
 - Saída sem alvo identificado é `INCONCLUSIVA`, não PASS.

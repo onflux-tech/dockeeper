@@ -16,7 +16,7 @@ Antes de qualquer edição, uma pergunta com a ask do harness, nesta ordem:
 3. **Só diagnóstico** — análise read-only, sem edição.
 4. **Já tenho spec/plano** — começar na revisão ou na execução, com os paths.
 
-Sem resposta, sem edição. A escolha fica no header do plano (`Process: full`) ou em `tmp/<YYYY-MM-DD>-<slug>/process.md` (`Process: fast`), com o escopo e os critérios de aceite. O despacho de subagente leva `process`, `spec`, `plan` e `task`; no caminho rápido, `spec` e `plan` vão como `none`, e no completo um arquivo ausente faz o worker parar. O close lê o process e `tmp/<entrega>/review.md`.
+Sem resposta, sem edição. Se a ask não estiver disponível ou falhar (run não interativo), pare e reporte; não assuma a escolha nem edite. A escolha fica no header do plano (`Process: full`) ou em `tmp/<YYYY-MM-DD>-<slug>/process.md` (`Process: fast`), com o escopo e os critérios de aceite. O despacho de subagente leva `process`, `spec`, `plan` e `task`; no caminho rápido, `spec` e `plan` vão como `none`, e no completo um arquivo ausente faz o worker parar. O close lê o process e `tmp/<entrega>/review.md`.
 
 ## Processo completo
 
@@ -64,7 +64,7 @@ Invoque `grilling` + `domain-modeling` direto; nunca `grill-with-docs`, cuja fla
 Só quando o usuário escolhe e a mudança é docs/config/harness puro sem alterar comportamento, permissões ou comandos, correção de um arquivo ou UI dentro do padrão existente.
 
 - Código: diagnóstico (em bug), critérios de aceite, TDD, `verify-fast` durante, `make verify` antes de `/review`, e `/review`. Sem spec ou plano.
-- Docs/config/harness: light review com `harness-check` e `harness-test` (ou `verify-fast`) e leitura focada; sem `/review`, refuter ou UI QA.
+- Docs/config/harness: light review com `harness-check` e `harness-test` e leitura focada; a saída verde libera o commit, sem `/review`, refuter ou UI QA.
 
 Grave `tmp/<entrega>/process.md` com `Process: fast`, o escopo e os gates.
 
@@ -86,7 +86,7 @@ Toda pergunta ao usuário usa a ask do harness: `AskUserQuestion` no Claude, `qu
 
 ## Relação com o review
 
-`docs/review.md` é o contrato do diff pós-implementação. A revisão de spec e de plano vem antes do código; o `/review` do diff vem depois da evolução do harness e do `make verify`, com `git diff <merge-base>` mais untracked quando a entrega ainda não foi commitada. Só `GO` ou `GO CONFIRMADO` libera commit, push e PR.
+`docs/review.md` é o contrato do diff pós-implementação. A revisão de spec e de plano vem antes do código; o `/review` do diff vem depois da evolução do harness e do `make verify`, com `git diff <merge-base>` mais untracked quando a entrega ainda não foi commitada. Só `GO` ou `GO CONFIRMADO` libera commit, push e PR no processo completo; no caminho rápido de docs/config/harness, a saída verde de `harness-check` e `harness-test` libera o commit.
 
 ## Não é
 

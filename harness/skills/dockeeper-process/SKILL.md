@@ -16,7 +16,7 @@ Antes de qualquer edição, chame a tool de ask do harness com uma pergunta e qu
 3. Só diagnóstico
 4. Já tenho spec/plano
 
-Sem resposta, não edite. Leia só o necessário para classificar. Pergunta pura ou análise read-only não disparam o gate; a primeira edição sempre dispara, mesmo depois do diagnóstico. Registre a escolha no header do plano (`Process: full`) ou em `tmp/<YYYY-MM-DD>-<slug>/process.md` (`Process: fast`), com o escopo e os critérios de aceite.
+Sem resposta, não edite. Leia só o necessário para classificar. Pergunta pura ou análise read-only não disparam o gate; a primeira edição sempre dispara, mesmo depois do diagnóstico. Se a ask não estiver disponível ou falhar (run não interativo), pare e reporte; não assuma a escolha nem edite. Registre a escolha no header do plano (`Process: full`) ou em `tmp/<YYYY-MM-DD>-<slug>/process.md` (`Process: fast`), com o escopo e os critérios de aceite.
 
 - **Só diagnóstico:** analise e reporte, sem editar. Se o usuário pedir a correção depois, o gate volta.
 - **Já tenho spec/plano:** peça os paths e comece na revisão da spec/plano ou na execução, sem refazer o brainstorming.
@@ -35,7 +35,7 @@ A entrada `/feature` já é a escolha do processo completo: não repita o Gate 0
 
 ## Caminho rápido
 
-Só para docs/config/harness puro que não muda comportamento, permissões ou comandos, correção de um arquivo ou UI dentro do padrão. Código: diagnóstico, critérios de aceite, TDD, `verify-fast` durante, `make verify` antes de `/review`, `/review`. Docs/config/harness: light review com `harness-check`/`harness-test` (ou `verify-fast`) e leitura focada, sem `/review`, refuter ou UI QA. Grave `tmp/<entrega>/process.md` com `Process: fast`.
+Só para docs/config/harness puro que não muda comportamento, permissões ou comandos, correção de um arquivo ou UI dentro do padrão. Código: diagnóstico, critérios de aceite, TDD, `verify-fast` durante, `make verify` antes de `/review`, `/review`. Docs/config/harness: light review com `harness-check`/`harness-test` e leitura focada; a saída verde libera o commit, sem `/review`, refuter ou UI QA. Grave `tmp/<entrega>/process.md` com `Process: fast`.
 
 Escale para o completo, com ask, se tocar migration/collection, proto/RPC, capability/RBAC, backup/restore, stream, auth ou contrato não provado, ou passar de 8 arquivos/5 tasks em código. Docs/config/harness puro é isento do limite; mudança de comportamento, permissões ou comandos escala.
 
