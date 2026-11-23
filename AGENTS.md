@@ -131,7 +131,7 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 ## Notas internas
 
 - Notas e evidências locais ficam em `tmp/<YYYY-MM-DD>-<slug>/` (ignorado) e não são versionadas. Nada solto no topo de `tmp/`; segredo não entra em `tmp/`.
-- A evidência durável vai para o PR ou o issue; a pasta da entrega é apagada depois do merge. `make tmp-prune` mantém `gocache`, `gotmp`, `memory`, `banners` e `e2e`; `make tmp-report` mostra o que ocupa espaço.
+- A evidência durável vai para o PR ou o issue; a pasta da entrega é apagada depois do merge. `make tmp-prune` mantém `gocache`, `gotmp`, `memory`, `banners` e `e2e`, mas remove binários, logs e estado de teste dentro de `e2e`; `make tmp-report` mostra o que ocupa espaço. Banner final é `docs/assets/banner.png`; `tmp/banners` é scratch.
 
 ## Ponteiros
 

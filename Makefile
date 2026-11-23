@@ -77,6 +77,8 @@ tmp-report:
 
 tmp-prune:
 	@test -d tmp || exit 0
+	@find tmp/e2e -type f \( -name '*.exe' -o -name '*.log' \) -print -delete 2>/dev/null || true
+	@rm -rf tmp/e2e/dockerfake tmp/e2e/dk-agent-data-backup
 	@find tmp -mindepth 1 -maxdepth 1 $(addprefix ! -name ,$(TMP_KEEP)) -print -exec rm -rf {} +
 
 clean:
