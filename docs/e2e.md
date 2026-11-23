@@ -74,7 +74,7 @@ curl -sS http://localhost:8090/api/dk/health
 
 ## Evidência
 
-Salve em `tmp/e2e/YYYY-MM-DD-<slug>.md` (ignorado pelo git) ou anexe na PR. Formato:
+Salve em `tmp/e2e/YYYY-MM-DD-<slug>.md` (ignorado pelo git) ou anexe na PR. O arquivo local é scratch; a evidência durável é o PR. `make tmp-prune` mantém `tmp/e2e` por padrão.
 
 ```markdown
 # E2E — <slug>

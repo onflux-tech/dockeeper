@@ -130,7 +130,8 @@ Não declare “pronto” sem colar a saída real. Uma falha só é pré-existen
 
 ## Notas internas
 
-- Notas locais ficam em `tmp/` (ignorado) e não são versionadas. O código vence qualquer nota.
+- Notas e evidências locais ficam em `tmp/<YYYY-MM-DD>-<slug>/` (ignorado) e não são versionadas. Nada solto no topo de `tmp/`; segredo não entra em `tmp/`.
+- A evidência durável vai para o PR ou o issue; a pasta da entrega é apagada depois do merge. `make tmp-prune` mantém `gocache`, `gotmp`, `memory`, `banners` e `e2e`; `make tmp-report` mostra o que ocupa espaço.
 
 ## Ponteiros
 

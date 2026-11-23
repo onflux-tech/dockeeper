@@ -12,3 +12,4 @@ description: "Use ao fechar uma entrega do dockeeper: verificação, review, evo
 5. Rode `make harness-sync`, `make harness-check` e `make harness-test`.
 6. Atualize o registro de evolução em `docs/harness.md`.
 7. Commite fonte e portas juntas, em inglês, conventional, imperativo. Peça autorização, faça push da branch e abra o PR para `develop`. Squash merge só com autorização; promoção é o fluxo do `dockeeper-release`.
+8. Depois do merge, apague `tmp/<entrega>/` ou rode `make tmp-prune`; a evidência durável já está no PR.
