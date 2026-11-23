@@ -74,7 +74,7 @@ curl -sS http://localhost:8090/api/dk/health
 
 ## Evidência
 
-Salve em `tmp/e2e/YYYY-MM-DD-<slug>.md` (ignorado pelo git) ou anexe na PR. O arquivo local é scratch; a evidência durável é o PR. `make tmp-prune` mantém relatórios e screenshots, mas remove binários, logs e estado de teste dentro de `tmp/e2e`.
+Salve em `tmp/<YYYY-MM-DD>-<slug>/e2e.md` (ignorado pelo git) ou anexe na PR; os screenshots ficam no mesmo diretório. O diretório local é scratch; a evidência durável é o PR. A pasta da entrega é apagada depois do merge; `make tmp-prune` remove binários, logs e estado de teste dentro do `tmp/e2e` legado.
 
 ```markdown
 # E2E — <slug>
