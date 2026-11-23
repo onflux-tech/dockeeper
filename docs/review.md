@@ -4,14 +4,21 @@ Contrato de review pós-implementação. Vale para o agente principal, para o `d
 
 ## Quando
 
-- Antes de abrir ou atualizar o PR, depois de `make verify`.
-- Em mudança de código; docs, config e harness puros não pedem review completo.
+- No processo completo, depois da evolução do harness e do changelog, com `make verify` verde.
+- Antes de abrir ou atualizar o PR.
+- Em mudança de código; docs, config e harness puros não pedem review completo. Se a mudança alterar comportamento, permissões ou comandos, o review é completo.
 - Em issue, feature ou refactor amplo, o review acontece antes de declarar pronto.
+- O relatório consolidado e o veredito vão para `tmp/<entrega>/review.md`; o PR é a evidência durável.
+
+## Review leve
+
+Para docs, config e harness sem mudança de comportamento, permissões ou comandos: rode `make harness-check`, `make harness-test` (ou `make verify-fast`) e faça uma leitura focada do diff; não despache reviewer, refuter nem UI QA. A evidência é a saída dos comandos e a leitura. Qualquer mudança de comportamento, permissões ou comandos volta ao review completo.
 
 ## Base do diff
 
 - Working tree por padrão: `git status --short`, `git diff`, `git diff --cached` e untracked relevantes.
-- PR de feature: `git merge-base origin/develop HEAD` e `git diff <merge-base>...HEAD`.
+- Close pré-commit: `git merge-base origin/develop HEAD` e `git diff <merge-base>` mais untracked; o `...HEAD` não vê a evolução no working tree.
+- PR de feature já pushado: `git merge-base origin/develop HEAD` e `git diff <merge-base>...HEAD`.
 - PR de promoção: `git diff origin/production...origin/develop`.
 - Range de commits: base explícita no despacho. Use `git merge-base <base> HEAD` e `git diff <merge-base>...HEAD`; nunca `HEAD~1`.
 - O revisor busca o diff sozinho. Não cole o diff no prompt.
