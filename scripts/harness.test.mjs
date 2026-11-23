@@ -62,7 +62,7 @@ test("renderAgent separa claude e opencode", () => {
 });
 
 test("agentes reais passam no contrato read-only", () => {
-	for (const name of ["dockeeper-reviewer", "dockeeper-refuter"]) {
+	for (const name of ["dockeeper-reviewer", "dockeeper-refuter", "dockeeper-spec-reviewer"]) {
 		const opencode = readFileSync(new URL(`../harness/agents/${name}/opencode.yaml`, import.meta.url), "utf8");
 		const claude = readFileSync(new URL(`../harness/agents/${name}/claude.yaml`, import.meta.url), "utf8");
 		assert.deepEqual(readOnlyAgentErrors(name, opencode), []);

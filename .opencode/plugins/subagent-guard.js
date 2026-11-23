@@ -1,6 +1,6 @@
 import { evaluate } from "../../harness/hooks/subagent-guard.mjs";
 
-const AGENTS = new Set(["dockeeper-reviewer", "dockeeper-refuter", "dockeeper-ui-qa"]);
+const AGENTS = new Set(["dockeeper-reviewer", "dockeeper-refuter", "dockeeper-spec-reviewer", "dockeeper-ui-qa"]);
 
 export default {
 	id: "subagent-guard",

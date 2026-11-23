@@ -1,0 +1,9 @@
+description: "Review read-only de spec e plano antes da implementação: contratos, enum, capability, migration, integridade e prontidão. Não edita; reporta achados e veredito."
+tools: Read, Grep, Glob, Bash, Skill
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: node "${CLAUDE_PROJECT_DIR}/.claude/hooks/subagent-guard.mjs"
+          timeout: 10
