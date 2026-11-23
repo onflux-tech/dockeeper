@@ -80,6 +80,10 @@ const WRITE_FLAGS = [
 	/\bssh\b/i,
 ];
 
+const REDIRECT = /(?:^|[\s;&|])(?:\d?>>?|&>>?|>\|)\s*([^\s;&|]+)/g;
+
+const SAFE_REDIRECT = /^(?:&[0-9]+|\/dev\/null|nul)$/i;
+
 function tokenize(args) {
 	const tokens = [];
 	let current = "";
@@ -128,6 +132,11 @@ export function evaluate(command) {
 	if (!cmd) return "BLOQUEADO: comando vazio.";
 	if (hasMutatingGit(cmd)) {
 		return "BLOQUEADO: git de escrita não é permitido no subagente read-only. Use status, log, diff, show, merge-base, ls-files, blame ou rev-parse.";
+	}
+	for (const match of cmd.matchAll(REDIRECT)) {
+		if (!SAFE_REDIRECT.test(match[1])) {
+			return "BLOQUEADO: redirecionamento de escrita não é permitido no subagente read-only. Use Read ou consulte o principal.";
+		}
 	}
 	for (const rule of DESTRUCTIVE) {
 		if (rule.test(cmd)) {
